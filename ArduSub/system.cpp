@@ -198,6 +198,7 @@ bool Sub::position_ok()
 {
     // return false if ekf failsafe has triggered
     if (failsafe.ekf) {
+        hal.console->printf("failsafe EKF\n\r");
         return false;
     }
 
@@ -210,6 +211,7 @@ bool Sub::ekf_position_ok()
 {
     if (!ahrs.have_inertial_nav()) {
         // do not allow navigation with dcm position
+        hal.console->printf("no intertial nav\n\r");
         return false;
     }
 
@@ -218,6 +220,8 @@ bool Sub::ekf_position_ok()
 
     // if disarmed we accept a predicted horizontal position
     if (!motors.armed()) {
+        //hal.console->printf("disarmed horiz_pos_abs = %d, pred_horiz_pos_abs = %d\n\r", 
+        //filt_status.flags.horiz_pos_abs, filt_status.flags.pred_horiz_pos_abs);
         return ((filt_status.flags.horiz_pos_abs || filt_status.flags.pred_horiz_pos_abs));
     }
 

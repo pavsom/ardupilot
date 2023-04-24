@@ -154,7 +154,14 @@ void Sub::fifty_hz_loop()
 
     // Update rc input/output
     rc().read_input();
+
+    // cork now, so that all channel outputs happen at once
+    SRV_Channels::cork();
+
     SRV_Channels::output_ch_all();
+
+    // push all channels
+    SRV_Channels::push();
 }
 
 // update_batt_compass - read battery and compass

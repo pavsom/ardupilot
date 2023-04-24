@@ -13,6 +13,7 @@ void Sub::motors_output()
     if (control_mode == MOTOR_DETECT){
         return;
     }
+    // send motors
     // check if we are performing the motor test
     if (ap.motor_test) {
         verify_motor_test();

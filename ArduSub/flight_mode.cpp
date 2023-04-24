@@ -6,7 +6,8 @@ bool Sub::set_mode(control_mode_t mode, ModeReason reason)
 {
     // boolean to record if flight mode could be set
     bool success = false;
-
+    hal.console->printf("setting mode MODE = %d\n\r", mode);
+    
     // return immediately if we are already in the desired mode
     if (mode == control_mode) {
         prev_control_mode = control_mode;

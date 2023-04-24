@@ -71,6 +71,7 @@ public:
     bool get_output_mode_banner(char banner_msg[], uint8_t banner_msg_len) const override;
 
     float scale_esc_to_unity(uint16_t pwm) override {
+        //printf("_esc_pwm_min = %d, _esc_pwm_max = %d\n\r", _esc_pwm_min, _esc_pwm_max);
         return 2.0 * ((float) pwm - _esc_pwm_min) / (_esc_pwm_max - _esc_pwm_min) - 1.0;
     }
 

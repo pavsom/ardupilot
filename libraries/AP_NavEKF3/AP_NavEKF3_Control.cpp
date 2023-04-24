@@ -525,9 +525,11 @@ bool NavEKF3_core::readyToUseBodyOdm(void) const
 bool NavEKF3_core::readyToUseGPS(void) const
 {
     if (frontend->sources.getPosXYSource() != AP_NavEKF_Source::SourceXY::GPS) {
+        //printf("xy source not gps\n\r");
         return false;
     }
-
+    //printf("validOrigin %d, tiltAlignComplete %d, yawAlignComplete %d, delAngBiasLearned %d, gpsGoodToAlign %d, gpsDataToFuse %d\n\r", 
+    //validOrigin, tiltAlignComplete, (uint8_t)yawAlignComplete, delAngBiasLearned, gpsGoodToAlign, gpsDataToFuse);
     return validOrigin && tiltAlignComplete && yawAlignComplete && (delAngBiasLearned || assume_zero_sideslip()) && gpsGoodToAlign && gpsDataToFuse;
 }
 
@@ -681,7 +683,9 @@ void  NavEKF3_core::updateFilterStatus(void)
 
     // If GPS height usage is specified, height is considered to be inaccurate until the GPS passes all checks
     bool hgtNotAccurate = (frontend->sources.getPosZSource() == AP_NavEKF_Source::SourceZ::GPS) && !validOrigin;
-
+    
+    //printf("posTimeout %d, filterHealthy %d, PV_AidingMode %d\n\r", 
+    //posTimeout, filterHealthy, (uint8_t)PV_AidingMode);
     // set individual flags
     filterStatus.flags.attitude = !stateStruct.quat.is_nan() && filterHealthy;   // attitude valid (we need a better check)
     filterStatus.flags.horiz_vel = someHorizRefData && filterHealthy;      // horizontal velocity estimate valid

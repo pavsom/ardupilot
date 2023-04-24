@@ -96,7 +96,8 @@ void AP_Vehicle::setup()
         sdcard_retry();
     }
 #endif
-
+    hal.console->printf("sdcard_retry();\n\r");
+    //hal.scheduler->delay(3000);
     // initialise the main loop scheduler
     const AP_Scheduler::Task *tasks;
     uint8_t task_count;
@@ -122,7 +123,8 @@ void AP_Vehicle::setup()
     // initialise serial ports
     serial_manager.init();
     gcs().setup_console();
-
+    hal.console->printf("gcs().setup_console();\n\r");
+    //hal.scheduler->delay(3000);
     // Register scheduler_delay_cb, which will run anytime you have
     // more than 5ms remaining in your call to hal.scheduler->delay
     hal.scheduler->register_delay_callback(scheduler_delay_callback, 5);
@@ -136,10 +138,12 @@ void AP_Vehicle::setup()
     // call externalAHRS init before init_ardupilot to allow for external sensors
     externalAHRS.init();
 #endif
-
+    hal.console->printf("externalAHRS.init();\n\r");
+    //hal.scheduler->delay(3000);
     // init_ardupilot is where the vehicle does most of its initialisation.
     init_ardupilot();
-
+    hal.console->printf("init_ardupilot();\n\r");
+    //hal.scheduler->delay(3000);
 #if !APM_BUILD_TYPE(APM_BUILD_Replay)
     SRV_Channels::init();
 #endif

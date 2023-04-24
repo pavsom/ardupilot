@@ -352,7 +352,7 @@ void AP_UAVCAN::init(uint8_t driver_index, bool enable_filters)
     debug_uavcan(AP_CANManager::LOG_INFO, "UAVCAN: init done\n\r");
 }
 #pragma GCC diagnostic pop
-
+uint32_t sent_delay = 0;
 void AP_UAVCAN::loop(void)
 {
     while (true) {
@@ -367,6 +367,12 @@ void AP_UAVCAN::loop(void)
             hal.scheduler->delay_microseconds(100);
             continue;
         }
+        if (!sent_delay){
+            sent_delay = 1000;
+            printf("_SRV_armed = %d\n\r", _SRV_armed);
+        }else{
+            sent_delay--;
+        } 
 
         if (_SRV_armed) {
             bool sent_servos = false;
@@ -386,12 +392,17 @@ void AP_UAVCAN::loop(void)
             }
 
             // if we have any ESC's in bitmask
-            if (_esc_bm > 0 && !sent_servos) {
-                SRV_send_esc();
-            }
+            /* printf("_esc_bm = %d, sent_servos = %d \n\r", _esc_bm, sent_servos);
+            hal.scheduler->delay(10); */
+            bool armed = hal.util->get_soft_armed();
+            if (armed){
+                if (_esc_bm > 0 && !sent_servos) {
+                    SRV_send_esc();
+                }
 
-            for (uint8_t i = 0; i < UAVCAN_SRV_NUMBER; i++) {
-                _SRV_conf[i].esc_pending = false;
+                for (uint8_t i = 0; i < UAVCAN_SRV_NUMBER; i++) {
+                    _SRV_conf[i].esc_pending = false;
+                }
             }
         }
 
@@ -475,7 +486,8 @@ void AP_UAVCAN::SRV_send_esc(void)
             }
         }
     }
-
+    /* printf("active_esc_num = %d \n\r", active_esc_num);
+    hal.scheduler->delay(10); */
     // if at least one is active (update) we need to send to all
     if (active_esc_num > 0) {
         k = 0;
@@ -483,9 +495,15 @@ void AP_UAVCAN::SRV_send_esc(void)
         for (uint8_t i = 0; i < max_esc_num && k < 20; i++) {
             if ((((uint32_t) 1) << i) & _esc_bm) {
                 // TODO: ESC negative scaling for reverse thrust and reverse rotation
-                float scaled = cmd_max * (hal.rcout->scale_esc_to_unity(_SRV_conf[i].pulse) + 1.0) / 2.0;
+                //printf("%d cmd_max = %d, pulse = %d\n\r", i, cmd_max,_SRV_conf[i].pulse); hal.scheduler->delay(10);
+                //int32_t test1 = hal.rcout->scale_esc_to_unity(_SRV_conf[i].pulse); test1 *=100; printf("unity = %d, ", test1); hal.scheduler->delay(10);
+                float scaled = cmd_max * (hal.rcout->scale_esc_to_unity(_SRV_conf[i].pulse));
 
-                scaled = constrain_float(scaled, 0, cmd_max);
+                //test1 = scaled; test1 *=100; printf("scaled = %d, ", test1); hal.scheduler->delay(10);
+
+                scaled = constrain_float(scaled, -cmd_max, cmd_max);
+
+                //test1 = scaled; test1 *=100; printf("scaled2 = %d\n\r",test1);  hal.scheduler->delay(10);
 
                 esc_msg.cmd.push_back(static_cast<int>(scaled));
             } else {

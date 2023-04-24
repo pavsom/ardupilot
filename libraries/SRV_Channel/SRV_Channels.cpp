@@ -366,13 +366,16 @@ void SRV_Channels::push()
     blheli_ptr->update_telemetry();
 #endif
 #endif // HAL_BUILD_AP_PERIPH
-
+//printf("HAL_CANMANAGER_ENABLEDn\r");
 #if HAL_CANMANAGER_ENABLED
     // push outputs to CAN
     uint8_t can_num_drivers = AP::can().get_num_drivers();
+    //printf("can_num_drivers = %d\n\r", can_num_drivers);
+    //hal.scheduler->delay(10);    
     for (uint8_t i = 0; i < can_num_drivers; i++) {
         switch (AP::can().get_driver_type(i)) {
             case AP_CANManager::Driver_Type_UAVCAN: {
+                //printf("Driver_Type_UAVCAN\n\r");
                 AP_UAVCAN *ap_uavcan = AP_UAVCAN::get_uavcan(i);
                 if (ap_uavcan == nullptr) {
                     continue;

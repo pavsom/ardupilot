@@ -8,7 +8,8 @@
 #include <AP_HAL/Semaphores.h>
 #include <AP_HAL/Device.h>
 
-#define TSYS01_ADDR 0x77
+#define TSYS01_ADDR 0x76
+//#define TSYS01_ADDR_CSB0 0x76
 
 class TSYS01 {
 public:

@@ -81,6 +81,7 @@ void Sub::failsafe_sensors_check()
 
     // only report once
     if (failsafe.sensor_health) {
+        //
         return;
     }
 

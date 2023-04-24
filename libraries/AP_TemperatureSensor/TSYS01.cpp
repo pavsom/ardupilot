@@ -15,6 +15,13 @@ static const uint8_t TSYS01_CMD_READ_ADC    = 0x00;
 
 bool TSYS01::init(uint8_t bus)
 {
+    constexpr char name[] = "TSYS01";
+
+
+
+
+
+
     _dev = std::move(hal.i2c_mgr->get_device(bus, TSYS01_ADDR));
     if (!_dev) {
         printf("TSYS01 device is null!");
@@ -24,6 +31,7 @@ bool TSYS01::init(uint8_t bus)
     _dev->get_semaphore()->take_blocking();
 
     _dev->set_retries(10);
+    printf("%s reset failed I2C addr of 0x%2X", name , TSYS01_ADDR);
 
     if (!_reset()) {
         printf("TSYS01 reset failed");
