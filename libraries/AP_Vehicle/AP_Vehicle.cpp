@@ -81,7 +81,7 @@ void AP_Vehicle::setup()
 
     // initialise serial port
     serial_manager.init_console();
-
+    //hal.scheduler->delay(3000);
     hal.console->printf("\n\nInit %s"
                         "\n\nFree RAM: %u\n",
                         AP::fwversion().fw_string,

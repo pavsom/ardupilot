@@ -30,10 +30,10 @@ bool TSYS01::init(uint8_t bus)
 
     _dev->get_semaphore()->take_blocking();
 
-    _dev->set_retries(10);
-    printf("%s reset failed I2C addr of 0x%2X", name , TSYS01_ADDR);
+    _dev->set_retries(10);   
 
     if (!_reset()) {
+        printf("%s reset failed I2C addr of 0x%2X", name , TSYS01_ADDR);
         printf("TSYS01 reset failed");
         _dev->get_semaphore()->give();
         return false;
