@@ -32,6 +32,7 @@ struct Guided_Limit {
 bool Sub::guided_init(bool ignore_checks)
 {
     if (!position_ok() && !ignore_checks) {
+        hal.console->printf("position not ok\n\r");
         return false;
     }
 

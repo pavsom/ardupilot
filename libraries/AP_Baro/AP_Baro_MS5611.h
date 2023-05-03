@@ -56,6 +56,9 @@ public:
     static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev, enum MS56XX_TYPE ms56xx_type=BARO_MS5611);
 
 private:
+    uint32_t temperatureMin = 0xffffff;
+    uint32_t temperatureMax = 0;
+    float temperatureMedian = 0;
 
     /*
      * Update @accum and @count with the new sample in @val, taking into
@@ -73,6 +76,9 @@ private:
     void _calculate_5607();
     void _calculate_5637();
     void _calculate_5837();
+    int32_t _temperature_5837(uint32_t raw_temperature);
+    uint32_t _temperatureFindRaw_5837(int32_t temperature);
+    bool _tOk_5837(uint32_t& raw_temperature);
     bool _read_prom_5611(uint16_t prom[8]);
     bool _read_prom_5637(uint16_t prom[8]);
 

@@ -39,6 +39,17 @@ void Sub::userhook_SlowLoop()
 #ifdef USERHOOK_SUPERSLOWLOOP
 void Sub::userhook_SuperSlowLoop()
 {
+    if (!ahrs.healthy())
+    hal.console->printf("ahrs healthy %d\n\r",ahrs.healthy());  
+    if (!ahrs.EKF3.healthy())
+    hal.console->printf("ekf3 healthy %d\n\r",ahrs.EKF3.healthy());  
+    if (ahrs.get_vehicle_class() != AP_AHRS::VehicleClass::SUBMARINE)
+    hal.console->printf("ship class %d\n\r",(uint8_t)ahrs.get_vehicle_class());  
+    if (!ahrs.have_inertial_nav())
+        hal.console->printf("no inertial navigation\n\r");
+    //hal.console->printf("posXYsource=%d\n\r", ahrs.EKF3.configuredToUseGPSForPosXY());
+    //barometer.update();
+    //hal.console->printf("\r\n%ld temperature = %.2f C\n\r",AP_HAL::micros()/1000000, barometer.get_temperature(1));
     // put your 1Hz code here
 }
 #endif

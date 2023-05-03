@@ -76,6 +76,7 @@ public:
     uint32_t get_disabled_channels(uint32_t digital_mask) override;
 
     float scale_esc_to_unity(uint16_t pwm) override {
+        //printf("_esc_pwm_min = %d, _esc_pwm_max = %d\n\r", _esc_pwm_min, _esc_pwm_max);
         return 2.0 * ((float) pwm - _esc_pwm_min) / (_esc_pwm_max - _esc_pwm_min) - 1.0;
     }
 

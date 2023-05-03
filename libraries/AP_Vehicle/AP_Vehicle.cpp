@@ -179,7 +179,8 @@ void AP_Vehicle::setup()
         sdcard_retry();
     }
 #endif
-
+    hal.console->printf("sdcard_retry();\n\r");
+    //hal.scheduler->delay(3000);
     // initialise the main loop scheduler
     const AP_Scheduler::Task *tasks;
     uint8_t task_count;
@@ -201,7 +202,8 @@ void AP_Vehicle::setup()
     // the GCS singleton first as it sets the global mavlink system ID
     // which may get used very early on.
     gcs().init();
-
+    hal.console->printf("gcs().setup_console();\n\r");
+    //hal.scheduler->delay(3000);
     // initialise serial ports
     serial_manager.init();
     gcs().setup_console();
@@ -219,10 +221,13 @@ void AP_Vehicle::setup()
     // call externalAHRS init before init_ardupilot to allow for external sensors
     externalAHRS.init();
 #endif
+    hal.console->printf("externalAHRS.init();\n\r");
+    //hal.scheduler->delay(3000);
 
     // init_ardupilot is where the vehicle does most of its initialisation.
     init_ardupilot();
-
+    hal.console->printf("init_ardupilot();\n\r");
+    //hal.scheduler->delay(3000);
 #if AP_AIRSPEED_ENABLED
     airspeed.init();
     if (airspeed.enabled()) {

@@ -542,6 +542,7 @@ void SRV_Channels::push()
     for (uint8_t i = 0; i < can_num_drivers; i++) {
         switch (AP::can().get_driver_type(i)) {
             case AP_CAN::Protocol::DroneCAN: {
+                // test print
                 AP_DroneCAN *ap_dronecan = AP_DroneCAN::get_dronecan(i);
                 if (ap_dronecan == nullptr) {
                     continue;
