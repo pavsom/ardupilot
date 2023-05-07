@@ -47,6 +47,14 @@ void Sub::userhook_SuperSlowLoop()
     hal.console->printf("ship class %d\n\r",(uint8_t)ahrs.get_vehicle_class());  
     if (!ahrs.have_inertial_nav())
         hal.console->printf("no inertial navigation\n\r");
+    /* printf("RC input roll  = %3d  ",static_cast<int8_t>(channel_roll->norm_input()*100)); 
+    printf("RC up      = %3d\n\r",static_cast<int8_t>(channel_throttle->norm_input()*100)); 
+    
+    printf("RC input pitch = %3d  ",static_cast<int8_t>(channel_pitch->norm_input()*100)); 
+    printf("RC forward = %3d\n\r",static_cast<int8_t>(channel_forward->norm_input()*100)); 
+    
+    printf("RC input yaw   = %3d  ",static_cast<int8_t>(channel_yaw->norm_input()*100)); 
+    printf("RC sttrafe = %3d\n\r\n\r",static_cast<int8_t>(channel_lateral->norm_input()*100));  */
     //hal.console->printf("posXYsource=%d\n\r", ahrs.EKF3.configuredToUseGPSForPosXY());
     //barometer.update();
     //hal.console->printf("\r\n%ld temperature = %.2f C\n\r",AP_HAL::micros()/1000000, barometer.get_temperature(1));

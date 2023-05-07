@@ -37,7 +37,7 @@ define AP_BARO_MS56XX_ENABLED 1
 # arguments, the first for whether the compass is external and the
 # second the orientation. The LSM303D driver doesn't take any arguments
 COMPASS HMC5843 SPI:hmc5843 false ROTATION_PITCH_180
-#COMPASS LSM303D SPI:lsm9ds0_am ROTATION_NONE
+COMPASS LSM303D SPI:lsm9ds0_am ROTATION_NONE
 
 # also probe for external compasses
 define HAL_PROBE_EXTERNAL_I2C_COMPASSES

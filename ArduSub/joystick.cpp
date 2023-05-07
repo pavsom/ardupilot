@@ -52,12 +52,23 @@ void Sub::init_joystick()
 
 void Sub::transform_manual_control_to_rc_override(int16_t x, int16_t y, int16_t z, int16_t r, uint16_t buttons)
 {
-
+    
+    /* printf("x roll  = %4d  ",x); 
+    printf("y pitch = %4d  ",y); 
+    printf("z       = %4d  ",z); 
+    printf("r       = %4d  ",r); 
+    printf("b       = %4d  \n\r",buttons);  */
     float rpyScale = 0.4*gain; // Scale -1000-1000 to -400-400 with gain
     float throttleScale = 0.8*gain*g.throttle_gain; // Scale 0-1000 to 0-800 times gain
     int16_t rpyCenter = 1500;
     int16_t throttleBase = 1500-500*throttleScale;
-
+    /* printf("gain    = %4d  ",static_cast<int8_t>(gain*100)); 
+    printf("thrgain = %4d  ",static_cast<int8_t>(g.throttle_gain*100));
+    printf("rpyScal = %4d  ",static_cast<int8_t>(rpyScale*100)); 
+    //printf("RC forward = %3d\n\r",static_cast<int8_t>(channel_forward->norm_input()*100)); 
+    
+    printf("thrSc   = %4d  ",static_cast<int8_t>(throttleScale*100)); 
+    printf("thrBa   = %4d  \n\r",throttleBase);  */
     bool shift = false;
 
     // Neutralize camera tilt and pan speed setpoint

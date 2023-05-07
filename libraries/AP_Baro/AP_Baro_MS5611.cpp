@@ -580,7 +580,7 @@ void AP_Baro_MS56XX::_calculate_5837()
     int64_t OFF, SENS;
     int32_t raw_pressure = _D1;
     int32_t raw_temperature = _D2;
-    int32_t T2 = 0;
+    //int32_t T2 = 0;
     int64_t aux = 0;
     int64_t OFF2 = 0;
     int64_t SENS2 = 0;
@@ -595,7 +595,7 @@ void AP_Baro_MS56XX::_calculate_5837()
 
     if (TEMP < 2000) {
         // second order temperature compensation when under 20 degrees C
-        T2 = ((int64_t)3 * ((int64_t)dT * (int64_t)dT) / (int64_t)8589934592);
+        //T2 = ((int64_t)3 * ((int64_t)dT * (int64_t)dT) / (int64_t)8589934592);
         aux = (TEMP - 2000) * (TEMP - 2000);
         OFF2 = 3 * aux / 2;
         SENS2 = 5 * aux / 8;
@@ -606,7 +606,7 @@ void AP_Baro_MS56XX::_calculate_5837()
             SENS2 = SENS2 + 4 * aux;
         }
     }else{
-        T2 = ((int64_t)2 * ((int64_t)dT * (int64_t)dT) / (int64_t)137438953472);
+        //T2 = ((int64_t)2 * ((int64_t)dT * (int64_t)dT) / (int64_t)137438953472);
         aux = (TEMP - 2000) * (TEMP - 2000);
         OFF2 = 1 * aux / 16;
         SENS2 = 0;

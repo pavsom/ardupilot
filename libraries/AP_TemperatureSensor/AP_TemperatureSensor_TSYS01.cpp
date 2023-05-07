@@ -53,7 +53,7 @@ void AP_TemperatureSensor_TSYS01::init()
     WITH_SEMAPHORE(_dev->get_semaphore());
 
     _dev->set_retries(10);
-    printf("%s reset failed I2C addr of 0x%2X", name , TSYS01_ADDR);
+    printf("%s reset failed I2C addr of 0x%2X", name , (unsigned)_params.bus_address.get());
 
     // reset
     if (!_dev->transfer(&TSYS01_CMD_RESET, 1, nullptr, 0)) {

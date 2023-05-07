@@ -363,8 +363,10 @@ void AP_Motors6DOF::output_armed_stabilizing()
         for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
             if (motor_enabled[i]) {
                 _thrust_rpyt_out[i] = constrain_float(_motor_reverse[i]*(rpy_out[i] + linear_out[i]),-1.0f,1.0f);
+                //hal.console->printf("1 %dmotorRPM %3d  ",i,static_cast<int8_t>(_thrust_rpyt_out[i]*100)); 
             }
         }
+        //hal.console->printf("\n\r");
     }
 
     const AP_BattMonitor &battery = AP::battery();
@@ -485,8 +487,10 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored()
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
             _thrust_rpyt_out[i] = constrain_float(_motor_reverse[i]*(rpy_out[i] + linear_out[i]), -1.0f, 1.0f);
+            //hal.console->printf("2 %dmotorRPM %3d  ",i,static_cast<int8_t>(_thrust_rpyt_out[i]*100)); 
         }
     }
+    //hal.console->printf("\n\r");
 }
 
 // Band Aid fix for motor normalization issues.
@@ -562,8 +566,10 @@ void AP_Motors6DOF::output_armed_stabilizing_vectored_6dof()
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
             _thrust_rpyt_out[i] = constrain_float(_motor_reverse[i]*(rpt_out[i]/rpt_max + yfl_out[i]/yfl_max),-1.0f,1.0f);
+            //hal.console->printf("3 %dmotorRPM %3d  ",i,static_cast<int8_t>(_thrust_rpyt_out[i]*100)); 
         }
     }
+    //hal.console->printf("\n\r"); 
 }
 
 Vector3f AP_Motors6DOF::get_motor_angular_factors(int motor_number) {

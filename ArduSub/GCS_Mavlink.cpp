@@ -6,6 +6,7 @@
 MAV_TYPE GCS_Sub::frame_type() const
 {
     return MAV_TYPE_SUBMARINE;
+    //return MAV_TYPE_QUADROTOR;
 }
 
 MAV_MODE GCS_MAVLINK_Sub::base_mode() const
@@ -115,6 +116,7 @@ bool GCS_MAVLINK_Sub::send_info()
 {
     // Just do this all at once, hopefully the hard-wire telemetry requirement means this is ok
     // Name is char[10]
+    /* 
     CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
     send_named_float("CamTilt",
                      1 - (SRV_Channels::get_output_norm(SRV_Channel::k_mount_tilt) / 2.0f + 0.5f));
@@ -136,13 +138,13 @@ bool GCS_MAVLINK_Sub::send_info()
                      SRV_Channels::get_output_norm(SRV_Channel::k_rcin10) / 2.0f + 0.5f);
 
     CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
-    send_named_float("PilotGain", sub.gain);
+    send_named_float("PilotGain", sub.gain); */
 
     CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
     send_named_float("InputHold", sub.input_hold_engaged);
 
-    CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
-    send_named_float("RollPitch", sub.roll_pitch_flag);
+    /* CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
+    send_named_float("RollPitch", sub.roll_pitch_flag); */
 
     return true;
 }
