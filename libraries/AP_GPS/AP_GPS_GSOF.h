@@ -43,15 +43,15 @@ private:
     bool process_message() WARN_IF_UNUSED;
     void requestBaud(const uint8_t portindex);
     void requestGSOF(const uint8_t messagetype, const uint8_t portindex);
-    double SwapDouble(uint8_t* src, const uint32_t pos) const WARN_IF_UNUSED;
-    float SwapFloat(uint8_t* src, const uint32_t pos) const WARN_IF_UNUSED;
-    uint32_t SwapUint32(uint8_t* src, const uint32_t pos) const WARN_IF_UNUSED;
-    uint16_t SwapUint16(uint8_t* src, const uint32_t pos) const WARN_IF_UNUSED;
+    double SwapDouble(const uint8_t* src, const uint32_t pos) const WARN_IF_UNUSED;
+    float SwapFloat(const uint8_t* src, const uint32_t pos) const WARN_IF_UNUSED;
+    uint32_t SwapUint32(const uint8_t* src, const uint32_t pos) const WARN_IF_UNUSED;
+    uint16_t SwapUint16(const uint8_t* src, const uint32_t pos) const WARN_IF_UNUSED;
 
-
-    struct gsof_msg_parser_t
+    struct Msg_Parser
     {
-        enum
+
+        enum class State
         {
             STARTTX = 0,
             STATUS,
@@ -60,7 +60,9 @@ private:
             DATA,
             CHECKSUM,
             ENDTX
-        } gsof_state;
+        };
+
+        State state;
 
         uint8_t status;
         uint8_t packettype;
@@ -71,10 +73,10 @@ private:
 
         uint16_t read;
         uint8_t checksumcalc;
-    } gsof_msg;
+    } msg;
 
-    static const uint8_t GSOF_STX = 0x02;
-    static const uint8_t GSOF_ETX = 0x03;
+    static const uint8_t STX = 0x02;
+    static const uint8_t ETX = 0x03;
 
     uint8_t packetcount = 0;
 
