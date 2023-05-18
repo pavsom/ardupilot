@@ -356,8 +356,8 @@ static const ap_message STREAM_EXTENDED_STATUS_msgs[] = {
     MSG_GPS2_RAW,
     MSG_GPS2_RTK,
     MSG_NAV_CONTROLLER_OUTPUT,
-    MSG_FENCE_STATUS,
-    MSG_NAMED_FLOAT
+    MSG_FENCE_STATUS//,
+    //MSG_NAMED_FLOAT
 };
 static const ap_message STREAM_POSITION_msgs[] = {
     MSG_LOCATION,
@@ -516,7 +516,7 @@ MAV_RESULT GCS_MAVLINK_Sub::handle_command_long_packet(const mavlink_command_lon
             return MAV_RESULT_FAILED;
         }
         return MAV_RESULT_ACCEPTED;
-
+ 
     default:
         return GCS_MAVLINK::handle_command_long_packet(packet);
     }
@@ -616,12 +616,6 @@ void GCS_MAVLINK_Sub::handleMessage(const mavlink_message_t &msg)
         bool vel_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_VEL_IGNORE;
         bool acc_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_ACC_IGNORE;
 
-        /*
-         * for future use:
-         * bool force           = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_FORCE;
-         * bool yaw_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_YAW_IGNORE;
-         * bool yaw_rate_ignore = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_YAW_RATE_IGNORE;
-         */
 
         // prepare position
         Vector3f pos_vector;
@@ -680,13 +674,7 @@ void GCS_MAVLINK_Sub::handleMessage(const mavlink_message_t &msg)
         bool pos_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_POS_IGNORE;
         bool vel_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_VEL_IGNORE;
         bool acc_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_ACC_IGNORE;
-
-        /*
-         * for future use:
-         * bool force           = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_FORCE;
-         * bool yaw_ignore      = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_YAW_IGNORE;
-         * bool yaw_rate_ignore = packet.type_mask & MAVLINK_SET_POS_TYPE_MASK_YAW_RATE_IGNORE;
-         */
+    
 
         if (!z_ignore && sub.control_mode == ALT_HOLD) { // Control only target depth when in ALT_HOLD
             sub.pos_control.set_pos_target_z_cm(packet.alt*100);
@@ -727,6 +715,12 @@ void GCS_MAVLINK_Sub::handleMessage(const mavlink_message_t &msg)
         break;
     }
 
+    case MAVLINK_MSG_ID_RADIO:
+    case MAVLINK_MSG_ID_RADIO_STATUS:       // MAV ID: 109
+    {
+        handle_radio_status(msg, sub.should_log(MASK_LOG_PM));
+        break;
+    }
     case MAVLINK_MSG_ID_TERRAIN_DATA:
     case MAVLINK_MSG_ID_TERRAIN_CHECK:
 #if AP_TERRAIN_AVAILABLE
@@ -744,7 +738,7 @@ void GCS_MAVLINK_Sub::handleMessage(const mavlink_message_t &msg)
             sub.leak_detector.set_detect();
         }
     }
-        break;
+        break; 
 
     default:
         handle_common_message(msg);

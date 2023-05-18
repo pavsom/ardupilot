@@ -104,7 +104,8 @@ public:
         k_param_camera, // Camera
         k_param_camera_mount, // Camera gimbal
 
-
+        // 74: RSSI
+        k_param_rssi, 
         // RC_Channel settings (deprecated)
         k_param_rc_1_old = 75,
         k_param_rc_2_old,

@@ -27,6 +27,9 @@ void Sub::init_ardupilot()
     // initialise notify system
     notify.init();
 
+    // Init RSSI
+    rssi.init();
+    
     // initialise battery monitor
     battery.init();
 

@@ -20,7 +20,7 @@
 #include <AP_BattMonitor/AP_BattMonitor.h>
 #include <AP_HAL/AP_HAL.h>
 #include "AP_Motors6DOF.h"
-
+#include <SRV_Channel/SRV_Channel.h>
 extern const AP_HAL::HAL& hal;
 
 // parameters for the motor class
@@ -183,10 +183,10 @@ void AP_Motors6DOF::setup_motors(motor_frame_class frame_class, motor_frame_type
         add_motor_raw_6dof(AP_MOTORS_MOT_2,     0,              0,              0,              0,                  1.0f,               0,              2);
         add_motor_raw_6dof(AP_MOTORS_MOT_3,     0,              0,              0,              0,                  1.0f,               0,              3);
         add_motor_raw_6dof(AP_MOTORS_MOT_4,     0,              0,              0,              0,                  1.0f,               0,              4);
-        add_motor_raw_6dof(AP_MOTORS_MOT_5,     0,              -1.0f,          0,              -1.0f,              0,                  0,              5);
-        add_motor_raw_6dof(AP_MOTORS_MOT_6,     0,              0,              1.0f,           0,                  0,                  1.0f,           6);
-        add_motor_raw_6dof(AP_MOTORS_MOT_7,     0,              1.0f,           0,              -1.0f,              0,                  0,              7);
-        add_motor_raw_6dof(AP_MOTORS_MOT_8,     0,              0,              -1.0f,          0,                  0,                  1.0f,           8);
+        add_motor_raw_6dof(AP_MOTORS_MOT_5,     0,              -1.0f,          0,              1.0f,               0,                  0,              5);
+        add_motor_raw_6dof(AP_MOTORS_MOT_6,     0,              0,              1.0f,           0,                  0,                  -1.0f,           6);
+        add_motor_raw_6dof(AP_MOTORS_MOT_7,     0,              1.0f,           0,              1.0f,               0,                  0,              7);
+        add_motor_raw_6dof(AP_MOTORS_MOT_8,     0,              0,              1.0f,           0,                  0,                  1.0f,           8);
         break;
 
     case SUB_FRAME_SIMPLEROV_3:
@@ -274,7 +274,7 @@ void AP_Motors6DOF::output_to_motors()
         // set motor output based on thrust requests
         for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
             if (motor_enabled[i]) {
-                motor_out[i] = calc_thrust_to_pwm(_thrust_rpyt_out[i]);
+               motor_out[i] = constrain_int16(SRV_Channels::srv_channel(i)->get_trim() + _thrust_rpyt_out[i] * 400, get_pwm_output_min(), get_pwm_output_max());
             }
         }
         break;
@@ -284,6 +284,7 @@ void AP_Motors6DOF::output_to_motors()
     for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
             rc_write(i, motor_out[i]);
+            //hal.console->printf("pwm%d  %4d",i,SRV_Channels::srv_channel(i)->pwm_from_angle(_thrust_rpyt_out[i])); 
         }
     }
 }
@@ -299,6 +300,12 @@ float AP_Motors6DOF::get_current_limit_max_throttle()
 // ToDo calculate headroom for rpy to be added for stabilization during full throttle/forward/lateral commands
 void AP_Motors6DOF::output_armed_stabilizing()
 {
+    /* uint8_t tmp = 0;
+    float floatTmp = 0;
+    float floatTmp1 = 0;
+    float floatTmp2 = 0;
+    static uint8_t counter1 = 0;
+    if (++counter1 == 250) counter1 = 0; */
     if ((sub_frame_t)_active_frame_class == SUB_FRAME_VECTORED) {
         output_armed_stabilizing_vectored();
     } else if ((sub_frame_t)_active_frame_class == SUB_FRAME_VECTORED_6DOF) {
@@ -329,6 +336,17 @@ void AP_Motors6DOF::output_armed_stabilizing()
         limit.throttle_lower = false;
         limit.throttle_upper = false;
 
+        /* if (counter1 == 200){
+            floatTmp = roll_thrust*100;
+            floatTmp1 = pitch_thrust*100;
+            floatTmp2 = yaw_thrust*100;
+            hal.console->printf("roll %4d  pitch %4d  yaw %4d  ",static_cast<int16_t>(floatTmp),static_cast<int16_t>(floatTmp1),static_cast<int16_t>(floatTmp2)); 
+            floatTmp = forward_thrust*100;
+            floatTmp1 = lateral_thrust*100;
+            floatTmp2 = throttle_thrust*100;
+            hal.console->printf("fwd  %4d  LR    %4d  UD  %4d  ",static_cast<int16_t>(floatTmp),static_cast<int16_t>(floatTmp1),static_cast<int16_t>(floatTmp2)); 
+            hal.console->printf("\n\r");
+        } */
         // sanity check throttle is above zero and below current limited throttle
         if (throttle_thrust <= -_throttle_thrust_max) {
             throttle_thrust = -_throttle_thrust_max;
@@ -348,7 +366,7 @@ void AP_Motors6DOF::output_armed_stabilizing()
 
             }
         }
-
+        //hal.console->printf("@%d rpy_out %5d  ",0,static_cast<int8_t>(rpy_out[0]*400+1500)); 
         // calculate linear command for each motor
         // linear factors should be 0.0 or 1.0 for now
         for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
@@ -358,15 +376,15 @@ void AP_Motors6DOF::output_armed_stabilizing()
                                 lateral_thrust * _lateral_factor[i];
             }
         }
-
+        //hal.console->printf("@%d linear_out %5d  ",0,static_cast<int8_t>(linear_out[0]*400+1500)); 
         // Calculate final output for each motor
+        
         for (i=0; i<AP_MOTORS_MAX_NUM_MOTORS; i++) {
             if (motor_enabled[i]) {
                 _thrust_rpyt_out[i] = constrain_float(_motor_reverse[i]*(rpy_out[i] + linear_out[i]),-1.0f,1.0f);
-                //hal.console->printf("1 %dmotorRPM %3d  ",i,static_cast<int8_t>(_thrust_rpyt_out[i]*100)); 
             }
         }
-        //hal.console->printf("\n\r");
+
     }
 
     const AP_BattMonitor &battery = AP::battery();
