@@ -1,5 +1,293 @@
 // A js tool for plotting ArduPilot batch log data
 
+// Generic Class to hold source for notch target
+class NotchTarget {
+    constructor(log, msg_name, key_name, name, mode_value) {
+        this.name = name
+        this.mode_value = mode_value
+        this.data = []
+
+        // Don't always need log data (static notch)
+        if (log == null) {
+            return
+        }
+
+        // Grab data from log
+        log.parseAtOffset(msg_name)
+        if ((log.messages[msg_name] == null) || (log.messages[msg_name].length == 0)) {
+            return
+        }
+
+        // Convert ket into array if needed
+        if (!Array.isArray(key_name)) {
+            key_name = [key_name]
+        }
+
+        // Grab all given keys to data struct
+        this.data.time = []
+        for (var j=0; j<key_name.length; j++) {
+            this.data[key_name[j]] = []
+        }
+        for (var i=0; i < log.messages[msg_name].time_boot_ms.length; i++) {
+            this.data.time[i] = log.messages[msg_name].time_boot_ms[i] / 1000
+            for (var j=0; j<key_name.length; j++) {
+                this.data[key_name[j]][i] = log.messages[msg_name][key_name[j]][i]
+            }
+        }
+    }
+
+    get_target_freq(config) {
+        if ((Object.keys(this.data).length == 0) || (this.data.time == null)) {
+            return
+        }
+        const start_index = find_start_index(this.data.time)
+        const end_index = find_end_index(this.data.time)
+        if (config.ref == 0) {
+            return { freq:[config.freq, config.freq], time:[this.data.time[start_index], this.data.time[end_index]] }
+        }
+
+        var freq = []
+        for (let j=start_index;j<end_index;j++) {
+            freq.push(this.get_target_freq_index(config, j))
+        }
+        return { freq:freq, time:this.data.time.slice(start_index, end_index) }
+    }
+}
+
+// Tracking mode specific classes
+class StaticTarget extends NotchTarget {
+    constructor(log) {
+        super(null, null, null, "Static", 0)
+    }
+
+    get_target_freq(config) {
+        const start_time = parseFloat(document.getElementById("TimeStart").value)
+        const end_time = parseFloat(document.getElementById("TimeEnd").value)
+        return { freq:[config.freq, config.freq], time:[start_time, end_time] }
+    }
+}
+
+class ThrottleTarget extends NotchTarget {
+    constructor(log) {
+        super(log, "RATE", "AOut", "Throttle", 1)
+    }
+
+    get_target_freq_index(config, index) {
+        const motors_throttle = math.max(0, this.data.AOut[index])
+        return config.freq * math.max(config.min_ratio, math.sqrt(motors_throttle / config.ref))
+    }
+}
+
+class RPMTarget extends NotchTarget {
+    constructor(log, instance, mode_value) {
+        const key = "rpm" + instance
+        super(log, "RPM", key, "RPM" + instance, mode_value)
+        this.key = key
+    }
+
+    get_target_freq_index(config, index) {
+        const rpm = this.data[this.key][index]
+        if (rpm > 0) {
+            return math.max(config.freq, rpm * config.ref * (1.0/60.0))
+        }
+        return config.freq
+    }
+}
+
+class ESCTarget extends NotchTarget {
+    constructor(log) {
+        super(null, null, null, "ESC", 3)
+
+        // Grab data from log, have to do it a little differently to get instances
+        const msg = "ESC"
+        log.parseAtOffset(msg)
+        if ((log.messages[msg] == null) || (log.messages[msg].length == 0)) {
+            return
+        }
+
+        // Individual RPM
+        var instances = 0
+        for (let i=0;i<16;i++) {
+            const inst_msg = msg + "[" + i + "]"
+            if (log.messages[inst_msg] != null) {
+                this.data[i] = { time:[], freq:[] }
+                for (var j=0; j < log.messages[inst_msg].time_boot_ms.length; j++) {
+                    this.data[i].time[j] = log.messages[inst_msg].time_boot_ms[j] / 1000
+                    this.data[i].freq[j] = log.messages[inst_msg].RPM[j] / 60
+                }
+                instances++
+            }
+        }
+
+        // Average RPM
+        this.data.avg_freq = []
+        this.data.avg_time = []
+        var inst = []
+        for (let i=0;i<instances;i++) {
+            inst[i] = { rpm:null, time_ms:null }
+        }
+        for (let i=0;i<log.messages[msg].length;i++) {
+            // Update instance
+            const instance = log.messages[msg][i].Instance
+            const time_ms = log.messages[msg][i].time_boot_ms
+            inst[instance].rpm = log.messages[msg][i].RPM
+            inst[instance].time_ms = time_ms
+
+            // Invalidate any instance that has timed out
+            for (let j=0;j<instances;j++) {
+                if ((j != instance) && (inst[j].time_ms != null) && ((time_ms - inst[j].time_ms) > 1000)) {
+                    inst[j].time_ms = null
+                    inst[j].rpm = null
+                }
+            }
+
+            // If a full set of valid instances take average
+            var expected_count = 0
+            var count = 0
+            var sum = 0
+            for (let j=0;j<instances;j++) {
+                if (inst[j].rpm != null) {
+                    count++
+                    sum += inst[j].rpm
+                }
+                if (inst[j].time_ms != null) {
+                    expected_count++
+                }
+            }
+
+            if ((count > 0) && (count == expected_count)) {
+                this.data.avg_freq.push((sum / count) / 60)
+                this.data.avg_time.push(time_ms / 1000)
+
+                // Invalidate used values
+                for (let j=0;j<instances;j++) {
+                    inst[j].rpm = null
+                }
+            }
+        }
+    }
+
+    get_target_freq(config) {
+        if (this.data.length == 0) {
+            return
+        }
+
+        const dynamic = (config.options & (1<<1)) != 0
+        if (dynamic) {
+            // Tracking individual motor RPM's
+            let freq = []
+            let time = []
+
+            for (let i = 0; i < this.data.length; i++) {
+                const start_index = find_start_index(this.data[i].time)
+                const end_index = find_end_index(this.data[i].time)
+
+                let inst_freq = this.data[i].freq.slice(start_index, end_index)
+                for (let j = 0; j < inst_freq.length; j++) {
+                    inst_freq[j] = math.max(inst_freq[j], config.freq)
+                }
+
+                time.push(...this.data[i].time.slice(start_index, end_index))
+                freq.push(...inst_freq)
+
+                // Add NAN to remove line from end back to the start
+                time.push(NaN)
+                freq.push(NaN)
+            }
+            return { freq:freq, time:time }
+
+        }
+
+        // Tracking average motor rpm
+        const start_index = find_start_index(this.data.avg_time)
+        const end_index = find_end_index(this.data.avg_time)
+
+        let freq = this.data.avg_freq.slice(start_index, end_index)
+        for (let j = 0; j < freq.length; j++) {
+            freq[j] = math.max(freq[j], config.freq)
+        }
+
+        return { freq:freq, time:this.data.avg_time.slice(start_index, end_index) }
+    }
+}
+
+class FFTTarget extends NotchTarget {
+    constructor(log) {
+        super(log, "FTN1", "PkAvg", "FFT", 4)
+
+        // Grab data from log, have to do it a little differently to get instances
+        const msg = "FTN2"
+        log.parseAtOffset(msg)
+        if ((log.messages[msg] == null) || (log.messages[msg].length == 0)) {
+            return
+        }
+
+        for (let i=0;i<3;i++) {
+            // FFT can track three peaks
+            const inst_msg = msg + "[" + i + "]"
+            if (log.messages[inst_msg] != null) {
+                this.data[i] = { time:[], freq:[] }
+                for (var j=0; j < log.messages[inst_msg].time_boot_ms.length; j++) {
+
+                    // Do noise weighting between axis to get a single frequency
+                    // Same as `get_weighted_freq_hz` function in AP_GyroFFT
+                    const energy_x = log.messages[inst_msg].EnX[j]
+                    const energy_y = log.messages[inst_msg].EnY[j]
+                    const freq_x = log.messages[inst_msg].PkX[j]
+                    const freq_y = log.messages[inst_msg].PkY[j]
+
+                    if ((energy_x > 0) && (energy_y > 0)) {
+                        // Weighted by relative energy
+                        this.data[i].freq[j] = (freq_x*energy_x + freq_y*energy_y) / (energy_x + energy_y)
+                    } else {
+                        // Just take average
+                        this.data[i].freq[j] = (freq_x + freq_y) * 0.5
+                    }
+                    this.data[i].time[j] = log.messages[inst_msg].time_boot_ms[j] / 1000
+                }
+            }
+        }
+    }
+
+    get_target_freq(config) {
+        const dynamic = (config.options & (1<<1)) != 0
+        if (dynamic) {
+            // Tracking multiple peaks
+            let freq = []
+            let time = []
+
+            for (let i = 0; i < this.data.length; i++) {
+                const start_index = find_start_index(this.data[i].time)
+                const end_index = find_end_index(this.data[i].time)
+
+                let inst_freq = this.data[i].freq.slice(start_index, end_index)
+                for (let j = 0; j < inst_freq.length; j++) {
+                    inst_freq[j] = math.max(inst_freq[j], config.freq)
+                }
+
+                time.push(...this.data[i].time.slice(start_index, end_index))
+                freq.push(...inst_freq)
+
+                // Add NAN to remove line from end back to the start
+                time.push(NaN)
+                freq.push(NaN)
+            }
+            return { freq:freq, time:time }
+        }
+
+        // Just center peak
+        const start_index = find_start_index(this.data.time)
+        const end_index = find_end_index(this.data.time)
+
+        let freq = this.data.PkAvg.slice(start_index, end_index)
+        for (let j = 0; j < freq.length; j++) {
+            freq[j] = math.max(freq[j], config.freq)
+        }
+
+        return { freq:freq, time:this.data.time.slice(start_index, end_index) }
+    }
+}
+
 // return hanning window array of given length (in tensorflow format)
 function hanning(len) {
     const half = tf.scalar(0.5)
@@ -16,21 +304,24 @@ function window_correction_factors(w) {
     }
 }
 
-// Frequency bins for given fft length and sample period
-function fft_freq(len, d) {
+// Length of real half of fft of len points
+function real_length(len) {
+    return math.floor(len / 2) + 1
+}
+
+// Frequency bins for given fft length and sample period (real only)
+function rfft_freq(len, d) {
+    const real_len = real_length(len)
     freq = []
-    for (var i=0;i<len;i++) {
-        freq[i] = i
-        if (i >= len/2) {
-            freq[i] -= len
-        }
-        freq[i] /= len * d
+    for (var i=0;i<real_len;i++) {
+        freq[i] = i / (len * d)
     }
     return freq
 }
 
-function run_fft(data, window_size, window_spacing, windowing_function, positive_index) {
+function run_fft(data, window_size, window_spacing, windowing_function) {
     const num_points = data.x.length
+    const real_len = real_length(window_size)
 
     var fft_x = []
     var fft_y = []
@@ -47,10 +338,11 @@ function run_fft(data, window_size, window_spacing, windowing_function, positive
     // normalize all points by the window size
     var scale = []
     scale[0] = 1 / window_size
-    for (var j=1;j<positive_index-1;j++) {
+    for (var j=1;j<real_len-1;j++) {
         scale[j] = 2 / window_size
     }
-    scale[positive_index] = 1 / window_size
+    scale[real_len-1] = 1 / window_size
+    const tf_scale = tf.tensor1d(scale)
 
     const num_windows = math.floor((num_points-window_size)/window_spacing) + 1
     for (var i=0;i<num_windows;i++) {
@@ -70,7 +362,7 @@ function run_fft(data, window_size, window_spacing, windowing_function, positive
         const p1 = p2.abs()
 
         // Apply scale and convert back to js array
-        const result = tf.mul(p1, scale).arraySync()
+        const result = tf.mul(p1, tf_scale).arraySync()
 
         fft_x[i] = result[0]
         fft_y[i] = result[1]
@@ -113,11 +405,7 @@ function run_batch_fft(data_set) {
     const window_correction = window_correction_factors(windowing_function)
 
     // Get bins
-    var bins = fft_freq(window_size, sample_time)
-
-    // discard negative spectrum
-    const positive_index = math.floor(window_size/2)
-    bins = bins.slice(0, positive_index)
+    var bins = rfft_freq(window_size, sample_time)
 
     var x = []
     var y = []
@@ -126,7 +414,7 @@ function run_batch_fft(data_set) {
     var time = []
 
     for (let i=0;i<num_batch;i++) {
-        var ret = run_fft(data_set[i], window_size, window_spacing, windowing_function, positive_index)
+        var ret = run_fft(data_set[i], window_size, window_spacing, windowing_function)
 
         time.push(...math.add(data_set[i].sample_time, math.dotMultiply(sample_time, ret.center)))
         x.push(...ret.x)
@@ -141,6 +429,7 @@ function run_batch_fft(data_set) {
 // Setup plots with no data
 var Spectrogram = {}
 var fft_plot = {}
+const max_num_harmonics = 8
 function reset() {
     let axis = ["X" , "Y", "Z"]
 
@@ -150,13 +439,16 @@ function reset() {
             document.getElementById("Gyro" + i + "Pre" + axis[j]).disabled = true
             document.getElementById("Gyro" + i + "Post" + axis[j]).disabled = true
         }
+        document.getElementById("SpecGyroInst" + i).disabled = true
+    }
+    document.getElementById("SpecGyroPre").disabled = true
+    document.getElementById("SpecGyroPost").disabled = true
+    for (let j = 0; j < 3; j++) {
+        document.getElementById("SpecGyroAxis" +  axis[j]).disabled = true
     }
 
     // Clear extra text
     document.getElementById("FFTWindowInfo").innerHTML = ""
-    document.getElementById("Gyro0_info").innerHTML = "<br>"
-    document.getElementById("Gyro1_info").innerHTML = "<br>"
-    document.getElementById("Gyro2_info").innerHTML = "<br>"
     document.getElementById("Gyro0_FFT_info").innerHTML = "<br><br><br>"
     document.getElementById("Gyro1_FFT_info").innerHTML = "<br><br><br>"
     document.getElementById("Gyro2_FFT_info").innerHTML = "<br><br><br>"
@@ -185,51 +477,57 @@ function reset() {
     fft_plot.layout = {
         xaxis: {title: {text: ""}, type: "linear"},
         yaxis: {title: {text: ""}},
+        showlegend: true,
+        legend: {itemclick: false, itemdoubleclick: false },
+        margin: { b: 50, l: 50, r: 50, t: 20 }
     }
 
     var FFTPlot = document.getElementById("FFTPlot")
     Plotly.purge(FFTPlot)
     Plotly.newPlot(FFTPlot, fft_plot.data, fft_plot.layout, {displaylogo: false});
 
-    // Disable legend click (could probably hook this into the set the ticky boxes)
-    FFTPlot.on('plotly_legendclick', function(data) { return false })
-
     // Spectrogram setup
-    // Define type
+    // Add surface
     Spectrogram.data = [{
-        type:"surface",
-        colorbar: {title: {side: "right", text: ""}},
-        contours: {
-            x: {highlight: false},
-            y: {highlight: false},
-            z: {highlight: false},
-        },
+        type:"heatmap",
+        colorbar: {title: {side: "right", text: ""}, orientation: "h"},
+        transpose: true,
+        zsmooth: "best",
         hovertemplate: ""
-    }];
+    }]
+
+    // Add tracking lines
+    // Two harmonic notch filters each with upto 8 harmonics
+    for (let i=0;i<2;i++) {
+        let Group_name = "Notch " + (i+1)
+        let dash = (i == 0) ? "solid" : "dot"
+        for (let j=0;j<max_num_harmonics;j++) {
+            let name = (j == 0) ? "Fundamental" : "Harmonic " + j
+            Spectrogram.data.push({
+                type:"scatter",
+                mode: "lines",
+                line: { width: 4, dash: dash },
+                visible: false,
+                name: name,
+                meta: Group_name + "<br>" + name,
+                legendgroup: i,
+                legendgrouptitle: { text: "" }
+            })
+        }
+    }
 
     // Define Layout
     Spectrogram.layout = {
-        margin: {
-            l: 10,
-            r: 10,
-            b: 10,
-            t: 10,
-            pad: 0
-        },
-        scene: {
-            camera: {
-                projection: { type: "orthographic"},
-                eye: { x:0, y:0, z:1 },
-            },
-            aspectratio: { x:1.4, y:4.4, z:1.4 },
-            xaxis: {showspikes: false, title: {text: ""}},
-            yaxis: {showspikes: false, title: {text: "Time (s)"}, autorange: 'reversed'},
-            zaxis: {showspikes: false, title: {text: ""}}
-        },
+        xaxis: {title: {text: "Time (s)"}},
+        yaxis: {title: {text: ""}, type: "linear"},
+        showlegend: true,
+        legend: {itemclick: false, itemdoubleclick: false },
+        margin: { b: 50, l: 50, r: 50, t: 20 }
     }
 
-    Plotly.purge("Spectrogram")
-    Plotly.newPlot("Spectrogram", Spectrogram.data, Spectrogram.layout, {modeBarButtonsToRemove: ['resetCameraDefault3d', 'orbitRotation'], displaylogo: false});
+    var SpectrogramPlot = document.getElementById("Spectrogram")
+    Plotly.purge(SpectrogramPlot)
+    Plotly.newPlot(SpectrogramPlot, Spectrogram.data, Spectrogram.layout, {displaylogo: false});
 }
 
 // Calculate if needed and re-draw, called from calculate button
@@ -242,6 +540,9 @@ function re_calc() {
 
 // Force full re-calc on next run, on window size change
 function clear_calculation() {
+    if (Gyro_batch == null) {
+        return
+    }
     for (let i = 0; i < Gyro_batch.length; i++) {
         if (Gyro_batch[i] == null) {
             continue
@@ -436,7 +737,7 @@ function redraw_Spectrogram() {
 
     const batch_instance = find_instance(gyro_instance, post_filter)
     if (batch_instance == null) {
-        console.log("Could not find matching dataset for checkbox: " + checkbox.id)
+        console.log("Could not find matching dataset")
         return
     }
 
@@ -454,10 +755,10 @@ function redraw_Spectrogram() {
     const frequency_scale = get_frequency_scale()
 
     // Setup axes
-    Spectrogram.layout.scene.xaxis.type = frequency_scale.type
-    Spectrogram.layout.scene.xaxis.title.text = frequency_scale.label
+    Spectrogram.layout.yaxis.type = frequency_scale.type
+    Spectrogram.layout.yaxis.title.text = frequency_scale.label
 
-    Spectrogram.data[0].hovertemplate = "<extra></extra>" + "%{y:.2f} s<br>" + frequency_scale.hover("x") + "<br>" + amplitude_scale.hover("z")
+    Spectrogram.data[0].hovertemplate = "<extra></extra>" + "%{x:.2f} s<br>" + frequency_scale.hover("y") + "<br>" + amplitude_scale.hover("z")
     Spectrogram.data[0].colorbar.title.text = amplitude_scale.label
 
     // Find the start and end index
@@ -467,9 +768,9 @@ function redraw_Spectrogram() {
     // Number of windows to plot
     const plot_length = end_index - start_index
 
-    // Setup xy data
-    Spectrogram.data[0].x = frequency_scale.fun(Gyro_batch[batch_instance].FFT.bins)
-    Spectrogram.data[0].y = Gyro_batch[batch_instance].FFT.time.slice(start_index, end_index)
+    // Setup xy data (x and y swapped because transpose flag is set)
+    Spectrogram.data[0].x = Gyro_batch[batch_instance].FFT.time.slice(start_index, end_index)
+    Spectrogram.data[0].y = frequency_scale.fun(Gyro_batch[batch_instance].FFT.bins)
 
     // Windowing amplitude correction depends on spectrum of interest
     const window_correction = amplitude_scale.use_PSD ? (Gyro_batch[batch_instance].FFT.correction.energy * math.sqrt(1/2)) : Gyro_batch[batch_instance].FFT.correction.linear
@@ -479,6 +780,57 @@ function redraw_Spectrogram() {
     for (j = 0; j<plot_length; j++) {
         const index = start_index + j
         Spectrogram.data[0].z[j] = amplitude_scale.fun(math.dotMultiply(Gyro_batch[batch_instance].FFT[axis][index], window_correction))
+    }
+
+    // Setup tracking lines
+    const tracking_hovertemplate = "<extra></extra>%{meta}<br>" +  "%{x:.2f} s<br>" + frequency_scale.hover("y")
+    for (let i=0;i<HNotch_setup.length;i++) {
+        // Plus one for the spectrogram plot
+        const plot_offset = i * max_num_harmonics + 1
+
+        // Hide all
+        for (let j=0;j<max_num_harmonics;j++) {
+            Spectrogram.data[plot_offset + j].visible = false
+        }
+
+        // Notch disabled, nothing to do
+        if ((HNotch_setup[i].enable <= 0) || (HNotch_setup[i].harmonics <= 0)) {
+            continue
+        }
+
+        // Find configured tracking source
+        let tracking
+        for (let j=0;j<tracking_methods.length;j++) {
+            if (HNotch_setup[i].mode == tracking_methods[j].mode_value) {
+                tracking = tracking_methods[j]
+            }
+        }
+
+        // Invalid mode
+        if (tracking == null) {
+            continue
+        }
+
+        const Group_name = "Notch " + (i+1) + ": " + tracking.name
+        const fundamental = tracking.get_target_freq(HNotch_setup[i])
+
+        // Enable each harmonic
+        for (let j=0;j<max_num_harmonics;j++) {
+            if ((HNotch_setup[i].harmonics & (1<<j)) == 0) {
+                continue
+            }
+            const harmonic_freq = math.dotMultiply(fundamental.freq, j+1)
+            if (harmonic_freq == null) {
+                break
+            }
+
+            Spectrogram.data[plot_offset + j].visible = true
+            Spectrogram.data[plot_offset + j].x = fundamental.time
+            Spectrogram.data[plot_offset + j].y = frequency_scale.fun(harmonic_freq)
+            Spectrogram.data[plot_offset + j].hovertemplate = tracking_hovertemplate
+            Spectrogram.data[plot_offset + j].legendgrouptitle.text = Group_name
+        }
+
     }
 
     Plotly.redraw("Spectrogram")
@@ -528,12 +880,50 @@ function get_param_value(param_log, name) {
     return value
 }
 
+function get_HNotch_param_names() {
+    prefix = ["INS_HNTCH_", "INS_HNTC2_"]
+    ret = []
+    for (let i = 0; i < prefix.length; i++) {
+        ret[i] = {enable: prefix[i] + "ENABLE",
+                  mode: prefix[i] + "MODE",
+                  freq: prefix[i] + "FREQ",
+                  ref: prefix[i] + "REF",
+                  min_ratio: prefix[i] + "FM_RAT",
+                  harmonics: prefix[i] + "HMNCS",
+                  options: prefix[i] + "OPTS"}
+    }
+    return ret
+}
+
+function HNotch_param_read() {
+    const HNotch_params = get_HNotch_param_names("INS_HNTCH_")
+
+    for (let i = 0; i < HNotch_params.length; i++) {
+        // Enable all params in group if enable is set
+        const enable_input = parseFloat(document.getElementById(HNotch_params[i].enable).value) > 0
+        for (const [key, value] of Object.entries(HNotch_params[i])) {
+            if (key != "enable") {
+                document.getElementById(value).disabled = !enable_input
+            }
+        }
+    }
+
+    // Load values into HNotch object
+    for (let i = 0; i < HNotch_params.length; i++) {
+        HNotch_setup[i] = []
+        for (const [key, value] of Object.entries(HNotch_params[i])) {
+            HNotch_setup[i][key] = parseFloat(document.getElementById(value).value)
+        }
+    }
+}
+
 var Gyro_batch
+var tracking_methods
+var HNotch_setup = []
 function load(log_file) {
 
     const start = performance.now()
 
-    // Clear and reset state
     var log = new DataflashParser()
     log.processData(log_file)
 
@@ -630,20 +1020,34 @@ function load(log_file) {
         return
     }
 
-    // Work out if logging is pre/post from param value
     log.parseAtOffset('PARM')
+
+    // Try and decode device IDs
+    var num_gyro = 0
+    for (let i = 0; i < 3; i++) {
+        const ID_param = i == 0 ? "INS_GYR_ID" : "INS_GYR" + (i + 1) + "_ID"
+        const ID = get_param_value(log.messages.PARM, ID_param)
+        if ((ID != null) && (ID > 0)) {
+            const decoded = decode_devid(ID, DEVICE_TYPE_IMU)
+            if (decoded != null) {
+                document.getElementById("Gyro" + i + "_info").innerHTML = decoded.name + " via " + decoded.bus_type
+            }
+            num_gyro++
+        }
+    }
+
+    // Work out if logging is pre/post from param value
     const INS_LOG_BAT_OPT = get_param_value(log.messages.PARM, "INS_LOG_BAT_OPT")
     const _doing_sensor_rate_logging = (INS_LOG_BAT_OPT & (1 << 0)) != 0
     const _doing_post_filter_logging = (INS_LOG_BAT_OPT & (1 << 1)) != 0
     const _doing_pre_post_filter_logging = (INS_LOG_BAT_OPT & (1 << 2)) != 0
     const use_instance_offset = _doing_pre_post_filter_logging || (_doing_post_filter_logging && _doing_sensor_rate_logging)
-    const instance_offset = Gyro_batch.length/2
     for (let i = 0; i < Gyro_batch.length; i++) {
         if (Gyro_batch[i] == null) {
             continue
         }
-        if (use_instance_offset && (i >= instance_offset)) {
-            Gyro_batch[i].sensor_num = i - instance_offset
+        if (use_instance_offset && (i >= num_gyro)) {
+            Gyro_batch[i].sensor_num = i - num_gyro
             Gyro_batch[i].post_filter = true
         } else {
             Gyro_batch[i].sensor_num = i
@@ -653,6 +1057,31 @@ function load(log_file) {
 
     // setup/reset plot and options
     reset()
+
+
+    // Load potential sources of notch tracking targets
+    tracking_methods = [new StaticTarget(),
+                        new ThrottleTarget(log),
+                        new RPMTarget(log, 1, 2),
+                        new ESCTarget(log),
+                        new FFTTarget(log),
+                        new RPMTarget(log, 2, 5)]
+
+    // Read from log into HTML box
+    const HNotch_params = get_HNotch_param_names()
+    for (let i = 0; i < HNotch_params.length; i++) {
+        for (const param of Object.values(HNotch_params[i])) {
+            const value = get_param_value(log.messages.PARM, param)
+            if (value != null) {
+                document.getElementById(param).value = value
+            }
+        }
+        // Allow enable values to be changed
+        document.getElementById(HNotch_params[i].enable).disabled = false 
+    }
+
+    // Load notch params
+    HNotch_param_read()
 
     // Update ranges of start and end time
     var start_time
@@ -761,18 +1190,6 @@ function load(log_file) {
         }
     }
 
-    // Try and decode device IDs
-    for (let i = 0; i < 3; i++) {
-        const ID_param = i == 0 ? "INS_GYR_ID" : "INS_GYR" + (i + 1) + "_ID"
-        const ID = get_param_value(log.messages.PARM, ID_param)
-        if (ID != null) {
-            const decoded = decode_devid(ID, DEVICE_TYPE_IMU)
-            if (decoded != null) {
-                document.getElementById("Gyro" + i + "_info").innerHTML = decoded.name + " via " + decoded.bus_type
-            }
-        }
-
-    }
 
     const end = performance.now();
     console.log(`Load took: ${end - start} ms`);
