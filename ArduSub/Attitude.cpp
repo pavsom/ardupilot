@@ -34,10 +34,11 @@ void Sub::get_pilot_desired_lean_angles(float roll_in, float pitch_in, float &ro
 // get_pilot_desired_heading - transform pilot's yaw input into a
 // desired yaw rate
 // returns desired yaw rate in centi-degrees per second
-float Sub::get_pilot_desired_yaw_rate(int16_t stick_angle) const
+float Sub::get_pilot_desired_yaw_rate(float stick_angle) const
 {
     // convert pilot input to the desired yaw rate
-    return stick_angle * g.acro_yaw_p;
+    float max = degrees(attitude_control.get_ang_vel_yaw_max_rads()) * 100.f;
+    return constrain_float(stick_angle * g.acro_yaw_p , -max, max);
 }
 
 // check for ekf yaw reset and adjust target heading
@@ -94,33 +95,19 @@ float Sub::get_pilot_desired_climb_rate(float throttle_control)
         return 0.0f;
     }
 
-    float desired_rate = 0.0f;
-    float mid_stick = channel_throttle->get_control_mid();
-    float deadband_top = mid_stick + g.throttle_deadzone;
-    float deadband_bottom = mid_stick - g.throttle_deadzone;
-
     // ensure a reasonable throttle value
     throttle_control = constrain_float(throttle_control,0.0f,1000.0f);
 
     // ensure a reasonable deadzone
     g.throttle_deadzone.set(constrain_int16(g.throttle_deadzone, 0, 400));
 
-    // check throttle is above, below or in the deadband
-    if (throttle_control < deadband_bottom) {
-        // below the deadband
-        desired_rate = get_pilot_speed_dn() * (throttle_control-deadband_bottom) / deadband_bottom;
-    } else if (throttle_control > deadband_top) {
-        // above the deadband
-        desired_rate = g.pilot_speed_up * (throttle_control-deadband_top) / (1000.0f-deadband_top);
-    } else {
-        // must be in the deadband
-        desired_rate = 0.0f;
+    uint16_t dead_zone = channel_throttle->get_dead_zone() * gain;
+    uint16_t center = (channel_throttle->get_radio_max() + channel_throttle->get_radio_min())/2;
+    float throttle = throttle_control - center + 1000;
+    if (abs(throttle) < dead_zone) {
+        return 0;
     }
-
-    // desired climb rate for logging
-    desired_climb_rate = desired_rate;
-
-    return desired_rate;
+    return throttle;
 }
 
 // get_surface_tracking_climb_rate - hold vehicle at the desired distance above the ground

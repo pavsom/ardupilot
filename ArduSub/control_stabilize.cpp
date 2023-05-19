@@ -33,7 +33,8 @@ void Sub::stabilize_run()
     get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, aparm.angle_max);
 
     // get pilot's desired yaw rate
-    float target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
+    float yaw_input = channel_yaw->pwm_to_angle_dz_trim(channel_yaw->get_dead_zone() * gain, channel_yaw->get_radio_trim());
+    float target_yaw_rate = get_pilot_desired_yaw_rate(yaw_input);
 
     // call attitude controller
     // update attitude controller targets

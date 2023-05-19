@@ -46,6 +46,7 @@
 #include <AP_Mission/AP_Mission.h>         // Mission command library
 #include <AC_AttitudeControl/AC_AttitudeControl_Sub.h> // Attitude control library
 #include <AC_AttitudeControl/AC_PosControl.h>      // Position control library
+#include <AC_AttitudeControl/AC_PosControl_Sub.h>      // Position control library
 #include <AP_Motors/AP_Motors.h>          // AP Motors library
 #include <Filter/Filter.h>             // Filter library
 #include <AP_Relay/AP_Relay.h>           // APM relay
@@ -225,6 +226,9 @@ private:
 
     // sensor health for logging
     struct {
+#ifdef sub42
+        uint8_t baro        : 1;    // true if any single baro is healthy
+#endif        
         uint8_t depth       : 1;    // true if depth sensor is healthy
         uint8_t compass     : 1;    // true if compass is healthy
     } sensor_health;
@@ -320,7 +324,7 @@ private:
     // To-Do: move inertial nav up or other navigation variables down here
     AC_AttitudeControl_Sub attitude_control;
 
-    AC_PosControl pos_control;
+    AC_PosControl_Sub pos_control;
 
     AC_WPNav wp_nav;
     AC_Loiter loiter_nav;
@@ -362,7 +366,10 @@ private:
     // setup the var_info table
     AP_Param param_loader;
 
-    uint32_t last_pilot_heading;
+    int32_t last_pilot_heading;
+    uint32_t last_input_ms;
+    int32_t last_roll;
+    int32_t last_pitch;
     uint32_t last_pilot_yaw_input_ms;
     uint32_t fs_terrain_recover_start_ms;
 
@@ -382,12 +389,13 @@ private:
     void update_altitude();
     float get_smoothing_gain();
     void get_pilot_desired_lean_angles(float roll_in, float pitch_in, float &roll_out, float &pitch_out, float angle_max);
-    float get_pilot_desired_yaw_rate(int16_t stick_angle) const;
+    float get_pilot_desired_yaw_rate(float stick_angle) const;
     void check_ekf_yaw_reset();
     float get_roi_yaw();
     float get_look_ahead_yaw();
     float get_pilot_desired_climb_rate(float throttle_control);
     float get_surface_tracking_climb_rate(int16_t target_rate, float current_alt_target, float dt);
+    void update_poscon_alt_max();
     void rotate_body_frame_to_NE(float &x, float &y);
     void Log_Write_Control_Tuning();
     void Log_Write_Attitude();
@@ -396,6 +404,7 @@ private:
     void Log_Write_Data(LogDataID id, int16_t value);
     void Log_Write_Data(LogDataID id, uint16_t value);
     void Log_Write_Data(LogDataID id, float value);
+    void Log_Sensor_Health();
     void Log_Write_GuidedTarget(uint8_t target_type, const Vector3f& pos_target, const Vector3f& vel_target);
     void Log_Write_Vehicle_Startup_Messages();
     void load_parameters(void) override;
@@ -421,6 +430,7 @@ private:
     void get_pilot_desired_angle_rates(int16_t roll_in, int16_t pitch_in, int16_t yaw_in, float &roll_out, float &pitch_out, float &yaw_out);
     bool althold_init(void);
     void althold_run();
+    void handle_attitude();
     bool auto_init(void);
     void auto_run();
     void auto_wp_start(const Vector3f& destination);
@@ -498,6 +508,8 @@ private:
     void set_surfaced(bool at_surface);
     void set_bottomed(bool at_bottom);
     void motors_output();
+    Vector3f pv_location_to_vector(const Location& loc);
+    float pv_alt_above_origin(float alt_above_home_cm);
     void init_rc_in();
     void init_rc_out();
     void enable_motor_output();
@@ -589,6 +601,7 @@ private:
     bool get_wp_distance_m(float &distance) const override;
     bool get_wp_bearing_deg(float &bearing) const override;
     bool get_wp_crosstrack_error_m(float &xtrack_error) const override;
+    float stopping_distance();
 
     enum Failsafe_Action {
         Failsafe_Action_None    = 0,

@@ -58,6 +58,9 @@ void Sub::Log_Write_Attitude()
     ahrs.Write_Attitude(targets);
 
     AP::ahrs().Log_Write();
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+    sitl.Log_Write_SIMSTATE();
+#endif
 }
 
 struct PACKED log_Data_Int16t {
@@ -165,6 +168,23 @@ void Sub::Log_Write_Data(LogDataID id, float value)
             data_value  : value
         };
         logger.WriteCriticalBlock(&pkt, sizeof(pkt));
+    }
+}
+
+// logs when baro or compass becomes unhealthy
+void Sub::Log_Sensor_Health()
+{
+#ifdef sub42    
+    // check baro
+    if (sensor_health.baro != barometer.healthy()) {
+        sensor_health.baro = barometer.healthy();
+        AP::logger().Write_Error(LogErrorSubsystem::BARO, (sensor_health.baro ? LogErrorCode::ERROR_RESOLVED : LogErrorCode::UNHEALTHY));
+    }
+#endif
+    // check compass
+    if (sensor_health.compass != compass.healthy()) {
+        sensor_health.compass = compass.healthy();
+        AP::logger().Write_Error(LogErrorSubsystem::COMPASS, (sensor_health.compass ? LogErrorCode::ERROR_RESOLVED : LogErrorCode::UNHEALTHY));
     }
 }
 
@@ -298,6 +318,7 @@ void Sub::Log_Write_Data(LogDataID id, uint32_t value) {}
 void Sub::Log_Write_Data(LogDataID id, int16_t value) {}
 void Sub::Log_Write_Data(LogDataID id, uint16_t value) {}
 void Sub::Log_Write_Data(LogDataID id, float value) {}
+void Sub::Log_Sensor_Health() {}
 void Sub::Log_Write_GuidedTarget(uint8_t target_type, const Vector3f& pos_target, const Vector3f& vel_target) {}
 void Sub::Log_Write_Vehicle_Startup_Messages() {}
 

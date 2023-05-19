@@ -29,6 +29,7 @@ public:
         SUB_FRAME_CUSTOM
     } sub_frame_t;
 
+    const char* _get_frame_string() const override { return _frame_class_string; };
     // Override parent
     void setup_motors(motor_frame_class frame_class, motor_frame_type frame_type) override;
 
@@ -49,6 +50,13 @@ public:
 
     bool set_reversed(int motor_number, bool reversed);
 
+    // This allows us to read back the output of the altidude controllers
+    // The controllers are in charge of the throttle input, so this gives vehicle access/visibility to the output of those controllers
+    float get_throttle_in_bidirectional() const { return constrain_float(2*(_throttle_in - 0.5f), -1.0f, 1.0f); }
+
+    // Sub assumes vehicles are neutrally buoyant
+    virtual float get_throttle_hover() const override { return 0.5f; }
+    
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo        var_info[];
 

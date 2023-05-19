@@ -401,6 +401,14 @@ const AP_Param::Info Sub::var_info[] = {
     // @User: Advanced
     GSCALAR(acro_expo,  "ACRO_EXPO",    ACRO_EXPO_DEFAULT),
 
+    // @Param: CONTROL_FRAME
+    // @DisplayName: Control Frame
+    // @Description: Control Frame used in stabilized modes
+    // @Values: 0: Standard, 1: Body frame Yaw/Pitch/Roll
+    // @User: Standard
+
+    GSCALAR(control_frame,  "CONTROL_FRAME",    CONTROL_FRAME_DEFAULT),
+    
     // variables not in the g class which contain EEPROM saved variables
 
 #if AP_CAMERA_ENABLED
@@ -714,9 +722,33 @@ void Sub::load_parameters()
     AP_Param::set_default_by_name("MNT1_RC_RATE", 30);
     AP_Param::set_default_by_name("RC7_OPTION", 214);   // MOUNT1_YAW
     AP_Param::set_default_by_name("RC8_OPTION", 213);   // MOUNT1_PITCH
+    AP_Param::set_default_by_name("BRD_RTC_TYPE", 3);
+    AP_Param::set_default_by_name("BARO_PROBE_EXT", 768);
+    AP_Param::set_default_by_name("PSC_JERK_Z", 50.0f);
+    AP_Param::set_default_by_name("WPNAV_SPEED", 100.0f);
+    AP_Param::set_default_by_name("PILOT_SPEED_UP", 100.0f);
+    AP_Param::set_default_by_name("PSC_JERK_Z", 50.0f);
+    AP_Param::set_default_by_name("PSC_VELXY_P", 6.0f);
+    AP_Param::set_default_by_name("EK3_SRC1_VELZ", 0);
+
+    AP_Param::set_by_name("MNT_RC_IN_PAN", 7);
+    AP_Param::set_by_name("MNT_RC_IN_TILT", 8);
     // We should ignore this parameter since ROVs are neutral buoyancy
     AP_Param::set_by_name("MOT_THST_HOVER", 0.5);
-
+    #if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_NAVIGATOR
+    AP_Param::set_default_by_name("BARO_PROBE_EXT", 0);
+    AP_Param::set_default_by_name("BATT_MONITOR", 4);
+    AP_Param::set_default_by_name("BATT_CAPACITY", 0);
+    AP_Param::set_default_by_name("LEAK1_PIN", 27);
+    AP_Param::set_default_by_name("SERVO13_FUNCTION", 59);
+    AP_Param::set_default_by_name("SERVO14_FUNCTION", 60);
+    AP_Param::set_default_by_name("SERVO16_FUNCTION", 7);
+    AP_Param::set_default_by_name("SCHED_LOOP_RATE", 200);
+    AP_Param::set_default_by_name("SERVO16_REVERSED", 1);
+#else
+    AP_Param::set_default_by_name("SERVO9_FUNCTION", 59);
+    AP_Param::set_default_by_name("SERVO10_FUNCTION", 7);
+#endif
 // PARAMETER_CONVERSION - Added: JAN-2022
 #if AP_AIRSPEED_ENABLED
     // Find G2's Top Level Key

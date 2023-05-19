@@ -126,6 +126,11 @@
 #define ACRO_EXPO_DEFAULT          0.3f
 #endif
 
+// should be a subset of MAV_FRAME
+#ifndef CONTROL_FRAME_DEFAULT
+#define CONTROL_FRAME_DEFAULT      0.0f
+#endif
+
 // AUTO Mode
 #ifndef WP_YAW_BEHAVIOR_DEFAULT
 # define WP_YAW_BEHAVIOR_DEFAULT   WP_YAW_BEHAVIOR_CORRECT_XTRACK
@@ -173,7 +178,7 @@
 
 // default maximum vertical velocity and acceleration the pilot may request
 #ifndef PILOT_VELZ_MAX
-# define PILOT_VELZ_MAX    500     // maximum vertical velocity in cm/s
+# define PILOT_VELZ_MAX    100     // maximum vertical velocity in cm/s
 #endif
 #ifndef PILOT_ACCEL_Z_DEFAULT
 # define PILOT_ACCEL_Z_DEFAULT 100 // vertical acceleration in cm/s/s while altitude is under pilot control

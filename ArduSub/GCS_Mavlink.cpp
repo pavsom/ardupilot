@@ -136,12 +136,12 @@ bool GCS_MAVLINK_Sub::send_info()
     CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
     send_named_float("Lights2",
                      SRV_Channels::get_output_norm(SRV_Channel::k_rcin10) / 2.0f + 0.5f);
-
+*/
     CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
-    send_named_float("PilotGain", sub.gain); */
+    send_named_float("PilotGain", sub.gain); 
 
-    CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
-    send_named_float("InputHold", sub.input_hold_engaged);
+    /* CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
+    send_named_float("InputHold", sub.input_hold_engaged); */
 
     /* CHECK_PAYLOAD_SIZE(NAMED_VALUE_FLOAT);
     send_named_float("RollPitch", sub.roll_pitch_flag); */
@@ -356,8 +356,8 @@ static const ap_message STREAM_EXTENDED_STATUS_msgs[] = {
     MSG_GPS2_RAW,
     MSG_GPS2_RTK,
     MSG_NAV_CONTROLLER_OUTPUT,
-    MSG_FENCE_STATUS//,
-    //MSG_NAMED_FLOAT
+    MSG_FENCE_STATUS,
+    MSG_NAMED_FLOAT
 };
 static const ap_message STREAM_POSITION_msgs[] = {
     MSG_LOCATION,
@@ -416,6 +416,16 @@ const struct GCS_MAVLINK::stream_entries GCS_MAVLINK::all_stream_entries[] = {
 bool GCS_MAVLINK_Sub::handle_guided_request(AP_Mission::Mission_Command &cmd)
 {
     return sub.do_guided(cmd);
+}
+
+void GCS_MAVLINK_Sub::handle_change_alt_request(AP_Mission::Mission_Command &cmd)
+{
+    // add home alt if needed
+    if (cmd.content.location.relative_alt) {
+        cmd.content.location.alt += sub.ahrs.get_home().alt;
+    }
+
+    // To-Do: update target altitude for loiter or waypoint controller depending upon nav mode
 }
 
 MAV_RESULT GCS_MAVLINK_Sub::_handle_command_preflight_calibration_baro(const mavlink_message_t &msg)
@@ -633,6 +643,12 @@ void GCS_MAVLINK_Sub::handleMessage(const mavlink_message_t &msg)
                     packet.coordinate_frame == MAV_FRAME_BODY_OFFSET_NED) {
                 pos_vector += sub.inertial_nav.get_position_neu_cm();
             }
+#ifdef sub42
+            else{
+                // convert from alt-above-home to alt-above-ekf-origin
+                pos_vector.z = sub.pv_alt_above_origin(pos_vector.z);
+            }
+#endif            
         }
 
         // prepare velocity
