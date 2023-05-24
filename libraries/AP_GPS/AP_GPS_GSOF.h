@@ -16,7 +16,8 @@
 //
 //  Trimble GPS driver for ArduPilot.
 //	Code by Michael Oborne
-//
+//  https://receiverhelp.trimble.com/oem-gnss/index.html#Welcome.html?TocPath=_____1
+
 #pragma once
 
 #include "AP_GPS.h"
@@ -82,6 +83,6 @@ private:
 
     uint32_t gsofmsg_time = 0;
     uint8_t gsofmsgreq_index = 0;
-    uint8_t gsofmsgreq[5] = {1,2,8,9,12};
+    const uint8_t gsofmsgreq[5] = {1,2,8,9,12};
 };
 #endif

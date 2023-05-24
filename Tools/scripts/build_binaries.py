@@ -565,7 +565,7 @@ is bob we will attempt to checkout bob-AVR'''
 
         self.checkout(vehicle, "latest")
 
-    def get_exception_stacktrace(self, e):
+    def _get_exception_stacktrace(self, e):
         if sys.version_info[0] >= 3:
             ret = "%s\n" % e
             ret += ''.join(traceback.format_exception(type(e),
@@ -575,6 +575,12 @@ is bob we will attempt to checkout bob-AVR'''
 
         # Python2:
         return traceback.format_exc(e)
+
+    def get_exception_stacktrace(self, e):
+        try:
+            return self._get_exception_stacktrace(e)
+        except Exception:
+            return "FAILED TO GET EXCEPTION STACKTRACE"
 
     def print_exception_caught(self, e, send_statustext=True):
         self.progress("Exception caught: %s" %
@@ -758,7 +764,7 @@ if __name__ == '__main__':
     tags = cmd_opts.tags
     if len(tags) == 0:
         # FIXME: wedge this defaulting into parser somehow
-        tags = ["stable", "beta", "latest"]
+        tags = ["stable", "beta-4.3", "beta", "latest"]
 
     bb = build_binaries(tags)
     bb.run()
