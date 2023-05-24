@@ -42,33 +42,6 @@ float Sub::stopping_distance() {
     return curr_pos_z  + distance;
 }
 
-// althold_run - runs the althold controller
-// should be called at 100hz or more
-void Sub::althold_run()
-{
-
-    if (!motors.armed()) {
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        // Sub vehicles do not stabilize roll/pitch/yaw when not auto-armed (i.e. on the ground, pilot has never raised throttle)
-        attitude_control.set_throttle_out(0.75,true,100.0);
-        attitude_control.relax_attitude_controllers();
-        //pos_control.relax_z_controller(motors.get_throttle_hover());
-        pos_control.init_z_controller();
-        // initialise position and desired velocity
-        float pos = stopping_distance();
-        float zero = 0;
-        pos_control.input_pos_vel_accel_z(pos, zero, zero);
-        last_roll = 0;
-        last_pitch = 0;
-        last_pilot_heading = ahrs.yaw_sensor;
-        return;
-    }
-
-    handle_attitude();
-
-    control_depth();
-}
-
 void Sub::handle_attitude()
 {
     uint32_t tnow = AP_HAL::millis();
@@ -149,6 +122,33 @@ void Sub::handle_attitude()
             }
         }
     }
+}
+
+// althold_run - runs the althold controller
+// should be called at 100hz or more
+void Sub::althold_run()
+{
+
+    if (!motors.armed()) {
+        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
+        // Sub vehicles do not stabilize roll/pitch/yaw when not auto-armed (i.e. on the ground, pilot has never raised throttle)
+        attitude_control.set_throttle_out(0.75,true,100.0);
+        attitude_control.relax_attitude_controllers();
+        //pos_control.relax_z_controller(motors.get_throttle_hover());
+        pos_control.init_z_controller();
+        // initialise position and desired velocity
+        float pos = stopping_distance();
+        float zero = 0;
+        pos_control.input_pos_vel_accel_z(pos, zero, zero);
+        last_roll = 0;
+        last_pitch = 0;
+        last_pilot_heading = ahrs.yaw_sensor;
+        return;
+    }
+
+    handle_attitude();
+
+    control_depth();
 }
 
 void Sub::control_depth() {

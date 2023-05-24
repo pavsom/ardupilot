@@ -650,7 +650,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
 
     // @Group: RC
     // @Path: ../libraries/RC_Channel/RC_Channels_VarInfo.h
-    AP_SUBGROUPINFO(rc_channels, "RC", 17, ParametersG2, RC_Channels),
+    AP_SUBGROUPINFO(rc_channels, "RC", 17, ParametersG2, RC_Channels_Sub),
 
 #if AP_SCRIPTING_ENABLED
     // @Group: SCR_
@@ -672,10 +672,22 @@ ParametersG2::ParametersG2()
 }
 
 const AP_Param::ConversionInfo conversion_table[] = {
+    // battery
+    // PARAMETER_CONVERSION - Added: Mar-2018
     { Parameters::k_param_fs_batt_voltage,   0,      AP_PARAM_FLOAT,  "BATT_LOW_VOLT" },
     { Parameters::k_param_fs_batt_mah,       0,      AP_PARAM_FLOAT,  "BATT_LOW_MAH" },
     { Parameters::k_param_failsafe_battery_enabled,       0,      AP_PARAM_INT8,  "BATT_FS_LOW_ACT" },
+
+    // PARAMETER_CONVERSION - Added: Aug-2018
+    { Parameters::Parameters::k_param_ch7_option_old,   0,      AP_PARAM_INT8,  "RC7_OPTION" },
+    { Parameters::Parameters::k_param_ch8_option_old,   0,      AP_PARAM_INT8,  "RC8_OPTION" },
+    { Parameters::Parameters::k_param_ch9_option_old,   0,      AP_PARAM_INT8,  "RC9_OPTION" },
+    { Parameters::Parameters::k_param_ch10_option_old,   0,      AP_PARAM_INT8,  "RC10_OPTION" },
+    { Parameters::Parameters::k_param_ch11_option_old,   0,      AP_PARAM_INT8,  "RC11_OPTION" },
+    { Parameters::Parameters::k_param_ch12_option_old,   0,      AP_PARAM_INT8,  "RC12_OPTION" },
+    // PARAMETER_CONVERSION - Added: Apr-2019
     { Parameters::k_param_compass_enabled_deprecated,       0,      AP_PARAM_INT8, "COMPASS_ENABLE" },
+    // PARAMETER_CONVERSION - Added: Jul-2019
     { Parameters::k_param_arming,            2,     AP_PARAM_INT16,  "ARMING_CHECK" },
 };
 

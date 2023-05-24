@@ -22,12 +22,15 @@ bool Sub::poshold_init()
 
     // initialise position and desired velocity
     pos_control.init_xy_controller_stopping_point();
+    // Stop all thrusters
+    attitude_control.set_throttle_out(0.75,true,100.0);
+    
     pos_control.init_z_controller();
 
-    // Stop all thrusters
-    attitude_control.set_throttle_out(0.5f ,true, g.throttle_filt);
-    attitude_control.relax_attitude_controllers();
-    pos_control.relax_z_controller(0.5f);
+    // initialise position and desired velocity
+    float pos = stopping_distance();
+    float zero = 0;
+    pos_control.input_pos_vel_accel_z(pos, zero, zero);
 
     last_pilot_heading = ahrs.yaw_sensor;
 
@@ -43,9 +46,9 @@ void Sub::poshold_run()
     if (!motors.armed()) {
         motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
         // Sub vehicles do not stabilize roll/pitch/yaw when not auto-armed (i.e. on the ground, pilot has never raised throttle)
-        attitude_control.set_throttle_out(0.5f ,true, g.throttle_filt);
+        attitude_control.set_throttle_out(0.75f ,true, g.throttle_filt);
         attitude_control.relax_attitude_controllers();
-        pos_control.init_xy_controller_stopping_point();
+        pos_control.relax_velocity_controller_xy();
         pos_control.relax_z_controller(0.5f);
         last_pilot_heading = ahrs.yaw_sensor;
         return;
@@ -72,8 +75,6 @@ void Sub::poshold_run()
     } else {
         pos_control.init_xy_controller_stopping_point();
     }
-    motors.set_forward(forward_out + pilot_forward);
-    motors.set_lateral(lateral_out + pilot_lateral);
     /////////////////////
     // Update attitude //
 
@@ -110,5 +111,8 @@ void Sub::poshold_run()
 
     // Update z axis //
     control_depth();
+
+    motors.set_forward(motors.get_forward() + forward_out + pilot_forward);
+    motors.set_lateral(motors.get_lateral() + lateral_out + pilot_lateral);
 }
 #endif  // POSHOLD_ENABLED == ENABLED
