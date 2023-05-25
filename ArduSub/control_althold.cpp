@@ -44,8 +44,8 @@ float Sub::stopping_distance() {
 
 void Sub::handle_attitude()
 {
+    //static uint32_t slowpoke = 0;
     uint32_t tnow = AP_HAL::millis();
-
     // initialize vertical speeds and acceleration
     pos_control.set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
     motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
@@ -73,7 +73,18 @@ void Sub::handle_attitude()
     }
     get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, attitude_control.get_althold_lean_angle_max_cd());
     float yaw_input =  channel_yaw->pwm_to_angle_dz_trim(channel_yaw->get_dead_zone() * gain, channel_yaw->get_radio_trim());
+    /* if (++slowpoke  > 200)
+        printf("dz  %4d  ",channel_yaw->get_dead_zone());
+    if (slowpoke  > 200)
+        printf("gain  %4d  ",static_cast<int16_t>((gain)*100));
+    if (slowpoke  > 200)
+    /    printf("trim  %4d  ",channel_yaw->get_radio_trim());
+    if (slowpoke  > 200)
+        printf("yaw_input  %4d  ",static_cast<int16_t>(yaw_input)); */
+
     target_yaw = get_pilot_desired_yaw_rate(yaw_input);
+    //if (slowpoke  > 200)
+    //    printf("target_yaw  %4d  \n\r",static_cast<int32_t>((target_yaw)));
     // If we don't have a mavlink attitude target, we use the pilot's input instead
     switch (g.control_frame) {
         case MAV_FRAME_BODY_FRD:
@@ -122,6 +133,7 @@ void Sub::handle_attitude()
             }
         }
     }
+    //if (slowpoke  > 200) slowpoke = 0;
 }
 
 // althold_run - runs the althold controller
@@ -151,29 +163,62 @@ void Sub::althold_run()
     control_depth();
 }
 
+#define slowpokeRate 200
 void Sub::control_depth() {
+    static uint32_t slowpoke = 0;
+    slowpoke++;
     // We rotate the RC inputs to the earth frame to check if the user is giving an input that would change the depth.
     // Output the Z controller + pilot input to all motors.
     Vector3f earth_frame_rc_inputs = ahrs.get_rotation_body_to_ned() * Vector3f(-channel_forward->norm_input(), -channel_lateral->norm_input(), (2.0f*(-0.5f+channel_throttle->norm_input())));
     float target_climb_rate_cm_s = get_pilot_desired_climb_rate(500 + g.pilot_speed_up * earth_frame_rc_inputs.z);
 
+    
+    if (slowpoke  > slowpokeRate){
+        printf("depth  %4d  ",static_cast<int32_t>(barometer.get_altitude()*100));
+        printf("Zrate  %4d  ",static_cast<int32_t>(target_climb_rate_cm_s));
+    }
+
+
     bool surfacing = ap.at_surface || pos_control.get_pos_target_z_cm() > g.surface_depth;
     float upper_speed_limit = surfacing ? 0 : g.pilot_speed_up;
     float lower_speed_limit = ap.at_bottom ? 0 : -get_pilot_speed_dn();
     target_climb_rate_cm_s = constrain_float(target_climb_rate_cm_s, lower_speed_limit, upper_speed_limit);
+
+    if (slowpoke  > slowpokeRate)
+        printf("surf=%d Z1  %4d  ",static_cast<int16_t>(g.surface_depth),static_cast<int16_t>((pos_control.get_pos_target_z_cm())));
+    if (slowpoke  > slowpokeRate){
+        printf("atSurf %s", ap.at_surface? "yes  " : "no  ");
+    }
+    if (slowpoke  > slowpokeRate)
+        printf("upSpLim  %4d  ",static_cast<int32_t>(upper_speed_limit));
+    if (slowpoke  > slowpokeRate)
+        printf("loSpLim  %4d  ",static_cast<int32_t>(lower_speed_limit));
+    if (slowpoke  > slowpokeRate)
+        printf("Zrate  %4d  ",static_cast<int32_t>(target_climb_rate_cm_s));
+
     pos_control.set_pos_target_z_from_climb_rate_cm(target_climb_rate_cm_s);
+    
+    if (slowpoke  > slowpokeRate)
+        printf("Z2  %4d  ",static_cast<int16_t>((pos_control.get_pos_target_z_cm())));
+    
+
 
     if (surfacing) {
         pos_control.set_alt_target_with_slew(MIN(pos_control.get_pos_target_z_cm(), g.surface_depth - 5.0f)); // set target to 5 cm below surface level
     } else if (ap.at_bottom) {
         pos_control.set_alt_target_with_slew(MAX(inertial_nav.get_position_z_up_cm() + 10.0f, pos_control.get_pos_target_z_cm())); // set target to 10 cm above bottom
     }
+    if (slowpoke  > slowpokeRate)
+        printf("Z3  %4d  ",static_cast<int16_t>((pos_control.get_pos_target_z_cm())));
     pos_control.update_z_controller();
     // Read the output of the z controller and rotate it so it always points up
     Vector3f throttle_vehicle_frame = ahrs.get_rotation_body_to_ned().transposed() * Vector3f(0, 0, motors.get_throttle_in_bidirectional());
     //TODO: scale throttle with the ammount of thrusters in the given direction
     float raw_throttle_factor = (ahrs.get_rotation_body_to_ned() * Vector3f(0, 0, 1.0)).xy().length();
     motors.set_throttle(throttle_vehicle_frame.z + raw_throttle_factor * channel_throttle->norm_input());
+    if (slowpoke  > slowpokeRate)
+        printf("throttle  %4d  \n\r",static_cast<int16_t>((throttle_vehicle_frame.z + raw_throttle_factor * channel_throttle->norm_input())*100));
     motors.set_forward(-throttle_vehicle_frame.x + channel_forward->norm_input());
     motors.set_lateral(-throttle_vehicle_frame.y + channel_lateral->norm_input());
+    if (slowpoke  > slowpokeRate) slowpoke = 0;
 }

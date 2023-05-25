@@ -37,6 +37,11 @@ void Sub::get_pilot_desired_lean_angles(float roll_in, float pitch_in, float &ro
 float Sub::get_pilot_desired_yaw_rate(float stick_angle) const
 {
     // convert pilot input to the desired yaw rate
+
+    if (!attitude_control.get_ang_vel_yaw_max_rads()){
+        if (!g.acro_yaw_p) return stick_angle;
+        return stick_angle * g.acro_yaw_p;
+    }
     float max = degrees(attitude_control.get_ang_vel_yaw_max_rads()) * 100.f;
     return constrain_float(stick_angle * g.acro_yaw_p , -max, max);
 }

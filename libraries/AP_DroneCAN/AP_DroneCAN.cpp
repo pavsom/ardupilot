@@ -375,6 +375,10 @@ void AP_DroneCAN::loop(void)
             }
 
             // if we have any ESC's in bitmask
+            /* printf("_esc_bm = %d, sent_servos = %d \n\r", _esc_bm, sent_servos);
+            hal.scheduler->delay(10); */
+            bool armed = hal.util->get_soft_armed();
+            if (armed){
             if (_esc_bm > 0 && !sent_servos) {
 #if AP_DRONECAN_HOBBYWING_ESC_SUPPORT
                 if (option_is_set(Options::USE_HOBBYWING_ESC)) {

@@ -56,7 +56,7 @@ void Sub::userhook_SuperSlowLoop()
     printf("RC input yaw   = %3d  ",static_cast<int8_t>(channel_yaw->norm_input()*100)); 
     printf("RC sttrafe = %3d\n\r\n\r",static_cast<int8_t>(channel_lateral->norm_input()*100));   */
 
-    printf(" js0 %4d  ",static_cast<int8_t>(RC_Channels::rc_channel(0)->norm_input()*100)); 
+   /*  printf(" js0 %4d  ",static_cast<int8_t>(RC_Channels::rc_channel(0)->norm_input()*100)); 
     printf(" js1 %4d  ",static_cast<int8_t>(RC_Channels::rc_channel(1)->norm_input()*100)); 
     printf(" js2 %4d  ",static_cast<int8_t>(RC_Channels::rc_channel(2)->norm_input()*100)); 
     printf(" js3 %4d  ",static_cast<int8_t>(RC_Channels::rc_channel(3)->norm_input()*100)); 
@@ -83,7 +83,7 @@ void Sub::userhook_SuperSlowLoop()
     printf("sr4 %4d  ",SRV_Channels::srv_channel(4)->get_output_pwm());
     printf("sr5 %4d  ",SRV_Channels::srv_channel(5)->get_output_pwm());
     printf("sr6 %4d  ",SRV_Channels::srv_channel(6)->get_output_pwm());
-    printf("sr7 %4d  \n\r\n\r",SRV_Channels::srv_channel(7)->get_output_pwm());
+    printf("sr7 %4d  \n\r\n\r",SRV_Channels::srv_channel(7)->get_output_pwm()); */
     
 
     
