@@ -37,6 +37,7 @@ from pymavlink import mavwp, mavutil, DFReader
 from pymavlink import mavextra
 from pymavlink.rotmat import Vector3
 from pymavlink import quaternion
+from pymavlink.generator import mavgen
 
 from pysim import util, vehicleinfo
 
@@ -2272,7 +2273,6 @@ class AutoTest(ABC):
             "SIM_GPS2_POS_X",
             "SIM_GPS2_POS_Y",
             "SIM_GPS2_POS_Z",
-            "SIM_GPS2_TYPE",
             "SIM_GPS2_VERR_X",
             "SIM_GPS2_VERR_Y",
             "SIM_GPS2_VERR_Z",
@@ -2293,7 +2293,6 @@ class AutoTest(ABC):
             "SIM_GPS_POS_X",
             "SIM_GPS_POS_Y",
             "SIM_GPS_POS_Z",
-            "SIM_GPS_TYPE",
             "SIM_GPS_VERR_X",
             "SIM_GPS_VERR_Y",
             "SIM_GPS_VERR_Z",
@@ -4236,6 +4235,12 @@ class AutoTest(ABC):
         away'''
         self.install_test_modules()
         self.context_get().installed_modules.append("test")
+
+    def install_mavlink_module_context(self):
+        '''installs mavlink module which will be removed when the context goes
+        away'''
+        self.install_mavlink_module()
+        self.context_get().installed_modules.append("mavlink")
 
     def install_applet_script_context(self, scriptname):
         '''installs an applet script which will be removed when the context goes
@@ -7667,6 +7672,13 @@ Also, ignores heartbeats not from our target system'''
         self.progress("Copying (%s) to (%s)" % (source, dest))
         shutil.copytree(source, dest)
 
+    def install_mavlink_module(self):
+        dest = os.path.join("scripts", "modules", "mavlink")
+        ardupilotmega_xml = os.path.join(self.rootdir(), "modules", "mavlink",
+                                         "message_definitions", "v1.0", "ardupilotmega.xml")
+        mavgen.mavgen(mavgen.Opts(output=dest, wire_protocol='2.0', language='Lua'), [ardupilotmega_xml])
+        self.progress("Installed mavlink module")
+
     def install_example_script(self, scriptname):
         source = self.script_example_source_path(scriptname)
         self.install_script(source, scriptname)
@@ -10594,6 +10606,78 @@ Also, ignores heartbeats not from our target system'''
         self.progress("Getting back to home and disarm")
         self.do_RTL(distance_min=0, distance_max=wp_accuracy)
         self.disarm_vehicle()
+
+    def SetpointBadVel(self, timeout=30):
+        '''try feeding in a very, very bad velocity and make sure it is ignored'''
+        self.takeoff(mode='GUIDED')
+        # following values from a real log:
+        target_speed = Vector3(-3.6019095525029597e+30,
+                               1.7796490496925177e-41,
+                               3.0557017120313744e-26)
+
+        self.progress("Feeding in bad global data, hoping we don't move")
+
+        def send_speed_vector_global_int(vector , mav_frame):
+            self.mav.mav.set_position_target_global_int_send(
+                0,  # timestamp
+                self.sysid_thismav(),  # target system_id
+                1,  # target component id
+                mav_frame,
+                MAV_POS_TARGET_TYPE_MASK.POS_IGNORE |
+                MAV_POS_TARGET_TYPE_MASK.ACC_IGNORE |
+                MAV_POS_TARGET_TYPE_MASK.YAW_IGNORE |
+                MAV_POS_TARGET_TYPE_MASK.YAW_RATE_IGNORE,
+                0,
+                0,
+                0,
+                vector.x,  # vx
+                vector.y,  # vy
+                vector.z,  # vz
+                0,  # afx
+                0,  # afy
+                0,  # afz
+                0,  # yaw
+                0,  # yawrate
+            )
+        self.wait_speed_vector(
+            Vector3(0, 0, 0),
+            timeout=timeout,
+            called_function=lambda plop, empty: send_speed_vector_global_int(target_speed, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT),  # noqa
+            minimum_duration=10
+        )
+
+        self.progress("Feeding in bad local data, hoping we don't move")
+
+        def send_speed_vector_local_ned(vector , mav_frame):
+            self.mav.mav.set_position_target_local_ned_send(
+                0,  # timestamp
+                self.sysid_thismav(),  # target system_id
+                1,  # target component id
+                mav_frame,
+                MAV_POS_TARGET_TYPE_MASK.POS_IGNORE |
+                MAV_POS_TARGET_TYPE_MASK.ACC_IGNORE |
+                MAV_POS_TARGET_TYPE_MASK.YAW_IGNORE |
+                MAV_POS_TARGET_TYPE_MASK.YAW_RATE_IGNORE,
+                0,
+                0,
+                0,
+                vector.x,  # vx
+                vector.y,  # vy
+                vector.z,  # vz
+                0,  # afx
+                0,  # afy
+                0,  # afz
+                0,  # yaw
+                0,  # yawrate
+            )
+        self.wait_speed_vector(
+            Vector3(0, 0, 0),
+            timeout=timeout,
+            called_function=lambda plop, empty: send_speed_vector_local_ned(target_speed, mavutil.mavlink.MAV_FRAME_LOCAL_NED),  # noqa
+            minimum_duration=10
+        )
+
+        self.do_RTL()
 
     def SetpointGlobalVel(self, timeout=30):
         """Test set position message in guided mode."""

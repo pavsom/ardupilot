@@ -2145,6 +2145,14 @@ function vehicle:nav_script_time() end
 function vehicle:reboot(hold_in_bootloader) end
 
 -- desc
+---@return boolean
+function vehicle:is_taking_off() end
+
+-- desc
+---@return boolean
+function vehicle:is_landing() end
+
+-- desc
 ---@class onvif
 onvif = {}
 
@@ -2857,3 +2865,29 @@ function dirlist(directoryname) end
 --desc
 --@param filename
 function remove(filename) end
+
+-- desc
+---@class mavlink
+mavlink = {}
+
+-- initializes mavlink
+--@param num_rx_msgid number
+--@param msg_queue_length
+function mavlink:init(num_rx_msgid, msg_queue_length) end
+
+-- marks mavlink message for receive, message id can be get using mavlink_msgs.get_msgid("MSG_NAME")
+--@param msg_id number
+function mavlink:register_rx_msgid(msg_id) end
+
+-- receives mavlink message marked for receive using mavlink:register_rx_msgid
+--@return mavlink_message bytes
+--@return mavlink_channel number
+--@return receive_timestamp number
+function mavlink:receive_chan() end
+
+-- sends mavlink message, to use this function the call should be like this:
+-- mavlink:send(chan, mavlink_msgs.encode("MSG_NAME", {param1 = value1, param2 = value2, ...}})
+--@param mavlink_channel integer
+--@param mavlink_message_id integer
+--@param encoded_message_packet bytes
+function mavlink:send_chan(chan, msgid, message) end

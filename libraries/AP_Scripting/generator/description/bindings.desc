@@ -277,6 +277,8 @@ singleton AP_Vehicle method set_velocity_match boolean Vector2f
 singleton AP_Vehicle method set_land_descent_rate boolean float'skip_check
 singleton AP_Vehicle method has_ekf_failsafed boolean
 singleton AP_Vehicle method reboot void boolean
+singleton AP_Vehicle method is_landing boolean
+singleton AP_Vehicle method is_taking_off boolean
 
 include AP_SerialLED/AP_SerialLED.h
 singleton AP_SerialLED rename serialLED
@@ -720,3 +722,8 @@ userdata uint32_t manual tofloat uint32_t_tofloat 0
 
 global manual dirlist lua_dirlist 1
 global manual remove lua_removefile 1
+
+singleton mavlink manual init lua_mavlink_init 2
+singleton mavlink manual register_rx_msgid lua_mavlink_register_rx_msgid 1
+singleton mavlink manual send_chan lua_mavlink_send_chan 3
+singleton mavlink manual receive_chan lua_mavlink_receive_chan 0
