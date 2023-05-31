@@ -76,7 +76,7 @@ const AP_Scheduler::Task Sub::scheduler_tasks[] = {
 #endif
     SCHED_TASK(update_batt_compass,   10,    120,  12),
     SCHED_TASK(read_rangefinder,      20,    100,  15),
-    SCHED_TASK(update_altitude,       10,    100,  18),
+    SCHED_TASK(update_altitude,       20,    100,  18),
     SCHED_TASK(three_hz_loop,          3,     75,  21),
     SCHED_TASK(update_turn_counter,   10,     50,  24),
     SCHED_TASK_CLASS(AP_Baro,             &sub.barometer,    accumulate,          50,  90,  27),

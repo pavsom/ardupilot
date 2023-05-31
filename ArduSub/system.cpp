@@ -138,6 +138,7 @@ void Sub::init_ardupilot()
     } else {
         ahrs.set_alt_measurement_noise(0.1f);
     }
+    AP_Param::set_and_save_by_name_ifchanged("BARO_FIELD_ELV",0.000001);
 
     leak_detector.init();
 

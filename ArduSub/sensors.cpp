@@ -3,11 +3,28 @@
 // return barometric altitude in centimeters
 void Sub::read_barometer()
 {
+    uint32_t tnow = AP_HAL::millis();
     barometer.update();
     // If we are reading a positive altitude, the sensor needs calibration
     // Even a few meters above the water we should have no significant depth reading
-    if(barometer.get_altitude() > 0) {
+    if(barometer.get_altitude() > 0 &&
+    (tnow -  barometerCalibrationTime) > 1000) {
+        barometerCalibrationTime = tnow;
         barometer.update_calibration();
+        gcs().send_text(MAV_SEVERITY_INFO, "alt =%f, baroOF =%f, eas2 =%f, exTmp =%f, filt =%d, gP  =%f, gT =%f, time =%ld, prs =%f, prCo =%f, prSea =%f, tmp =%f",
+        barometer.get_altitude(),
+        barometer.get_baro_drift_offset(),
+        barometer.get_EAS2TAS(),
+        barometer.get_external_temperature(),
+        barometer.get_filter_range(),
+        barometer.get_ground_pressure(),
+        barometer.get_ground_temperature(),
+        barometer.get_last_update(),
+        barometer.get_pressure(),
+        barometer.get_pressure_correction(),
+        barometer.get_sealevel_pressure(barometer.get_pressure()),
+        barometer.get_temperature());
+        
     }
 
     if (ap.depth_sensor_present) {

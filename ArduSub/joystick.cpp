@@ -621,9 +621,15 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
 
     case JSButton::button_function_t::k_custom_1:
+        if (!held) {
+            barometer.update_calibration();
+        }
         // Not implemented
         break;
     case JSButton::button_function_t::k_custom_2:
+        if (!held) {
+            //AP_Param::set_and_save_by_name_ifchanged("BARO_FIELD_ELV",1.00001);
+        }
         // Not implemented
         break;
     case JSButton::button_function_t::k_custom_3:

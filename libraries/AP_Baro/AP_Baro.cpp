@@ -348,6 +348,8 @@ void AP_Baro::calibrate(bool save)
         } else {
             if (save) {
                 float p0_sealevel = get_sealevel_pressure(sum_pressure[i] / count[i]);
+                BARO_SEND_TEXT(MAV_SEVERITY_INFO, "Barometer %u: old sealevel %ld, pressure %ld, new sealevel %ld", 
+                i+1,static_cast<int32_t>(sensors[i].ground_pressure),static_cast<int32_t>(sum_pressure[i]),static_cast<int32_t>(p0_sealevel));
                 sensors[i].ground_pressure.set_and_save(p0_sealevel);
             }
         }
@@ -384,6 +386,9 @@ void AP_Baro::update_calibration()
     for (uint8_t i=0; i<_num_sensors; i++) {
         if (healthy(i)) {
             float corrected_pressure = get_sealevel_pressure(get_pressure(i) + sensors[i].p_correction);
+            BARO_SEND_TEXT(MAV_SEVERITY_INFO, "Barometer %u: old sealevel %ld pressure %ld, correction %ld, new sealevel %ld, fldElev %f = %s", 
+            i+1,static_cast<int32_t>(sensors[i].ground_pressure),static_cast<int32_t>(get_pressure(i)),
+            static_cast<int32_t>(sensors[i].p_correction),static_cast<int32_t>(corrected_pressure),_field_elevation.cast_to_float(),is_zero(_field_elevation)? "zero" : "not zero");
             sensors[i].ground_pressure.set(corrected_pressure);
         }
 
