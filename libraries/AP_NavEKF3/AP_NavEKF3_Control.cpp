@@ -55,13 +55,25 @@ NavEKF3_core::MagCal NavEKF3_core::effective_magCal(void) const
     return MagCal(magCalParamVal);
 }
 
+//#define slowpokeRate 400
 // Determine if learning of wind and magnetic field will be enabled and set corresponding indexing limits to
 // avoid unnecessary operations
 void NavEKF3_core::setWindMagStateLearningMode()
 {
+    /* static uint32_t slowpoke = 0;
+    if (slowpoke  > slowpokeRate) slowpoke = 0;
+    slowpoke++;   */
     const bool canEstimateWind = ((finalInflightYawInit && dragFusionEnabled) || assume_zero_sideslip()) &&
                                  !onGround &&
                                  PV_AidingMode != AID_NONE;
+    /* if (slowpoke  > slowpokeRate)
+        printf("1313canEstimateWind = %s; finalInflightYawInit = %s; dragFusionEnabled = %s; assume_zero_sideslip = %s; onGround = %s; PV_AidingMode = %d\n\r",
+    canEstimateWind? "good" : "bad",
+    finalInflightYawInit? "good" : "bad",
+    dragFusionEnabled? "good" : "bad",
+    assume_zero_sideslip()? "good" : "bad",
+    onGround? "bad" : "good",
+    PV_AidingMode);  */                            
     if (!inhibitWindStates && !canEstimateWind) {
         inhibitWindStates = true;
         updateStateIndexLim();
@@ -351,6 +363,7 @@ void NavEKF3_core::setAidingMode()
                     (imuSampleTime_ms - lastPosPassTime_ms > maxLossTime_ms);
             }
 
+            //attAidLossCritical = false;
             if (attAidLossCritical) {
                 // if the loss of attitude data is critical, then put the filter into a constant position mode
                 PV_AidingMode = AID_NONE;
@@ -549,8 +562,15 @@ bool NavEKF3_core::readyToUseGPS(void) const
         //printf("xy source not gps\n\r");
         return false;
     }
-    //printf("validOrigin %d, tiltAlignComplete %d, yawAlignComplete %d, delAngBiasLearned %d, gpsGoodToAlign %d, gpsDataToFuse %d\n\r", 
-    //validOrigin, tiltAlignComplete, (uint8_t)yawAlignComplete, delAngBiasLearned, gpsGoodToAlign, gpsDataToFuse);
+    /* static uint32_t slowpoke = 0;
+    if (slowpoke  > slowpokeRate) slowpoke = 0;
+    slowpoke++;
+    if (slowpoke  > slowpokeRate){
+        if(gpsDataToFuse)
+            printf("1313validOrigin %d, tiltAlignComplete %d, yawAlignComplete %d, delAngBiasLearned %d, gpsGoodToAlign %d, gpsDataToFuse %d\n\r", 
+    validOrigin, tiltAlignComplete, (uint8_t)yawAlignComplete, delAngBiasLearned, gpsGoodToAlign, gpsDataToFuse);
+        else slowpoke--;
+    } */
     return validOrigin && tiltAlignComplete && yawAlignComplete && (delAngBiasLearned || assume_zero_sideslip()) && gpsGoodToAlign && gpsDataToFuse;
 }
 

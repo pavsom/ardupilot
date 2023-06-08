@@ -19,6 +19,7 @@ void NavEKF3_core::controlMagYawReset()
     // This allows recovery for heading alignment errors due to compass faults
     if (assume_zero_sideslip() && (!finalInflightYawInit || !yawAlignComplete) && inFlight) {
         gpsYawResetRequest = true;
+        //printf("1313gps yaw reset return \n\r");
         return;
     } else {
         gpsYawResetRequest = false;
@@ -44,6 +45,12 @@ void NavEKF3_core::controlMagYawReset()
         initialResetAllowed = angRateOK && tiltAlignComplete;
         flightResetAllowed = angRateOK && !onGround;
 
+        /* printf("1313-initialResetAllowed = %s; angRateOK = %s; tiltAlignComplete = %s; flightResetAllowed = %s; onGround = %s\n\r",
+        initialResetAllowed? "yes" : "not",
+        angRateOK? "ok" : "bad",
+        tiltAlignComplete? "yes" : "not",
+        flightResetAllowed? "yes" : "not",
+        onGround? "yes" : "not");  */
     }
 
     // reset the limit on the number of magnetic anomaly resets for each takeoff
@@ -57,8 +64,11 @@ void NavEKF3_core::controlMagYawReset()
     if (flightResetAllowed && !assume_zero_sideslip()) {
         // check that we have reached a height where ground magnetic interference effects are insignificant
         // and can perform a final reset of the yaw and field states
-        finalResetRequest = (stateStruct.position.z  - posDownAtTakeoff) < -EKF3_MAG_FINAL_RESET_ALT;
-
+        finalResetRequest = (stateStruct.position.z  - posDownAtTakeoff) < -EKF3_MAG_FINAL_RESET_ALT; //ardusub44
+        /* printf("1313--finalResetRequest = %s; stateStruct.position.z = %f; posDownAtTakeoff = %f\n\r",
+        finalResetRequest? "ok" : "bad",
+        stateStruct.position.z,
+        posDownAtTakeoff);  */  
         // check for increasing height
         bool hgtIncreasing = (posDownAtLastMagReset-stateStruct.position.z) > 0.5f;
         ftype yawInnovIncrease = fabsF(innovYaw) - fabsF(yawInnovAtLastMagReset);
@@ -79,6 +89,14 @@ void NavEKF3_core::controlMagYawReset()
                                 && hgtIncreasing
                                 && yawInnovIncreasing
                                 && !largeAngleChange;
+        /* printf("1313--interimResetRequest = %s; finalInflightYawInit = %s; finalResetRequest = %s; magYawAnomallyCount = %s; hgtIncreasing = %s; yawInnovIncreasing = %s; largeAngleChange = %s\n\r",
+        interimResetRequest? "ok" : "bad",
+        !finalInflightYawInit? "ok" : "bad",
+        !finalResetRequest? "ok" : "bad",
+        (magYawAnomallyCount < MAG_ANOMALY_RESET_MAX)? "ok" : "bad",
+        hgtIncreasing? "ok" : "bad",
+        yawInnovIncreasing? "ok" : "bad",
+        !largeAngleChange? "ok" : "bad");  */                            
     }
 
     // an initial reset is required if we have not yet aligned the yaw angle
@@ -90,6 +108,11 @@ void NavEKF3_core::controlMagYawReset()
             interimResetRequest || // an interim alignment required to recover from ground based magnetic anomaly
             finalResetRequest; // the final reset when we have achieved enough height to be in stable magnetic field environment
 
+    /* printf("1313---magYawResetRequest = %s; magYawResetRequest = %s; initialResetRequest = %s; interimResetRequest = %s; finalResetRequest = %s\n\r",
+        magYawResetRequest? "ok" : "bad",
+        initialResetRequest? "ok" : "bad",
+        interimResetRequest? "ok" : "bad",
+        finalResetRequest? "ok" : "bad");  */
     // Perform a reset of magnetic field states and reset yaw to corrected magnetic heading
     if (magYawResetRequest && use_compass()) {
         // send initial alignment status to console
@@ -291,10 +314,12 @@ void NavEKF3_core::SelectMagFusion()
                     last_gps_yaw_fuse_ms = imuSampleTime_ms;
                 }
             }
+            //printf("1313have fused gps yaw\n\r",have_fused_gps_yaw);
             last_gps_yaw_ms = imuSampleTime_ms;
         } else if (tiltAlignComplete && !yawAlignComplete) {
             // External yaw sources can take significant time to start providing yaw data so
             // wuile waiting, fuse a 'fake' yaw observation at 7Hz to keeop the filter stable
+            //printf("1313no yaw from gps, faking it\n\r",have_fused_gps_yaw);
             if (imuSampleTime_ms - lastSynthYawTime_ms > 140) {
                 yawAngDataDelayed.yawAngErr = MAX(frontend->_yawNoise, 0.05f);
                 // update the yaw angle using the last estimate which will be used as a static yaw reference when movement stops
@@ -317,6 +342,7 @@ void NavEKF3_core::SelectMagFusion()
             return;
         }
 
+        //printf("1313gps compas but read mag data\n\r");
         // get new mag data into delay buffer
         readMagData();
 
@@ -327,6 +353,8 @@ void NavEKF3_core::SelectMagFusion()
             }
             // update mag bias from GPS yaw
             gps_yaw_mag_fallback_ok = learnMagBiasFromGPS();
+            //gps_yaw_mag_fallback_ok = true;  //ardusub44
+            //printf("1313gps compas learning bias return\n\r");
             return;
         }
 
@@ -334,15 +362,18 @@ void NavEKF3_core::SelectMagFusion()
         // fallback. If we've only just lost GPS yaw
         if (imuSampleTime_ms - last_gps_yaw_ms < 10000) {
             // don't fallback to magnetometer fusion for 10s
+            //printf("1313gpsCompass no yaw data\n\r");
             return;
         }
         if (!gps_yaw_mag_fallback_ok) {
             // mag was not consistent enough with GPS to use it as
             // fallback
+            //printf("1313gps compas not consistent return\n\r");
             return;
         }
         if (!inFlight) {
             // don't fall back if not flying but reset to GPS yaw if it becomes available
+            //printf("1313gps compas return not in flight\n\r");
             return;
         }
         if (!gps_yaw_mag_fallback_active) {
@@ -401,12 +432,14 @@ void NavEKF3_core::SelectMagFusion()
     magDataToFuse = storedMag.recall(magDataDelayed,imuDataDelayed.time_ms);
 
     // Control reset of yaw and magnetic field states if we are using compass data
+    //printf("1313select magfusion\n\r");
     if (magDataToFuse) {
         if (yaw_source_reset && (yaw_source == AP_NavEKF_Source::SourceYaw::COMPASS ||
                                  yaw_source == AP_NavEKF_Source::SourceYaw::GPS_COMPASS_FALLBACK)) {
             magYawResetRequest = true;
             yaw_source_reset = false;
         }
+        //printf("1313mag data to use control mag rset\n\r");
         controlMagYawReset();
     }
 

@@ -143,6 +143,7 @@ void NavEKF3_core::FuseAirspeed()
             lastTasFailTime_ms = 0;
         }
 
+       // printf("tasDataDelayed.allowFusion %s\n\r",tasDataDelayed.allowFusion? "yes" : "no");
         // test the ratio before fusing data, forcing fusion if airspeed and position are timed out as we have no choice but to try and use airspeed to constrain error growth
         if (tasDataDelayed.allowFusion && (isConsistent || (tasTimeout && posTimeout))) {
 
@@ -195,9 +196,13 @@ void NavEKF3_core::FuseAirspeed()
     }
 }
 
+//#define slowpokeRate 70
 // select fusion of true airspeed measurements
 void NavEKF3_core::SelectTasFusion()
 {
+    /* static uint32_t slowpoke = 0;
+    if (slowpoke  > slowpokeRate) slowpoke = 0;
+    slowpoke++; */
     // Check if the magnetometer has been fused on that time step and the filter is running at faster than 200 Hz
     // If so, don't fuse measurements on this time step to reduce frame over-runs
     // Only allow one time slip to prevent high rate magnetometer data locking out fusion of other measurements
@@ -212,6 +217,12 @@ void NavEKF3_core::SelectTasFusion()
     readAirSpdData();
 
     // if the filter is initialised, wind states are not inhibited and we have data to fuse, then perform TAS fusion
+    /* if (slowpoke  > slowpokeRate){
+        if (tasDataToFuse)
+        printf("1313tasDataToFuse = %s; statesInitialised = %s; inhibitWindStates = %s\n\r",
+        tasDataToFuse? "good" : "bad", statesInitialised? "good" : "bad", inhibitWindStates? "bad" : "good");
+        else slowpoke--;
+    } */
     if (tasDataToFuse && statesInitialised && !inhibitWindStates) {
         FuseAirspeed();
         prevTasStep_ms = imuSampleTime_ms;

@@ -709,6 +709,7 @@ void NavEKF3_core::readGpsYawData()
     // if the GPS has yaw data then fuse it as an Euler yaw angle
     float yaw_deg, yaw_accuracy_deg;
     uint32_t yaw_time_ms;
+    //printf("1313try read gps yaw\n\r");
     if (gps.status(selected_gps) >= AP_DAL_GPS::GPS_OK_FIX_3D &&
         dal.gps().gps_yaw_deg(selected_gps, yaw_deg, yaw_accuracy_deg, yaw_time_ms) &&
         yaw_time_ms != yawMeasTime_ms) {
@@ -841,6 +842,8 @@ void NavEKF3_core::readAirSpdData()
         tasDataNew.tasVariance = sq(MAX(frontend->_easNoise * EAS2TAS, 0.5f));
         tasDataNew.allowFusion = airspeed->healthy(selected_airspeed) && airspeed->use(selected_airspeed);
 
+        /* printf("airspeed healthy %s; use = %s\n\r",airspeed->healthy(selected_airspeed)? "yes" : "no",
+        airspeed->use(selected_airspeed)? "yes" : "no"); */
         // Correct for the average intersampling delay due to the filter update rate
         tasDataNew.time_ms -= localFilterTimeStep_ms/2;
 
@@ -1077,10 +1080,14 @@ void NavEKF3_core::writeExtNavData(const Vector3f &pos, const Quaternion &quat, 
     }
 #endif // EK3_FEATURE_EXTERNAL_NAV
 }
+//#define slowpokeRate 70
 
 void NavEKF3_core::writeExtNavVelData(const Vector3f &vel, float err, uint32_t timeStamp_ms, uint16_t delay_ms)
 {
 #if EK3_FEATURE_EXTERNAL_NAV
+    /* static uint32_t slowpoke = 0;
+    if (slowpoke  > slowpokeRate) slowpoke = 0;
+    slowpoke++; */
     // sanity check for NaNs
     if (vel.is_nan() || isnan(err)) {
         return;
@@ -1105,6 +1112,11 @@ void NavEKF3_core::writeExtNavVelData(const Vector3f &vel, float err, uint32_t t
     extNavVelNew.err = err;
     extNavVelNew.corrected = false;
 
+    /* if (slowpoke  > slowpokeRate)
+    {
+        printf("Speed     X=%+f; Y=%+f; Z=%+f\n\r",
+        vel.x,vel.y,vel.z);
+    } */
     storedExtNavVel.push(extNavVelNew);
 #endif // EK3_FEATURE_EXTERNAL_NAV
 }
