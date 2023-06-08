@@ -47,6 +47,17 @@ void Sub::userhook_SuperSlowLoop()
     hal.console->printf("ship class %d\n\r",(uint8_t)ahrs.get_vehicle_class());  
     if (!ahrs.have_inertial_nav())
         hal.console->printf("no inertial navigation\n\r");
+    /* AP_MotorsMatrix* mMatrix = AP_Motors6DOF::get_singleton();
+    AP_Motors6DOF* motorz = static_cast<AP_Motors6DOF*>(mMatrix);
+
+    printf("thrToPwm  %4d  ",motorz->calc_thrust_to_pwm(motorz->get_forward()));
+    printf("roll  %4d  ",static_cast<int8_t>((motorz->get_roll()+motorz->get_roll_ff())*100));
+    printf("pitch %4d  ",static_cast<int8_t>((motorz->get_pitch()+motorz->get_pitch_ff())*100)); 
+    printf("yaw   %4d  ",static_cast<int8_t>((motorz->get_yaw()+motorz->get_yaw_ff())*100));
+    printf("fwd   %4d  ",static_cast<int8_t>((motorz->get_forward())*100));
+    printf("strf  %4d  ",static_cast<int8_t>((motorz->get_lateral())*100));
+    printf("updw  %4d  \n\r",static_cast<int8_t>((motorz->get_throttle_bidirectional())*100)); */
+
     /* printf("RC input roll  = %3d  ",static_cast<int8_t>(channel_roll->norm_input()*100)); 
     printf("RC up      = %3d\n\r",static_cast<int8_t>(channel_throttle->norm_input()*100)); 
     
