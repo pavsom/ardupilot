@@ -376,6 +376,7 @@ void AP_Baro::calibrate(bool save)
    this updates the baro ground calibration to the current values. It
    can be used before arming to keep the baro well calibrated
 */
+//#define baroDebug
 void AP_Baro::update_calibration()
 {
     const uint32_t now = AP_HAL::millis();
@@ -386,9 +387,11 @@ void AP_Baro::update_calibration()
     for (uint8_t i=0; i<_num_sensors; i++) {
         if (healthy(i)) {
             float corrected_pressure = get_sealevel_pressure(get_pressure(i) + sensors[i].p_correction);
+#ifdef baroDebug            
             BARO_SEND_TEXT(MAV_SEVERITY_INFO, "Barometer %u: old sealevel %ld pressure %ld, correction %ld, new sealevel %ld, fldElev %f = %s", 
             i+1,static_cast<int32_t>(sensors[i].ground_pressure),static_cast<int32_t>(get_pressure(i)),
             static_cast<int32_t>(sensors[i].p_correction),static_cast<int32_t>(corrected_pressure),_field_elevation.cast_to_float(),is_zero(_field_elevation)? "zero" : "not zero");
+#endif            
             sensors[i].ground_pressure.set(corrected_pressure);
         }
 
