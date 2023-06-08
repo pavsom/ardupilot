@@ -36,6 +36,7 @@ class ExtractFeatures(object):
         # the substitutions will be upper-cased
         self.features = [
             ('AP_ADVANCEDFAILSAFE_ENABLED', 'AP::advancedfailsafe',),
+            ('AP_BOOTLOADER_FLASHING_ENABLED', 'ChibiOS::Util::flash_bootloader',),
             ('AP_AIRSPEED_ENABLED', 'AP_Airspeed::AP_Airspeed',),
             ('AP_AIRSPEED_{type}_ENABLED', r'AP_Airspeed_(?P<type>.*)::init',),
 
@@ -188,6 +189,9 @@ class ExtractFeatures(object):
             ('AP_NOTIFY_PROFILED_ENABLED', r'ProfiLED::init_ports'),
             ('AP_NOTIFY_PROFILED_SPI_ENABLED', r'ProfiLED_SPI::rgb_set_id'),
             ('AP_NOTIFY_NEOPIXEL_ENABLED', r'NeoPixel::init_ports'),
+            ('AP_FILESYSTEM_FORMAT_ENABLED', r'AP_Filesystem::format'),
+
+            ('AP_INERTIALSENSOR_KILL_IMU_ENABLED', r'AP_InertialSensor::kill_imu'),
         ]
 
     def progress(self, msg):
