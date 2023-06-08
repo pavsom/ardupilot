@@ -2274,6 +2274,7 @@ bool AP_GPS::gps_yaw_deg(uint8_t instance, float &yaw_deg, float &accuracy_deg, 
     }
 #endif
     if (!have_gps_yaw(instance)) {
+        //printf("no yaw from this %d gps\n\r",instance);
         return false;
     }
     yaw_deg = state[instance].gps_yaw;

@@ -19,6 +19,7 @@
 #include "AP_GPS_MAV.h"
 #include <stdint.h>
 
+#include <stdio.h>
 #if AP_GPS_MAV_ENABLED
 
 // Reading does nothing in this class; we simply return whether or not
@@ -54,6 +55,7 @@ void AP_GPS_MAV::handle_msg(const mavlink_message_t &msg)
             bool have_va     = ((packet.ignore_flags & GPS_INPUT_IGNORE_FLAG_VERTICAL_ACCURACY) == 0);
             bool have_yaw    = (packet.yaw != 0);
 
+            //printf("packet yaw = %d",packet.yaw);
             state.time_week     = packet.time_week;
             state.time_week_ms  = packet.time_week_ms;
             state.status = (AP_GPS::GPS_Status)packet.fix_type;
