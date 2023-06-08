@@ -153,6 +153,13 @@ void Sub::update_flight_mode()
     default:
         break;
     }
+
+    if (abs(motors.get_lateral()) < 0.1 && 
+    abs(motors.get_forward()) > 0.2){
+        ahrs.set_fly_forward(true);
+    }else{
+        ahrs.set_fly_forward(false);
+    }
 }
 
 // exit_mode - high level call to organise cleanup as a flight mode is exited
