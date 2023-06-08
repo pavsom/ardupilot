@@ -164,19 +164,28 @@ void Sub::althold_run()
 }
 
 #define slowpokeRate 200
+//#define zrateDebug
+#define altitudeSimpleControl
 void Sub::control_depth() {
+#ifndef zrateDebug    
     static uint32_t slowpoke = 0;
+    if (slowpoke  > slowpokeRate) slowpoke = 0;
     slowpoke++;
+#endif    
     // We rotate the RC inputs to the earth frame to check if the user is giving an input that would change the depth.
     // Output the Z controller + pilot input to all motors.
+#ifndef altitudeSimpleControl
     Vector3f earth_frame_rc_inputs = ahrs.get_rotation_body_to_ned() * Vector3f(-channel_forward->norm_input(), -channel_lateral->norm_input(), (2.0f*(-0.5f+channel_throttle->norm_input())));
     float target_climb_rate_cm_s = get_pilot_desired_climb_rate(500 + g.pilot_speed_up * earth_frame_rc_inputs.z);
-
-    
+#else    
+    float target_climb_rate_cm_s = get_pilot_desired_climb_rate(500 + g.pilot_speed_up * (2.0f*(-0.5f+channel_throttle->norm_input())));
+#endif    
+#ifdef zrateDebug        
     if (slowpoke  > slowpokeRate){
         printf("depth  %4d  ",static_cast<int32_t>(barometer.get_altitude()*100));
         printf("Zrate  %4d  ",static_cast<int32_t>(target_climb_rate_cm_s));
     }
+#endif
 
 
     bool surfacing = ap.at_surface || pos_control.get_pos_target_z_cm() > g.surface_depth;
@@ -184,6 +193,8 @@ void Sub::control_depth() {
     float lower_speed_limit = ap.at_bottom ? 0 : -get_pilot_speed_dn();
     target_climb_rate_cm_s = constrain_float(target_climb_rate_cm_s, lower_speed_limit, upper_speed_limit);
 
+
+#ifdef zrateDebug    
     if (slowpoke  > slowpokeRate)
         printf("surf=%d Z1  %4d  ",static_cast<int16_t>(g.surface_depth),static_cast<int16_t>((pos_control.get_pos_target_z_cm())));
     if (slowpoke  > slowpokeRate){
@@ -195,12 +206,15 @@ void Sub::control_depth() {
         printf("loSpLim  %4d  ",static_cast<int32_t>(lower_speed_limit));
     if (slowpoke  > slowpokeRate)
         printf("Zrate  %4d  ",static_cast<int32_t>(target_climb_rate_cm_s));
+#endif
 
     pos_control.set_pos_target_z_from_climb_rate_cm(target_climb_rate_cm_s);
-    
+
+
+#ifdef zrateDebug        
     if (slowpoke  > slowpokeRate)
         printf("Z2  %4d  ",static_cast<int16_t>((pos_control.get_pos_target_z_cm())));
-    
+#endif    
 
 
     if (surfacing) {
@@ -208,17 +222,29 @@ void Sub::control_depth() {
     } else if (ap.at_bottom) {
         pos_control.set_alt_target_with_slew(MAX(inertial_nav.get_position_z_up_cm() + 10.0f, pos_control.get_pos_target_z_cm())); // set target to 10 cm above bottom
     }
+
+#ifdef zrateDebug        
     if (slowpoke  > slowpokeRate)
         printf("Z3  %4d  ",static_cast<int16_t>((pos_control.get_pos_target_z_cm())));
+#endif        
+
     pos_control.update_z_controller();
     // Read the output of the z controller and rotate it so it always points up
     Vector3f throttle_vehicle_frame = ahrs.get_rotation_body_to_ned().transposed() * Vector3f(0, 0, motors.get_throttle_in_bidirectional());
     //TODO: scale throttle with the ammount of thrusters in the given direction
+    //float thrtl = motors.get_throttle_in_bidirectional();
     float raw_throttle_factor = (ahrs.get_rotation_body_to_ned() * Vector3f(0, 0, 1.0)).xy().length();
     motors.set_throttle(throttle_vehicle_frame.z + raw_throttle_factor * channel_throttle->norm_input());
+
+#ifdef zrateDebug        
     if (slowpoke  > slowpokeRate)
         printf("throttle  %4d  \n\r",static_cast<int16_t>((throttle_vehicle_frame.z + raw_throttle_factor * channel_throttle->norm_input())*100));
+#endif    
+
     motors.set_forward(-throttle_vehicle_frame.x + channel_forward->norm_input());
-    motors.set_lateral(-throttle_vehicle_frame.y + channel_lateral->norm_input());
-    if (slowpoke  > slowpokeRate) slowpoke = 0;
+    motors.set_lateral(-throttle_vehicle_frame.y + channel_lateral->norm_input());  
+    /* if (slowpoke  > slowpokeRate)
+        printf("tthrl = %f; xx = %f; y = %f; z = %f; scale = %f; in = %f; thrt = %f; frw = %f; lat = %f\n\r",
+            thrtl, throttle_vehicle_frame.x, throttle_vehicle_frame.y, throttle_vehicle_frame.z, raw_throttle_factor, channel_throttle->norm_input(), 
+            motors.get_throttle_in_bidirectional(),motors.get_forward(),motors.get_lateral()); */
 }
