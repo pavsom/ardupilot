@@ -19,7 +19,7 @@ int16_t yTrim = 0;
 int16_t video_switch = 1100;
 int16_t x_last, y_last, z_last;
 uint16_t buttons_prev;
-
+bool disableGPS = false;
 // Servo control output channels
 // TODO: Allow selecting output channels
 const uint8_t SERVO_CHAN_1 = 9; // Pixhawk Aux1
@@ -628,7 +628,9 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_custom_2:
         if (!held) {
-            //AP_Param::set_and_save_by_name_ifchanged("BARO_FIELD_ELV",1.00001);
+            disableGPS = !disableGPS;
+            AP::gps().force_disable(disableGPS);
+            gcs().send_text(MAV_SEVERITY_INFO, disableGPS? "GPS disabled" : "GPS enabled");
         }
         // Not implemented
         break;
