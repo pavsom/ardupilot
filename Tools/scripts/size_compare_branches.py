@@ -129,10 +129,13 @@ class SizeCompareBranches(object):
 
         # remove boards based on --exclude-board-glob
         new_self_board = []
-        for exclude_glob in exclude_board_glob:
-            for board_name in self.board:
+        for board_name in self.board:
+            exclude = False
+            for exclude_glob in exclude_board_glob:
                 if fnmatch.fnmatch(board_name, exclude_glob):
-                    continue
+                    exclude = True
+                    break
+            if not exclude:
                 new_self_board.append(board_name)
         self.board = new_self_board
 
@@ -151,6 +154,7 @@ class SizeCompareBranches(object):
             'skyviper-f412-rev1',
             'skyviper-journey',
             'Pixhawk1-1M-bdshot',
+            'Pixhawk1-bdshot',
             'SITL_arm_linux_gnueabihf',
         ])
 
