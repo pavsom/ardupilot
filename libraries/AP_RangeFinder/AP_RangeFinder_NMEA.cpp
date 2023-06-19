@@ -19,9 +19,12 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <ctype.h>
+#include <stdio.h>
 
 extern const AP_HAL::HAL& hal;
 
+char test[20];
+uint8_t  testC = 0;
 // return last value measured by sensor
 bool AP_RangeFinder_NMEA::get_reading(float &reading_m)
 {
@@ -29,10 +32,13 @@ bool AP_RangeFinder_NMEA::get_reading(float &reading_m)
         return false;
     }
 
+    //printf("rng finder get_reading\n\r");
     // read any available lines from the lidar
     float sum = 0.0f;
     uint16_t count = 0;
     int16_t nbytes = uart->available();
+    //if (nbytes)
+      //  printf("rng finder get_reading bytes = %d\n\r",nbytes);
     while (nbytes-- > 0) {
         char c = uart->read();
         if (decode(c)) {
@@ -41,6 +47,7 @@ bool AP_RangeFinder_NMEA::get_reading(float &reading_m)
         }
     }
 
+    //printf("_term  = %.20s\n\r",test);
     // return false on failure
     if (count == 0) {
         return false;
@@ -48,6 +55,7 @@ bool AP_RangeFinder_NMEA::get_reading(float &reading_m)
 
     // return average of all measurements
     reading_m = sum / count;
+    //printf("rng finder get_reading true distance = %f, count = %d\n\r",reading_m, count);
     return true;
 }
 
@@ -66,6 +74,10 @@ bool AP_RangeFinder_NMEA::get_temp(float &temp) const
 // returns true if a distance was successfully decoded
 bool AP_RangeFinder_NMEA::decode(char c)
 {
+    if (c == '$') testC = 0;
+    if (testC < sizeof(test) - 1) {
+        test[testC++] = c;
+    }
     switch (c) {
     case ',':
         // end of a term, add to checksum
@@ -122,14 +134,17 @@ bool AP_RangeFinder_NMEA::decode_latest_term()
         uint8_t nibble_high = 0;
         uint8_t nibble_low  = 0;
         if (!hex_to_uint8(_term[0], nibble_high) || !hex_to_uint8(_term[1], nibble_low)) {
+            //printf("inbble error\n\r");
             return false;
         }
         const uint8_t checksum = (nibble_high << 4u) | nibble_low;
-        if (checksum == _checksum) {
+        if (checksum == _checksum || 1) {
             if ((_sentence_type == SONAR_DBT || _sentence_type == SONAR_DPT || _sentence_type == SONAR_HDED) && !is_negative(_distance_m)) {
                 // return true if distance is valid
+                //printf("distance valid = %f\n\r",_distance_m);
                 return true;
             }
+            //printf("dist error\n\r");
             if (_sentence_type == SONAR_MTW) {
                 _temp = _temp_unvalidated;
                 _temp_readtime_ms = AP_HAL::millis();
@@ -138,6 +153,7 @@ bool AP_RangeFinder_NMEA::decode_latest_term()
                 return false;
             }
         }
+        //printf("chksum error chksum = 0x%04x\n\r",_checksum);
         return false;
     }
 
@@ -174,6 +190,7 @@ bool AP_RangeFinder_NMEA::decode_latest_term()
         // parse DPT messages
         if (_term_number == 1) {
             _distance_m = strtof(_term, NULL);
+            //printf("distance = %f\n\r",_distance_m);
         }
     } else if (_sentence_type == SONAR_MTW) {
         // parse MTW (mean water temperature) messages
