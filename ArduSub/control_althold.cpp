@@ -187,16 +187,16 @@ void Sub::control_depth() {
     }
 #endif
 
-
-    bool surfacing = ap.at_surface || pos_control.get_pos_target_z_cm() > g.surface_depth;
+    bool burrowing = ap.at_bottom || pos_control.get_pos_target_z_cm() < (depthTerrain + g.depth_surface);
+    bool surfacing = ap.at_surface || pos_control.get_pos_target_z_cm() > g.depth_surface;
     float upper_speed_limit = surfacing ? 0 : g.pilot_speed_up;
-    float lower_speed_limit = ap.at_bottom ? 0 : -get_pilot_speed_dn();
+    float lower_speed_limit = burrowing ? 0 : -get_pilot_speed_dn();
     target_climb_rate_cm_s = constrain_float(target_climb_rate_cm_s, lower_speed_limit, upper_speed_limit);
 
 
 #ifdef zrateDebug    
     if (slowpoke  > slowpokeRate)
-        printf("surf=%d Z1  %4d  ",static_cast<int16_t>(g.surface_depth),static_cast<int16_t>((pos_control.get_pos_target_z_cm())));
+        printf("surf=%d Z1  %4d  ",static_cast<int16_t>(g.depth_surface),static_cast<int16_t>((pos_control.get_pos_target_z_cm())));
     if (slowpoke  > slowpokeRate){
         printf("atSurf %s", ap.at_surface? "yes  " : "no  ");
     }
@@ -218,9 +218,10 @@ void Sub::control_depth() {
 
 
     if (surfacing) {
-        pos_control.set_alt_target_with_slew(MIN(pos_control.get_pos_target_z_cm(), g.surface_depth - 5.0f)); // set target to 5 cm below surface level
-    } else if (ap.at_bottom) {
-        pos_control.set_alt_target_with_slew(MAX(inertial_nav.get_position_z_up_cm() + 10.0f, pos_control.get_pos_target_z_cm())); // set target to 10 cm above bottom
+        pos_control.set_alt_target_with_slew(MIN(pos_control.get_pos_target_z_cm(), g.depth_surface - 5.0f)); // set target to 5 cm below surface level
+    } else if (burrowing) {
+        const float terrainDepth = depthTerrain +10.0f;
+        pos_control.set_alt_target_with_slew(MAX(inertial_nav.get_position_z_up_cm() + 10.0f, MAX(terrainDepth, pos_control.get_pos_target_z_cm()))); // set target to 10 cm above bottom
     }
 
 #ifdef zrateDebug        
