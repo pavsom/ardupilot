@@ -7,6 +7,14 @@ void Sub::read_barometer()
     barometer.update();
     // If we are reading a positive altitude, the sensor needs calibration
     // Even a few meters above the water we should have no significant depth reading
+    if (!rangefinder_alt_ok()){
+        if (!rangefinder_state.enabled || !depthTerrain){
+            depthTerrain = !g.depth_bottom? g.depth_max : MAX(g.depth_bottom, g.depth_max);
+        }
+    }else{
+        float rangeFinderDistance = rangefinder_state.alt_cm_filt.get();
+        depthTerrain = barometer.get_altitude()*100.0f - rangeFinderDistance; 
+    }
     if(barometer.get_altitude() > 0 &&
     (tnow -  barometerCalibrationTime) > 1000) {
         barometerCalibrationTime = tnow;
@@ -50,14 +58,14 @@ void Sub::read_rangefinder()
     rangefinder_state.alt_healthy = ((rangefinder.status_orient(ROTATION_PITCH_270) == RangeFinder::Status::Good) && (rangefinder.range_valid_count_orient(ROTATION_PITCH_270) >= RANGEFINDER_HEALTH_MAX));
 
     int16_t temp_alt = rangefinder.distance_cm_orient(ROTATION_PITCH_270);
-
+    printf("rngRAW = %d ",temp_alt);
 #if RANGEFINDER_TILT_CORRECTION == ENABLED
     // correct alt for angle of the rangefinder
     temp_alt = (float)temp_alt * MAX(0.707f, ahrs.get_rotation_body_to_ned().c.z);
 #endif
 
     rangefinder_state.alt_cm = temp_alt;
-
+    printf("rngTilt = %d ",rangefinder_state.alt_cm);
     // filter rangefinder for use by AC_WPNav
     uint32_t now = AP_HAL::millis();
 
@@ -70,7 +78,7 @@ void Sub::read_rangefinder()
         }
         rangefinder_state.last_healthy_ms = now;
     }
-
+    printf("rngFilter = %f \n\r",rangefinder_state.alt_cm_filt.get());
     // send rangefinder altitude and health to waypoint navigation library
 #ifdef sub42
     wp_nav.set_rangefinder_alt(rangefinder_state.enabled, rangefinder_state.alt_healthy, rangefinder_state.alt_cm_filt.get());
