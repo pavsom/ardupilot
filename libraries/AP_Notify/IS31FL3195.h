@@ -1,4 +1,6 @@
 /*
+   IS31FL3195 I2C driver
+
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
@@ -11,31 +13,35 @@
 
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   Datasheet: https://www.lumissil.com/assets/pdf/core/IS31FL3195_DS.pdf
+
  */
+#pragma once
 
-#include <AP_HAL/AP_HAL.h>
+#include "AP_Notify_config.h"
 
-#include "RPM_EFI.h"
+#if AP_NOTIFY_IS31FL3195_ENABLED
 
-#if AP_RPM_EFI_ENABLED
+#include <AP_HAL/I2CDevice.h>
+#include "RGBLed.h"
 
-#include <AP_EFI/AP_EFI.h>
-
-AP_RPM_EFI::AP_RPM_EFI(AP_RPM &_ap_rpm, uint8_t _instance, AP_RPM::RPM_State &_state) :
-    AP_RPM_Backend(_ap_rpm, _instance, _state)
+class IS31FL3195 : public RGBLed
 {
-}
+public:
+    IS31FL3195(uint8_t bus, uint8_t addr);
+    bool init(void) override;
+protected:
+    bool hw_set_rgb(uint8_t r, uint8_t g, uint8_t b) override;
 
-void AP_RPM_EFI::update(void)
-{
-    AP_EFI *efi = AP::EFI();
-    if (efi == nullptr) {
-        return;
-    }
-    state.rate_rpm = efi->get_rpm();
-    state.rate_rpm *= ap_rpm._params[state.instance].scaling;
-    state.signal_quality = 0.5f;
-    state.last_reading_ms = AP_HAL::millis();
-}
+private:
+    AP_HAL::OwnPtr<AP_HAL::I2CDevice> _dev;
+    uint8_t _bus;
+    uint8_t _addr;
 
-#endif // AP_RPM_EFI_ENABLED
+    void _timer(void);
+    bool _need_update;
+    uint8_t rgb[3];
+};
+
+#endif  // AP_NOTIFY_IS31FL3195_ENABLED
