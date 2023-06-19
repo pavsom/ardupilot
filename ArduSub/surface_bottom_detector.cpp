@@ -25,13 +25,13 @@ void Sub::update_surface_and_bottom_detector()
     bool vel_stationary = velocity.z > -0.05 && velocity.z < 0.05;
 
     if (ap.depth_sensor_present && sensor_health.depth) { // we can use the external pressure sensor for a very accurate and current measure of our z axis position
-        current_depth = barometer.get_altitude(); // cm
+        current_depth = barometer.get_altitude() *100.0f; // cm
 
 
         if (ap.at_surface) {
-            set_surfaced(current_depth > g.surface_depth/100.0 - 0.05); // add a 5cm buffer so it doesn't trigger too often
+            set_surfaced(current_depth > g.depth_surface - 5); // add a 5cm buffer so it doesn't trigger too often
         } else {
-            set_surfaced(current_depth > g.surface_depth/100.0); // If we are above surface depth, we are surfaced
+            set_surfaced(current_depth > g.depth_surface); // If we are above surface depth, we are surfaced
         }
 
 
@@ -41,12 +41,16 @@ void Sub::update_surface_and_bottom_detector()
                 bottom_detector_count++;
             } else {
                 set_bottomed(true);
+                depthTerrain = current_depth;
             }
 
         } else {
-            set_bottomed(false);
+            if (ap.at_bottom) {
+            set_bottomed(current_depth < depthTerrain - 5);
+            }else {
+                set_bottomed(current_depth < depthTerrain);
+            }
         }
-
         // with no external baro, the only thing we have to go by is a vertical velocity estimate
     } else if (vel_stationary) {
         if (motors.limit.throttle_upper) {
