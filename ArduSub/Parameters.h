@@ -184,7 +184,7 @@ public:
         k_param_pilot_speed_up,     // renamed from k_param_pilot_velocity_z_max
         k_param_pilot_accel_z,
         k_param_compass_enabled_deprecated,
-        k_param_surface_depth,
+        k_param_depth_surface,
         k_param_rc_speed, // Main output pwm frequency
         k_param_gcs_pid_mask = 178,
         k_param_throttle_filt,
@@ -195,7 +195,8 @@ public:
         k_param_cam_tilt_center, // deprecated
         k_param_frame_configuration,
         k_param_control_frame,
-
+        k_param_depth_bottom,
+        k_param_depth_max,
         // Acro Mode parameters
         k_param_acro_yaw_p = 220, // Used in all modes for get_pilot_desired_yaw_rate
         k_param_acro_trainer,
@@ -304,9 +305,12 @@ public:
     AP_Int8         acro_trainer;
     AP_Float        acro_expo;
 
-    AP_Float                surface_depth;
+    AP_Float                depth_surface;
     AP_Int8                 frame_configuration;
     AP_Int8                 control_frame;
+
+    AP_Float                depth_bottom;
+    AP_Float                depth_max;
 
     // Note: keep initializers here in the same order as they are declared
     // above.

@@ -28,7 +28,31 @@ const AP_Param::Info Sub::var_info[] = {
     // @Units: cm
     // @Range: -100 0
     // @User: Standard
-    GSCALAR(surface_depth, "SURFACE_DEPTH", SURFACE_DEPTH_DEFAULT),
+    //GSCALAR(surface_depth, "SURFACE_DEPTH", SURFACE_DEPTH_DEFAULT),
+
+    // @Param: DEPTH_SURFACE
+    // @DisplayName: Depth reading at surface
+    // @Description: The depth the external pressure sensor will read when the vehicle is considered at the surface (in centimeters)
+    // @Units: cm
+    // @Range: -100 0
+    // @User: Standard
+    GSCALAR(depth_surface, "DEPTH_SURFACE", DEPTH_SURFACE_DEFAULT),
+
+    // @Param: DEPTH_BOTTOM
+    // @DisplayName: Depth reading at surface
+    // @Description: The depth the external pressure sensor will read when the vehicle is considered at the bottom (in centimeters)
+    // @Units: cm
+    // @Range: -100 0
+    // @User: Standard
+    GSCALAR(depth_bottom, "DEPTH_BOTTOM", DEPTH_BOTTOM_DEFAULT),
+
+    // @Param: DEPTH_MAX
+    // @DisplayName: Maximum rated depth
+    // @Description: The depth the external pressure sensor will read when the vehicle is considered at maximum rated depth (in centimeters)
+    // @Units: cm
+    // @Range: -100 0
+    // @User: Standard
+    GSCALAR(depth_max, "DEPTH_MAX", DEPTH_MAX_DEFAULT),
 
     // @Param: FORMAT_VERSION
     // @DisplayName: Eeprom format version number

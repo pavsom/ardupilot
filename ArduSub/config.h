@@ -19,6 +19,17 @@
 # define SURFACE_DEPTH_DEFAULT -10.0f // pressure sensor reading 10cm depth means craft is considered surfaced
 #endif
 
+#ifndef DEPTH_SURFACE_DEFAULT
+# define DEPTH_SURFACE_DEFAULT -10.0f // pressure sensor reading 10cm depth means craft is considered surfaced
+#endif
+
+#ifndef DEPTH_BOTTOM_DEFAULT
+# define DEPTH_BOTTOM_DEFAULT -10000.0f // pressure sensor reading 10cm depth means craft is considered at the bottom
+#endif
+
+#ifndef DEPTH_MAX_DEFAULT
+# define DEPTH_MAX_DEFAULT -10000.0f // pressure sensor reading 10cm depth means craft is considered at it's maximum depth
+#endif
 //////////////////////////////////////////////////////////////////////////////
 // PWM control
 // default RC speed in Hz
