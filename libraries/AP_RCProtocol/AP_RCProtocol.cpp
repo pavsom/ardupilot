@@ -36,7 +36,7 @@
 #include <RC_Channel/RC_Channel.h>
 
 #include <AP_Vehicle/AP_Vehicle_Type.h>
-
+#include <stdio.h>
 extern const AP_HAL::HAL& hal;
 
 void AP_RCProtocol::init()
@@ -229,6 +229,7 @@ bool AP_RCProtocol::process_byte(uint8_t byte, uint32_t baudrate)
             backend[i]->process_byte(byte, baudrate);
             const uint32_t frame_count2 = backend[i]->get_rc_frame_count();
             if (frame_count2 > frame_count) {
+                printf("protocol %d enabled count1 %d count2 %d new count%d\n\r",i,frame_count,input_count,frame_count2);
                 if (requires_3_frames((rcprotocol_t)i) && frame_count2 < 3) {
                     continue;
                 }
@@ -364,6 +365,7 @@ bool AP_RCProtocol::new_input()
     // run update function on backends
     for (uint8_t i = 0; i < ARRAY_SIZE(backend); i++) {
         if (backend[i] != nullptr) {
+            //printf("backend rc %d\n\r",i);
             backend[i]->update();
         }
     }

@@ -63,7 +63,7 @@ public:
 private:
     uint16_t _rc_values[RC_INPUT_MAX_CHANNELS] = {0};
 
-    uint64_t _last_read;
+    uint32_t _last_read;
     uint8_t _num_channels;
     Semaphore rcin_mutex;
     int16_t _rssi = -1;

@@ -74,14 +74,24 @@ void RCInput::pulse_input_enable(bool enable)
 
 bool RCInput::new_input()
 {
+    /* uint32_t tnow = AP_HAL::millis();
+    static uint32_t tnowLast = 0;
+    uint32_t passedTime = tnow - tnowLast;
+    if (passedTime > 1001)
+            tnowLast =  tnow; */
     if (!_init) {
+        printf("rcinput not initialized\n\r");
+        /* if (passedTime > 1000)
+            printf("rcinput not initialized\n\r"); */
         return false;
     }
     bool valid;
     {
+        //printf("1 last read 0x%08x, new signal 0x%08x ",_last_read, _rcin_timestamp_last_signal);
         WITH_SEMAPHORE(rcin_mutex);
         valid = _rcin_timestamp_last_signal != _last_read;
         _last_read = _rcin_timestamp_last_signal;
+        //printf("valid %d\n\r",(uint8_t)valid);
     }
 
 #if HAL_RCINPUT_WITH_AP_RADIO
@@ -147,18 +157,31 @@ uint8_t RCInput::read(uint16_t* periods, uint8_t len)
 
 void RCInput::_timer_tick(void)
 {
+    /* uint32_t tnow = AP_HAL::millis();
+    static uint32_t tnowLast = 0;
+    uint32_t passedTime = tnow - tnowLast;
+    if (passedTime > 1001)
+        tnowLast =  tnow; */
+    /* if (passedTime > 1000)
+            printf("rcinputtimer %d - %d\n\r", tnow, tnowLast); */
     if (!_init) {
+        /* if (passedTime > 1000)
+            printf("rcinput not initialized\n\r"); */
         return;
     }
 #ifndef HAL_NO_UARTDRIVER
     const char *rc_protocol = nullptr;
     RCSource source = last_source;
+    /* if (passedTime > 1000)
+            printf("rc source %d\n\r", (uint8_t)source); */
 #endif
 
 #if AP_RCPROTOCOL_ENABLED
     AP_RCProtocol &rcprot = AP::RC();
 
 #if HAL_USE_ICU == TRUE
+    /* if (passedTime > 1000)
+            printf("rc timer use icu\n\r"); */
     if (pulse_input_enabled) {
         const uint32_t *p;
         uint32_t n;
@@ -170,6 +193,8 @@ void RCInput::_timer_tick(void)
 #endif
 
 #if HAL_USE_EICU == TRUE
+    /* if (passedTime > 1000)
+            printf("rc timer user eicu\n\r"); */
     if (pulse_input_enabled) {
         uint32_t width_s0, width_s1;
         while(sig_reader.read(width_s0, width_s1)) {
@@ -181,6 +206,8 @@ void RCInput::_timer_tick(void)
 #endif  // AP_RCPROTOCOL_ENABLED
 
 #if HAL_WITH_IO_MCU
+    /* if (passedTime > 1000)
+            printf("rc timer use ioMCU\n\r"); */
     uint32_t now = AP_HAL::millis();
     const bool have_iocmu_rc = (_rcin_last_iomcu_ms != 0 && now - _rcin_last_iomcu_ms < 400);
     if (!have_iocmu_rc) {
@@ -192,6 +219,8 @@ void RCInput::_timer_tick(void)
 
 #if AP_RCPROTOCOL_ENABLED
     if (rcprot.new_input() && !have_iocmu_rc) {
+        /* if (passedTime > 1000)
+            printf("rc timer new input\n\r"); */
         WITH_SEMAPHORE(rcin_mutex);
         _rcin_timestamp_last_signal = AP_HAL::micros();
         _num_channels = rcprot.num_channels();
@@ -207,7 +236,11 @@ void RCInput::_timer_tick(void)
 #endif // AP_RCPROTOCOL_ENABLED
 
 #if HAL_RCINPUT_WITH_AP_RADIO
+    /* if (passedTime > 1000)
+            printf("rc timer rc with radio\n\r"); */
     if (radio && radio->last_recv_us() != last_radio_us && !have_iocmu_rc) {
+        /* if (passedTime > 1000)
+            printf("rc timer radio last recv\n\r"); */
         last_radio_us = radio->last_recv_us();
         WITH_SEMAPHORE(rcin_mutex);
         _rcin_timestamp_last_signal = last_radio_us;
@@ -218,6 +251,8 @@ void RCInput::_timer_tick(void)
         }
 #ifndef HAL_NO_UARTDRIVER
         source = RCSource::APRADIO;
+        /* if (passedTime > 1000)
+            printf("rc timer source radio\n\r"); */
 #endif
     }
 #endif
@@ -232,6 +267,8 @@ void RCInput::_timer_tick(void)
 #ifndef HAL_NO_UARTDRIVER
             rc_protocol = iomcu.get_rc_protocol();
             _rssi = iomcu.get_RSSI();
+            /* if (passedTime > 1000)
+            printf("rc timer user source mcu\n\r"); */
             source = RCSource::IOMCU;
 #endif
         }
