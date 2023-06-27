@@ -80,7 +80,7 @@ const struct LogStructure AP_Periph_FW::log_structure[] = {
 
 void AP_Periph_FW::init()
 {
-    
+    printf("main firmware starting...\n\r");
     // always run with watchdog enabled. This should have already been
     // setup by the bootloader, but if not then enable now
 #ifndef DISABLE_WATCHDOG
@@ -90,7 +90,7 @@ void AP_Periph_FW::init()
     stm32_watchdog_pat();
 
 #if !HAL_GCS_ENABLED
-    hal.serial(0)->begin(AP_SERIALMANAGER_CONSOLE_BAUD, 32, 32);
+    hal.serial(0)->begin(57600, 32, 32);
 #endif
     hal.serial(3)->begin(115200, 128, 256);
 
@@ -105,6 +105,7 @@ void AP_Periph_FW::init()
     gcs().init();
 #endif
     serial_manager.init();
+    hal.serial(0)->begin(57600, 32, 32);
 
 #if HAL_GCS_ENABLED
     gcs().setup_console();
