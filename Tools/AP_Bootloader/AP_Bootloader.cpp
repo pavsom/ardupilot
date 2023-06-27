@@ -142,6 +142,7 @@ int main(void)
 #if defined(HAL_GPIO_PIN_VBUS) && defined(HAL_ENABLE_VBUS_CHECK)
 #if HAL_USE_SERIAL_USB == TRUE
     else if (palReadLine(HAL_GPIO_PIN_VBUS) == 0)  {
+        uprintf("btn, staying in bootloader\n\r");
         try_boot = true;
         timeout = 0;
     }
@@ -176,6 +177,7 @@ int main(void)
 #if defined(BOOTLOADER_DEV_LIST)
     init_uarts();
 #endif
+    uprintf("in bootloader\n\r");
 #if HAL_USE_CAN == TRUE || HAL_NUM_CAN_IFACES
     can_start();
 #endif
