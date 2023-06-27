@@ -77,8 +77,8 @@ extern AP_Periph_FW periph;
 #define AP_PERIPH_MAG_MAX_RATE 25U
 #endif
 
-#define DEBUG_PRINTS 0
-#define DEBUG_PKTS 0
+#define DEBUG_PRINTS 1
+#define DEBUG_PKTS 1
 #if DEBUG_PRINTS
  # define Debug(fmt, args ...)  do {can_printf(fmt "\n", ## args);} while(0)
 #else
