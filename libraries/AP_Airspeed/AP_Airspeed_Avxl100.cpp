@@ -38,20 +38,26 @@ AP_Airspeed_Avxl100::AP_Airspeed_Avxl100(AP_Airspeed &_frontend, uint8_t _instan
 
 bool AP_Airspeed_Avxl100::init()
 {
+#ifndef HAL_BUILD_AP_PERIPH    
     gcs().send_text(MAV_SEVERITY_INFO, "Airspeed#%d avxl100 initialized id device", get_instance());
+#endif    
     return true;
 }
 
 // read the airspeed sensor
 bool AP_Airspeed_Avxl100::get_differential_pressure(float &pressure)
 {
+#ifndef HAL_BUILD_AP_PERIPH    
     gcs().send_text(MAV_SEVERITY_INFO, "Airspeed#%d avxl100 requested pressure", get_instance());
+#endif    
     return false;
 }
 
 bool AP_Airspeed_Avxl100::get_airspeed(float& airspeed){
     uint32_t tnow = AP_HAL::millis();
+#ifndef HAL_BUILD_AP_PERIPH    
     forwardThrust = forwardThrust * bodyInertia + motors->get_forward() * (1 - bodyInertia);
+#endif    
     dT = (tnow - lastEstimate);
     lastEstimate = tnow;
     forwardVelocity = forwardThrust * forwardVelRatio;

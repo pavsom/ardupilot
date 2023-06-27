@@ -34,7 +34,9 @@ public:
     bool get_airspeed(float& airspeed) override;
 
 private:
+#ifndef HAL_BUILD_AP_PERIPH
     AP_Motors6DOF* const motors = static_cast<AP_Motors6DOF*>(AP_Motors::get_singleton());
+#endif    
 
     float bodyInertia = 0.6f;
     float forwardThrust = 0.0f;
