@@ -36,6 +36,9 @@ public:
         return &obj_channels[chan];
     }
 
+    // tell the gimbal code all is good with RC input:
+    bool in_rc_failsafe() const override { return false; };
+
     // returns true if throttle arming checks should be run
     bool arming_check_throttle() const override;
 protected:

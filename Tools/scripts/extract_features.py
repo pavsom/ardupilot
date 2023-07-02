@@ -153,6 +153,8 @@ class ExtractFeatures(object):
             ('HAL_SPRAYER_ENABLED', 'AC_Sprayer::AC_Sprayer',),
             ('AP_LANDINGGEAR_ENABLED', r'AP_LandingGear::init\b',),
             ('AP_WINCH_ENABLED', 'AP_Winch::AP_Winch',),
+            ('AP_RELAY_ENABLED', 'AP_Relay::init',),
+            ('AP_SERVORELAYEVENTS_ENABLED', 'AP_ServoRelayEvents::update_events',),
 
             ('AP_RCPROTOCOL_ENABLED', r'AP_RCProtocol::init\b',),
             ('AP_RCPROTOCOL_{type}_ENABLED', r'AP_RCProtocol_(?P<type>.*)::_process_byte\b',),
@@ -162,6 +164,7 @@ class ExtractFeatures(object):
             ('AP_DRONECAN_VOLZ_FEEDBACK_ENABLED', r'AP_DroneCAN::handle_actuator_status_Volz\b',),
             ('AP_ROBOTISSERVO_ENABLED', r'AP_RobotisServo::init\b',),
             ('AP_FETTEC_ONEWIRE_ENABLED', r'AP_FETtecOneWire::init\b',),
+            ('AP_SBUSOUTPUT_ENABLED', 'AP_SBusOut::sbus_format_frame',),
             ('AP_KDECAN_ENABLED', r'AP_KDECAN::update\b',),
 
             ('AP_RPM_ENABLED', 'AP_RPM::AP_RPM',),

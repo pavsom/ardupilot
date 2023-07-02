@@ -3079,6 +3079,10 @@ INCLUDE common.ld
 #define AP_ROBOTISSERVO_ENABLED 0
 #endif
 
+#ifndef AP_SBUSOUTPUT_ENABLED
+#define AP_SBUSOUTPUT_ENABLED 0
+#endif
+
 // by default an AP_Periph defines as many servo output channels as
 // there are PWM outputs:
 #ifndef NUM_SERVO_CHANNELS
@@ -3122,6 +3126,14 @@ INCLUDE common.ld
 #endif
 
 #define HAL_CRSF_TELEM_ENABLED 0
+
+#ifndef AP_SERVORELAYEVENTS_ENABLED
+#define AP_SERVORELAYEVENTS_ENABLED 0
+#endif
+
+#ifndef AP_RELAY_ENABLED
+#define AP_RELAY_ENABLED 0
+#endif
 
 /*
  * GPS Backends - we selectively turn backends on.
@@ -3263,6 +3275,12 @@ INCLUDE common.ld
 #ifndef AP_SCRIPTING_ENABLED
 #define AP_SCRIPTING_ENABLED 0
 #endif
+
+#define AP_BATTERY_ENABLED defined(HAL_PERIPH_ENABLE_BATTERY)
+#define AP_AHRS_ENABLED defined(HAL_PERIPH_ENABLE_AHRS)
+#define AP_COMPASS_ENABLED defined(HAL_PERIPH_ENABLE_MAG)
+#define AP_BARO_ENABLED defined(HAL_PERIPH_ENABLE_BARO)
+#define AP_GPS_ENABLED defined(HAL_PERIPH_ENABLE_GPS)
 
 // end AP_Periph defaults
 ''')
