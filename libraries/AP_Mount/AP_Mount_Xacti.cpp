@@ -164,10 +164,10 @@ bool AP_Mount_Xacti::record_video(bool start_recording)
 
 // set focus specified as rate, percentage or auto
 // focus in = -1, focus hold = 0, focus out = 1
-bool AP_Mount_Xacti::set_focus(FocusType focus_type, float focus_value)
+SetFocusResult AP_Mount_Xacti::set_focus(FocusType focus_type, float focus_value)
 {
     if (_detected_modules[_instance].ap_dronecan == nullptr) {
-        return false;
+        return SetFocusResult::FAILED;
     }
 
     // convert focus type and value to parameter value
@@ -185,11 +185,14 @@ bool AP_Mount_Xacti::set_focus(FocusType focus_type, float focus_value)
         break;
     default:
         // unsupported forucs mode
-        return false;
+        return SetFocusResult::INVALID_PARAMETERS;
     }
 
     // set FocusMode parameter
-    return _detected_modules[_instance].ap_dronecan->set_parameter_on_node(_detected_modules[_instance].node_id, XACTI_PARAM_FOCUSMODE, focus_param_value, &param_int_cb);
+    if (!_detected_modules[_instance].ap_dronecan->set_parameter_on_node(_detected_modules[_instance].node_id, XACTI_PARAM_FOCUSMODE, focus_param_value, &param_int_cb)) {
+        return SetFocusResult::FAILED;
+    }
+    return SetFocusResult::ACCEPTED;
 }
 
 // send camera information message to GCS
@@ -379,7 +382,7 @@ void AP_Mount_Xacti::handle_gnss_status_req(AP_DroneCAN* ap_dronecan, const Cana
     }
 
     // get current location
-    uint8_t gps_status = 3;
+    uint8_t gps_status = 2;
     Location loc;
     if (!AP::ahrs().get_location(loc)) {
         gps_status = 0;
@@ -398,7 +401,7 @@ void AP_Mount_Xacti::handle_gnss_status_req(AP_DroneCAN* ap_dronecan, const Cana
     xacti_gnss_status_msg.order = msg.requirement;
     xacti_gnss_status_msg.remain_buffer = 1;
     xacti_gnss_status_msg.utc_year = year;
-    xacti_gnss_status_msg.utc_month = month;
+    xacti_gnss_status_msg.utc_month = month + 1;
     xacti_gnss_status_msg.utc_day = day;
     xacti_gnss_status_msg.utc_hour = hour;
     xacti_gnss_status_msg.utc_minute = min;

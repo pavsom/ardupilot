@@ -168,6 +168,11 @@ class NotAchievedException(ErrorException):
     pass
 
 
+class OldpymavlinkException(ErrorException):
+    """Thrown when a new feature is required from pymavlink"""
+    pass
+
+
 class YawSpeedNotAchievedException(NotAchievedException):
     """Thrown when fails to achieve given yaw speed."""
     pass
@@ -2500,7 +2505,6 @@ class AutoTest(ABC):
             "SIM_RC_CHANCOUNT",
             "SIM_RICH_CTRL",
             "SIM_RICH_ENABLE",
-            "SIM_SAFETY_STATE",
             "SIM_SERVO_SPEED",
             "SIM_SHIP_DSIZE",
             "SIM_SHIP_ENABLE",
@@ -9291,11 +9295,23 @@ Also, ignores heartbeats not from our target system'''
                          0, # param2
                          0, # param3
                          0, # param4
-
                          0, # param5
                          0, # param6
                          0 # param7
                          )
+            self.verify_parameter_values(wanted)
+
+            # run same command but as command_int:
+            self.zero_mag_offset_parameters()
+            self.run_cmd_int(mavutil.mavlink.MAV_CMD_FIXED_MAG_CAL_YAW,
+                             math.degrees(ss.yaw), # param1
+                             0, # param2
+                             0, # param3
+                             0, # param4
+                             0, # param5
+                             0, # param6
+                             0 # param7
+                             )
             self.verify_parameter_values(wanted)
 
             self.progress("Rebooting and making sure we could arm with these values")
@@ -9581,6 +9597,28 @@ Also, ignores heartbeats not from our target system'''
             raise NotAchievedException("Failed to ARM")
         self.progress("default disarm_vehicle() call")
         self.disarm_vehicle()
+
+        self.start_subtest("Arm/disarm vehicle with COMMAND_INT")
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            1,  # ARM
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            0,  # DISARM
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
 
         self.progress("arm with mavproxy")
         mavproxy = self.start_mavproxy()
