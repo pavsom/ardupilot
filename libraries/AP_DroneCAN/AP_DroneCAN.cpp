@@ -369,7 +369,7 @@ void AP_DroneCAN::loop(void)
         
         if (!sent_delay){
             sent_delay = 1000;
-            printf("_SRV_armed = %d\n\r", _SRV_armed);
+            //printf("_SRV_armed = %d\n\r", _SRV_armed);
         }else{
             sent_delay--;
         } 
