@@ -226,11 +226,13 @@ bool Sub::ekf_position_ok()
     if (!motors.armed()) {
         //
         //
-        return ((filt_status.flags.horiz_pos_abs || filt_status.flags.pred_horiz_pos_abs));
+        //printf("hpa %d phpa %d\n\r",filt_status.flags.horiz_pos_abs,filt_status.flags.pred_horiz_pos_abs);
+        return ((filt_status.flags.horiz_pos_abs || filt_status.flags.pred_horiz_pos_abs || !filt_status.flags.const_pos_mode));
     }
 
     // once armed we require a good absolute position and EKF must not be in const_pos_mode
-    return (filt_status.flags.horiz_pos_abs && !filt_status.flags.const_pos_mode);
+    //printf("hpa %d cpm %d\n\r",filt_status.flags.horiz_pos_abs,filt_status.flags.const_pos_mode);
+    return ((filt_status.flags.horiz_pos_abs && !filt_status.flags.const_pos_mode) || !filt_status.flags.const_pos_mode);
 }
 
 // optflow_position_ok - returns true if optical flow based position estimate is ok
