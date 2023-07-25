@@ -79,9 +79,10 @@ public:
 
   
     // pilot input processing
-    void get_pilot_desired_accelerations(float &right_out, float &front_out) const;
+    void get_pilot_desired_accelerationsget_pilot_desired_accelerations(float &right_out, float &front_out) const;
     void get_pilot_desired_angle_rates(int16_t roll_in, int16_t pitch_in, int16_t yaw_in, float &roll_out, float &pitch_out, float &yaw_out);
-
+    void control_depth();
+    void handle_attitude();
 
 protected:
 
@@ -262,7 +263,6 @@ public:
     bool has_manual_throttle() const override { return false; }
     bool allows_arming(bool from_gcs) const override { return true; }
     bool is_autopilot() const override { return false; }
-    void control_depth();
 
 protected:
 

@@ -12,7 +12,7 @@ protected:
     void init_aux_function(aux_func_t ch_option, AuxSwitchPos) override;
     bool do_aux_function(aux_func_t ch_option, AuxSwitchPos) override;
 private:
-    void do_aux_function_change_mode(const control_mode_t mode,
+    void do_aux_function_change_mode(Mode::Number mode,
                                      const AuxSwitchPos ch_flag);
     void do_aux_function_change_air_mode(const AuxSwitchPos ch_flag);
     void do_aux_function_change_force_flying(const AuxSwitchPos ch_flag);

@@ -138,10 +138,21 @@ void Sub::exit_mode(Mode::Number old_control_mode, Mode::Number new_control_mode
         camera_mount.set_mode_to_default();
 #endif  // HAL_MOUNT_ENABLED
     }
+    if (old_control_mode != Mode::Number::ALT_HOLD &&
+    new_control_mode == Mode::Number::STABILIZE){
+        sub.last_roll = 0;
+        sub.last_pitch = 0;
+    }
+    if (old_control_mode != Mode::Number::STABILIZE &&
+    new_control_mode == Mode::Number::ALT_HOLD){
+        sub.last_roll = 0;
+        sub.last_pitch = 0;
+    }
 }
 
 bool Sub::set_mode(const uint8_t new_mode, const ModeReason reason)
 {
+    hal.console->printf("setting mode MODE = %d\n\r", new_mode);
     static_assert(sizeof(Mode::Number) == sizeof(new_mode), "The new mode can't be mapped to the vehicles mode number");
     return sub.set_mode(static_cast<Mode::Number>(new_mode), reason);
 }
@@ -151,6 +162,13 @@ bool Sub::set_mode(const uint8_t new_mode, const ModeReason reason)
 void Sub::update_flight_mode()
 {
     flightmode->run();
+
+    if (abs(motors.get_lateral()) < 0.1 && 
+    abs(motors.get_forward()) > 0.2){
+        ahrs.set_fly_forward(true);
+    }else{
+        ahrs.set_fly_forward(false);
+    }
 }
 
 // exit_mode - high level call to organise cleanup as a flight mode is exited
@@ -168,6 +186,177 @@ void Sub::notify_flight_mode()
     notify.set_flight_mode_str(flightmode->name4());
 }
 
+void Mode::handle_attitude(){
+    uint32_t tnow = AP_HAL::millis();
+    // initialize vertical speeds and acceleration
+    position_control->set_max_speed_accel_z(-sub.get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+    motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
+
+    // get pilot desired lean angles/rates
+    float target_roll, target_pitch, target_yaw;
+
+    // Check if set_attitude_target_no_gps is valid
+    if (tnow - sub.set_attitude_target_no_gps.last_message_ms < 5000) {
+        Quaternion(
+            sub.set_attitude_target_no_gps.packet.q
+        ).to_euler(
+            target_roll,
+            target_pitch,
+            target_yaw
+        );
+        target_roll = 100 * degrees(target_roll);
+        target_pitch = 100 * degrees(target_pitch);
+        target_yaw = 100 * degrees(target_yaw);
+        sub.last_roll = target_roll;
+        sub.last_pitch = target_pitch;
+        sub.last_pilot_heading = target_yaw;
+        attitude_control->input_euler_angle_roll_pitch_yaw(target_roll, target_pitch, target_yaw, true);
+        return;
+    }
+    // convert pilot input to lean angles
+    // To-Do: convert sub.get_pilot_desired_lean_angles to return angles as floats
+    // TODO2: move into mode.h
+    sub.get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, attitude_control->get_althold_lean_angle_max_cd());
+
+    // get pilot's desired yaw rate
+    float yaw_input =  channel_yaw->pwm_to_angle_dz_trim(channel_yaw->get_dead_zone() * sub.gain, channel_yaw->get_radio_trim());
+    target_yaw = sub.get_pilot_desired_yaw_rate(yaw_input);
+    
+    switch (g.control_frame) {
+        case MAV_FRAME_BODY_FRD:
+        {
+          if (abs(target_roll) > 50 || abs(target_pitch) > 50 || abs(target_yaw) > 50) {
+              sub.last_input_ms = tnow;
+              attitude_control->input_rate_bf_roll_pitch_yaw(target_roll, target_pitch, target_yaw);
+              Quaternion attitude_target = attitude_control->get_attitude_target_quat();
+              sub.last_roll = degrees(attitude_target.get_euler_roll()) * 100;
+              sub.last_pitch = degrees(attitude_target.get_euler_pitch()) * 100;
+              sub.last_pilot_heading = degrees(attitude_target.get_euler_yaw()) * 100;
+          } else {
+              attitude_control->input_euler_angle_roll_pitch_yaw(sub.last_roll, sub.last_pitch, sub.last_pilot_heading, true);
+          } 
+        }
+        break;
+        default:
+        {
+            // call attitude controller
+            if (!is_zero(target_yaw)) { // call attitude controller with rate yaw determined by pilot input
+                attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(sub.last_roll, sub.last_pitch, target_yaw);
+                sub.last_pilot_heading = ahrs.yaw_sensor;
+                sub.last_pilot_yaw_input_ms = tnow; // time when pilot last changed heading
+
+            } else { // hold current heading
+
+                if (abs(target_roll) > 50 || abs(target_pitch) > 50 || abs(target_yaw) > 50) {
+                    sub.last_roll = ahrs.roll_sensor;
+                    sub.last_pitch = ahrs.pitch_sensor;
+                    sub.last_pilot_heading = ahrs.yaw_sensor;
+                    sub.last_input_ms = tnow;
+                    attitude_control->input_rate_bf_roll_pitch_yaw(target_roll, target_pitch, target_yaw);
+
+                // this check is required to prevent bounce back after very fast yaw maneuvers
+                // the inertia of the vehicle causes the heading to move slightly past the point when pilot input actually stopped
+                } else if (tnow < sub.last_pilot_yaw_input_ms + 250) { // give 250ms to slow down, then set target heading
+                    target_yaw = 0; // Stop rotation on yaw axis
+
+                    // call attitude controller with target yaw rate = 0 to decelerate on yaw axis
+                    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(sub.last_roll, sub.last_pitch, target_yaw);
+                    sub.last_pilot_heading = ahrs.yaw_sensor; // update heading to hold
+
+                } else { // call attitude controller holding absolute absolute bearing
+                    attitude_control->input_euler_angle_roll_pitch_yaw(sub.last_roll, sub.last_pitch, sub.last_pilot_heading, true);
+                }
+            }
+        }
+    }
+}
+
+#define slowpokeRate 200
+//#define zrateDebug
+#define altitudeSimpleControl
+void Mode::control_depth() {
+#ifndef zrateDebug    
+    static uint32_t slowpoke = 0;
+    if (slowpoke  > slowpokeRate) slowpoke = 0;
+    slowpoke++;
+#endif    
+    // We rotate the RC inputs to the earth frame to check if the user is giving an input that would change the depth.
+    // Output the Z controller + pilot input to all motors.
+#ifndef altitudeSimpleControl
+    Vector3f earth_frame_rc_inputs = ahrs.get_rotation_body_to_ned() * Vector3f(-channel_forward->norm_input(), -channel_lateral->norm_input(), (2.0f*(-0.5f+channel_throttle->norm_input())));
+    float target_climb_rate_cm_s = sub.get_pilot_desired_climb_rate(500 + g.pilot_speed_up * earth_frame_rc_inputs.z);
+#else    
+    float target_climb_rate_cm_s = sub.get_pilot_desired_climb_rate(500 + g.pilot_speed_up * (2.0f*(-0.5f+channel_throttle->norm_input())));
+#endif    
+#ifdef zrateDebug        
+    if (slowpoke  > slowpokeRate){
+        printf("depth  %4d  ",static_cast<int32_t>(barometer.get_altitude()*100));
+        printf("Zrate  %4d  ",static_cast<int32_t>(target_climb_rate_cm_s));
+    }
+#endif
+
+    bool burrowing = sub.ap.at_bottom || position_control->get_pos_target_z_cm() < (sub.depthTerrain + g.depth_surface);
+    bool surfacing = sub.ap.at_surface || position_control->get_pos_target_z_cm() > g.depth_surface;
+    float upper_speed_limit = surfacing ? 0 : g.pilot_speed_up;
+    float lower_speed_limit = burrowing ? 0 : -sub.get_pilot_speed_dn();
+    target_climb_rate_cm_s = constrain_float(target_climb_rate_cm_s, lower_speed_limit, upper_speed_limit);
+
+
+#ifdef zrateDebug    
+    if (slowpoke  > slowpokeRate)
+        printf("surf=%d Z1  %4d  ",static_cast<int16_t>(g.depth_surface),static_cast<int16_t>((position_control->get_pos_target_z_cm())));
+    if (slowpoke  > slowpokeRate){
+        printf("atSurf %s", ap.at_surface? "yes  " : "no  ");
+    }
+    if (slowpoke  > slowpokeRate)
+        printf("upSpLim  %4d  ",static_cast<int32_t>(upper_speed_limit));
+    if (slowpoke  > slowpokeRate)
+        printf("loSpLim  %4d  ",static_cast<int32_t>(lower_speed_limit));
+    if (slowpoke  > slowpokeRate)
+        printf("Zrate  %4d  ",static_cast<int32_t>(target_climb_rate_cm_s));
+#endif
+
+    position_control->set_pos_target_z_from_climb_rate_cm(target_climb_rate_cm_s);
+
+
+#ifdef zrateDebug        
+    if (slowpoke  > slowpokeRate)
+        printf("Z2  %4d  ",static_cast<int16_t>((position_control->get_pos_target_z_cm())));
+#endif    
+
+
+    if (surfacing) {
+        position_control->set_alt_target_with_slew(MIN(position_control->get_pos_target_z_cm(), g.depth_surface - 5.0f)); // set target to 5 cm below surface level
+    } else if (burrowing) {
+        const float terrainDepth = sub.depthTerrain +10.0f;
+        position_control->set_alt_target_with_slew(MAX(inertial_nav.get_position_z_up_cm() + 10.0f, MAX(terrainDepth, position_control->get_pos_target_z_cm()))); // set target to 10 cm above bottom
+    }
+
+#ifdef zrateDebug        
+    if (slowpoke  > slowpokeRate)
+        printf("Z3  %4d  ",static_cast<int16_t>((position_control->get_pos_target_z_cm())));
+#endif        
+
+    position_control->update_z_controller();
+    // Read the output of the z controller and rotate it so it always points up
+    Vector3f throttle_vehicle_frame = ahrs.get_rotation_body_to_ned().transposed() * Vector3f(0, 0, motors.get_throttle_in_bidirectional());
+    //TODO: scale throttle with the ammount of thrusters in the given direction
+    //float thrtl = motors.get_throttle_in_bidirectional();
+    float raw_throttle_factor = (ahrs.get_rotation_body_to_ned() * Vector3f(0, 0, 1.0)).xy().length();
+    motors.set_throttle(throttle_vehicle_frame.z + raw_throttle_factor * channel_throttle->norm_input());
+
+#ifdef zrateDebug        
+    if (slowpoke  > slowpokeRate)
+        printf("throttle  %4d  \n\r",static_cast<int16_t>((throttle_vehicle_frame.z + raw_throttle_factor * channel_throttle->norm_input())*100));
+#endif    
+
+    motors.set_forward(-throttle_vehicle_frame.x + channel_forward->norm_input());
+    motors.set_lateral(-throttle_vehicle_frame.y + channel_lateral->norm_input());  
+    /* if (slowpoke  > slowpokeRate)
+        printf("tthrl = %f; xx = %f; y = %f; z = %f; scale = %f; in = %f; thrt = %f; frw = %f; lat = %f\n\r",
+            thrtl, throttle_vehicle_frame.x, throttle_vehicle_frame.y, throttle_vehicle_frame.z, raw_throttle_factor, channel_throttle->norm_input(), 
+            motors.get_throttle_in_bidirectional(),motors.get_forward(),motors.get_lateral()); */
+}
 
 // get_pilot_desired_angle_rates - transform pilot's roll pitch and yaw input into a desired lean angle rates
 // returns desired angle rates in centi-degrees-per-second

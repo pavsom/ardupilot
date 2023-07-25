@@ -374,4 +374,11 @@ void Sub::stats_update(void)
 }
 #endif
 
+float Sub::stopping_distance() {
+    const float curr_pos_z = inertial_nav.get_position_neu_cm().z;
+    float curr_vel_z = inertial_nav.get_velocity_neu_cms().z;
+    float distance = - (curr_vel_z * curr_vel_z) / (2 * g.pilot_accel_z);
+    return curr_pos_z  + distance;
+}
+
 AP_HAL_MAIN_CALLBACKS(&sub);

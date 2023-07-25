@@ -136,7 +136,7 @@ void RC_Channel_Sub::init_aux_function(const aux_func_t ch_option, const AuxSwit
 
 // do_aux_function_change_mode - change mode based on an aux switch
 // being moved
-void RC_Channel_Sub::do_aux_function_change_mode(const control_mode_t mode,
+void RC_Channel_Sub::do_aux_function_change_mode(Mode::Number mode,
                                                     const AuxSwitchPos ch_flag)
 {
     /* switch(ch_flag) {
