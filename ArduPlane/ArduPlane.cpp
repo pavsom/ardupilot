@@ -245,7 +245,12 @@ void Plane::update_logging10(void)
         ahrs.Write_AOA_SSA();
     } else if (log_faster) {
         ahrs.Write_AOA_SSA();
-    } 
+    }
+#if HAL_MOUNT_ENABLED
+    if (should_log(MASK_LOG_CAMERA)) {
+        camera_mount.write_log();
+    }
+#endif
 }
 
 /*
@@ -262,7 +267,9 @@ void Plane::update_logging25(void)
 
     if (should_log(MASK_LOG_CTUN)) {
         Log_Write_Control_Tuning();
-        AP::ins().write_notch_log_messages();
+        if (!should_log(MASK_LOG_NOTCH_FULLRATE)) {
+            AP::ins().write_notch_log_messages();
+        }
 #if HAL_GYROFFT_ENABLED
         gyro_fft.write_log_messages();
 #endif

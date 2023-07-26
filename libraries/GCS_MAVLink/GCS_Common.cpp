@@ -4601,32 +4601,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_mount(const mavlink_command_long_t &packe
 #endif
 }
 
-MAV_RESULT GCS_MAVLINK::handle_command_do_set_home(const mavlink_command_long_t &packet)
-{
-    if (is_equal(packet.param1, 1.0f) || (is_zero(packet.param5) && is_zero(packet.param6))) {
-        // param1 is 1 (or both lat and lon are zero); use current location
-        if (!set_home_to_current_location(true)) {
-            return MAV_RESULT_FAILED;
-        }
-        return MAV_RESULT_ACCEPTED;
-    }
-
-    // ensure param1 is zero
-    if (!is_zero(packet.param1)) {
-        return MAV_RESULT_FAILED;
-    }
-
-    Location new_home_loc;
-    if (!location_from_command_t(packet, MAV_FRAME_GLOBAL, new_home_loc)) {
-        return MAV_RESULT_DENIED;
-    }
-
-    if (!set_home(new_home_loc, true)) {
-        return MAV_RESULT_FAILED;
-    }
-    return MAV_RESULT_ACCEPTED;
-}
-
 MAV_RESULT GCS_MAVLINK::handle_command_component_arm_disarm(const mavlink_command_int_t &packet)
 {
     if (is_equal(packet.param1,1.0f)) {
@@ -4667,6 +4641,7 @@ MAV_RESULT GCS_MAVLINK::try_command_long_as_command_int(const mavlink_command_lo
             { MAV_CMD_FIXED_MAG_CAL_YAW, MAV_FRAME_GLOBAL_RELATIVE_ALT },
             { MAV_CMD_DO_SET_ROI, MAV_FRAME_GLOBAL_RELATIVE_ALT },
             { MAV_CMD_DO_SET_ROI_LOCATION, MAV_FRAME_GLOBAL_RELATIVE_ALT },
+            { MAV_CMD_DO_SET_HOME, MAV_FRAME_GLOBAL },
         };
 
         // map from command to frame:
@@ -4709,10 +4684,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_packet(const mavlink_command_long_t 
 
     case MAV_CMD_DO_SEND_BANNER:
         result = handle_command_do_send_banner(packet);
-        break;
-
-    case MAV_CMD_DO_SET_HOME:
-        result = handle_command_do_set_home(packet);
         break;
 
     case MAV_CMD_DO_FENCE_ENABLE:
@@ -4770,9 +4741,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_packet(const mavlink_command_long_t 
         break;
     }
 #endif
-
-    case MAV_CMD_DO_SET_ROI_NONE:
-        return handle_command_do_set_roi_none();
 
     case MAV_CMD_DO_SET_ROI_SYSID:
         return handle_command_do_set_roi_sysid(packet);
@@ -5039,7 +5007,7 @@ void GCS_MAVLINK::handle_landing_target(const mavlink_message_t &msg)
 }
 
 
-MAV_RESULT GCS_MAVLINK::handle_command_int_do_set_home(const mavlink_command_int_t &packet)
+MAV_RESULT GCS_MAVLINK::handle_command_do_set_home(const mavlink_command_int_t &packet)
 {
     if (is_equal(packet.param1, 1.0f) || (packet.x == 0 && packet.y == 0)) {
         // param1 is 1 (or both lat and lon are zero); use current location
@@ -5092,19 +5060,17 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_external_position_estimate(const mavl
 }
 #endif // AP_AHRS_POSITION_RESET_ENABLED
 
+#if HAL_MOUNT_ENABLED
 MAV_RESULT GCS_MAVLINK::handle_command_do_set_roi_none()
 {
-#if HAL_MOUNT_ENABLED
     AP_Mount *mount = AP::mount();
     if (mount == nullptr) {
         return MAV_RESULT_UNSUPPORTED;
     }
     mount->set_mode_to_default();
     return MAV_RESULT_ACCEPTED;
-#else
-    return MAV_RESULT_UNSUPPORTED;
-#endif
 }
+#endif
 
 MAV_RESULT GCS_MAVLINK::handle_command_do_set_roi_sysid(const uint8_t sysid)
 {
@@ -5179,10 +5145,12 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
         return handle_command_do_set_roi(packet);
     case MAV_CMD_DO_SET_ROI_SYSID:
         return handle_command_do_set_roi_sysid(packet);
+#if HAL_MOUNT_ENABLED
     case MAV_CMD_DO_SET_ROI_NONE:
         return handle_command_do_set_roi_none();
+#endif
     case MAV_CMD_DO_SET_HOME:
-        return handle_command_int_do_set_home(packet);
+        return handle_command_do_set_home(packet);
 #if AP_AHRS_POSITION_RESET_ENABLED
     case MAV_CMD_EXTERNAL_POSITION_ESTIMATE:
         return handle_command_int_external_position_estimate(packet);
@@ -5202,8 +5170,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
             return scripting->handle_command_int_packet(packet);
         }
 #endif // AP_SCRIPTING_ENABLED
-    default:
-        break;
     }
     return MAV_RESULT_UNSUPPORTED;
 }

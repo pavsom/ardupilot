@@ -62,6 +62,9 @@ void Plane::Log_Write_FullRate(void)
     if (should_log(MASK_LOG_ATTITUDE_FULLRATE)) {
         Log_Write_Attitude();
     }
+    if (should_log(MASK_LOG_NOTCH_FULLRATE)) {
+        AP::ins().write_notch_log_messages();
+    }
 }
 
 
@@ -374,8 +377,8 @@ const struct LogStructure Plane::log_structure[] = {
 // @Field: CRt: climb rate
 // @Field: TMix: transition throttle mix value
 // @Field: Sscl: speed scalar for tailsitter control surfaces
-// @Field: Trn: Transistion state
-// @Field: Ast: Q assist active state
+// @Field: Trn: Transition state: 0-AirspeedWait,1-Timer,2-Done / TailSitter: 0-FW Wait,1-VTOL Wait,2-Done
+// @Field: Ast: Q assist active
 #if HAL_QUADPLANE_ENABLED
     { LOG_QTUN_MSG, sizeof(QuadPlane::log_QControl_Tuning),
       "QTUN", "QffffffeccffBB", "TimeUS,ThI,ABst,ThO,ThH,DAlt,Alt,BAlt,DCRt,CRt,TMix,Sscl,Trn,Ast", "s----mmmnn----", "F----00000-0--" , true },
