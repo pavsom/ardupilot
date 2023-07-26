@@ -1,5 +1,5 @@
 #pragma once
-
+#include "AP_Airspeed_config.h"
 #include <AP_HAL/AP_HAL_Boards.h>
 #include <AP_Motors/AP_Motors.h>
 
