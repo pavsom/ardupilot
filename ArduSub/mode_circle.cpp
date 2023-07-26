@@ -29,24 +29,12 @@ bool ModeCircle::init(bool ignore_checks)
 // should be called at 100hz or more
 void ModeCircle::run()
 {
-    float target_yaw_rate = 0;
-    float target_climb_rate = 0;
-
-    // update parameters, to allow changing at runtime
-    position_control->set_max_speed_accel_xy(sub.wp_nav.get_default_speed_xy(), sub.wp_nav.get_wp_acceleration());
-    position_control->set_max_speed_accel_z(-sub.get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
-
-    // if not armed set throttle to zero and exit immediately
-    if (!motors.armed()) {
-        // To-Do: add some initialisation of position controllers
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
-        attitude_control->set_throttle_out(0,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
+    if (disarmed(Number::CIRCLE)){
         sub.circle_nav.init();
         return;
     }
-
+    float target_yaw_rate = 0;
+    float target_climb_rate = 0;
     // process pilot inputs
     // get pilot's desired yaw rate
     target_yaw_rate = sub.get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz()) * 100;

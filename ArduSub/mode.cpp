@@ -188,10 +188,6 @@ void Sub::notify_flight_mode()
 
 void Mode::handle_attitude(){
     uint32_t tnow = AP_HAL::millis();
-    // initialize vertical speeds and acceleration
-    position_control->set_max_speed_accel_z(-sub.get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
-    motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
-
     // get pilot desired lean angles/rates
     float target_roll, target_pitch, target_yaw;
 
@@ -469,6 +465,38 @@ void Mode::get_pilot_desired_angle_rates(int16_t roll_in, int16_t pitch_in, int1
     yaw_out = rate_bf_request.z;
 }
 
+bool Mode::disarmed(Number mode){
+    if (!motors.armed()) {
+        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
+        attitude_control->set_throttle_out(0,true,g.throttle_filt);
+        attitude_control->relax_attitude_controllers();
+        sub.last_roll = 0;
+        sub.last_pitch = 0;
+        sub.last_pilot_heading = ahrs.yaw_sensor;
+        if (mode == Number::AUTO){
+            sub.wp_nav.wp_and_spline_init(); 
+        }
+        if (mode == Number::GUIDED){
+            // initialise velocity controller
+            position_control->init_z_controller();
+            position_control->init_xy_controller();
+        }
+        return true;
+    }else{
+        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
+        if (mode == Number::MANUAL){
+            // initialize vertical speeds and acceleration
+            position_control->set_max_speed_accel_z(-sub.get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+            position_control->set_correction_speed_accel_z(-sub.get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+        }
+        if (mode == Number::CIRCLE){
+            // initialize vertical speeds and acceleration
+            position_control->set_max_speed_accel_xy(sub.wp_nav.get_default_speed_xy(), sub.wp_nav.get_wp_acceleration());
+            position_control->set_max_speed_accel_z(-sub.get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
+        } 
+        return false;
+    }
+}
 
 bool Mode::set_mode(Mode::Number mode, ModeReason reason)
 {

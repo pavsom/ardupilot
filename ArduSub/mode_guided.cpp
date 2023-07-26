@@ -312,18 +312,14 @@ void ModeGuided::run()
 void ModeGuided::guided_pos_control_run()
 {
     // if motors not enabled set throttle to zero and exit immediately
-    if (!motors.armed()) {
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
-        attitude_control->set_throttle_out(0,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
-        sub.wp_nav.wp_and_spline_init();
+    if (disarmed(Number::AUTO)){
+
         return;
     }
 
     // process pilot's yaw input
     float target_yaw_rate = 0;
-    if (!sub.failsafe.pilot_input) {
+    if (sub.pilotInputValid) {
         // get pilot's desired yaw rate
         target_yaw_rate = sub.get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz()) * 100;
         if (!is_zero(target_yaw_rate)) {
@@ -363,29 +359,18 @@ void ModeGuided::guided_pos_control_run()
 void ModeGuided::guided_vel_control_run()
 {
     // ifmotors not enabled set throttle to zero and exit immediately
-    if (!motors.armed()) {
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
-        attitude_control->set_throttle_out(0,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
-        // initialise velocity controller
-        position_control->init_z_controller();
-        position_control->init_xy_controller();
-        return;
+    if (disarmed(Number::GUIDED)){
     }
 
     // process pilot's yaw input
     float target_yaw_rate = 0;
-    if (!sub.failsafe.pilot_input) {
+    if (sub.pilotInputValid) {
         // get pilot's desired yaw rate
         target_yaw_rate = sub.get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz()) * 100;
         if (!is_zero(target_yaw_rate)) {
             set_auto_yaw_mode(AUTO_YAW_HOLD);
         }
     }
-
-    // set motors to full range
-    motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     // set velocity to zero if no updates received for 3 seconds
     uint32_t tnow = AP_HAL::millis();
@@ -419,22 +404,15 @@ void ModeGuided::guided_vel_control_run()
 // called from guided_run
 void ModeGuided::guided_posvel_control_run()
 {
-    // if motors not enabled set throttle to zero and exit immediately
-    if (!motors.armed()) {
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
-        attitude_control->set_throttle_out(0,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
-        // initialise velocity controller
-        position_control->init_z_controller();
-        position_control->init_xy_controller();
+    // ifmotors not enabled set throttle to zero and exit immediately
+    if (disarmed(Number::AUTO)){
         return;
     }
 
     // process pilot's yaw input
     float target_yaw_rate = 0;
 
-    if (!sub.failsafe.pilot_input) {
+    if (sub.pilotInputValid) {
         // get pilot's desired yaw rate
         target_yaw_rate = sub.get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz()) * 100;
         if (!is_zero(target_yaw_rate)) {
@@ -485,14 +463,8 @@ void ModeGuided::guided_posvel_control_run()
 // called from guided_run
 void ModeGuided::guided_angle_control_run()
 {
-    // if motors not enabled set throttle to zero and exit immediately
-    if (!motors.armed()) {
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
-        attitude_control->set_throttle_out(0.0f,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
-        // initialise velocity controller
-        position_control->init_z_controller();
+    // ifmotors not enabled set throttle to zero and exit immediately
+    if (disarmed(Number::AUTO)){
         return;
     }
 

@@ -17,15 +17,10 @@ bool ModeManual::init(bool ignore_checks) {
 void ModeManual::run()
 {
     // if not armed set throttle to zero and exit immediately
-    if (!sub.motors.armed()) {
-        sub.motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        attitude_control->set_throttle_out(0,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
+    if (disarmed(Number::MANUAL)){
         return;
     }
-
-    sub.motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
-
+    
     sub.motors.set_roll(channel_roll->norm_input());
     sub.motors.set_pitch(channel_pitch->norm_input());
     sub.motors.set_yaw(channel_yaw->norm_input() * g.acro_yaw_p / ACRO_YAW_P);

@@ -83,7 +83,7 @@ public:
     void get_pilot_desired_angle_rates(int16_t roll_in, int16_t pitch_in, int16_t yaw_in, float &roll_out, float &pitch_out, float &yaw_out);
     void control_depth();
     void handle_attitude();
-
+    bool disarmed(Number mode);
 protected:
 
     // navigation support functions

@@ -104,21 +104,13 @@ void ModeAuto::auto_wp_start(const Location& dest_loc)
 void ModeAuto::auto_wp_run()
 {
     // if not armed set throttle to zero and exit immediately
-    if (!motors.armed()) {
-        // To-Do: reset waypoint origin to current location because vehicle is probably on the ground so we don't want it lurching left or right on take-off
-        //    (of course it would be better if people just used take-off)
-        // call attitude controller
-        // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        attitude_control->set_throttle_out(0,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
-        sub.wp_nav.wp_and_spline_init();                                                // Reset xy target
+    if (disarmed(Number::AUTO)){
         return;
     }
 
     // process pilot's yaw input
     float target_yaw_rate = 0;
-    if (!sub.failsafe.pilot_input) {
+    if (sub.pilotInputValid) {
         // get pilot's desired yaw rate
         target_yaw_rate = sub.get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz()) * 100;
         if (!is_zero(target_yaw_rate)) {
@@ -126,8 +118,6 @@ void ModeAuto::auto_wp_run()
         }
     }
 
-    // set motors to full range
-    motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     // run waypoint controller
     // TODO logic for terrain tracking target going below fence limit
@@ -298,24 +288,16 @@ bool ModeAuto::auto_loiter_start()
 void ModeAuto::auto_loiter_run()
 {
     // if not armed set throttle to zero and exit immediately
-    if (!motors.armed()) {
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        // Sub vehicles do not stabilize roll/pitch/yaw when disarmed
-        attitude_control->set_throttle_out(0,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
-
-        sub.wp_nav.wp_and_spline_init();                                                // Reset xy target
+    if (disarmed(Number::AUTO)){
+        
         return;
     }
 
     // accept pilot input of yaw
     float target_yaw_rate = 0;
-    if (!sub.failsafe.pilot_input) {
+    if (sub.pilotInputValid) {
         target_yaw_rate = sub.get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz()) * 100;
     }
-
-    // set motors to full range
-    motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     // run waypoint and z-axis position controller
     sub.failsafe_terrain_set_status(sub.wp_nav.update_wpnav());
@@ -466,11 +448,7 @@ void ModeAuto::auto_terrain_recover_run()
     static uint32_t rangefinder_recovery_ms = 0;
 
     // if not armed set throttle to zero and exit immediately
-    if (!motors.armed()) {
-        motors.set_desired_spool_state(AP_Motors::DesiredSpoolState::GROUND_IDLE);
-        attitude_control->set_throttle_out(0,true,g.throttle_filt);
-        attitude_control->relax_attitude_controllers();
-
+    if (disarmed(Number::POSHOLD)){
         sub.loiter_nav.init_target();                                                   // Reset xy target
         position_control->relax_z_controller(motors.get_throttle_hover());                // Reset z axis controller
         return;
