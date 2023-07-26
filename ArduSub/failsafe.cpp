@@ -171,18 +171,22 @@ void Sub::handle_battery_failsafe(const char* type_str, const int8_t action)
 void Sub::failsafe_pilot_input_check()
 {
 #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
-    if (g.failsafe_pilot_input == FS_PILOT_INPUT_DISABLED) {
-        failsafe.pilot_input = false;
-        return;
-    }
+    
 
     if (AP_HAL::millis() < failsafe.last_pilot_input_ms + g.failsafe_pilot_input_timeout * 1000.0f) {
         failsafe.pilot_input = false; // We've received an update from the pilot within the timeout period
+        pilotInputValid = true;
         return;
     }
 
     if (failsafe.pilot_input) {
         return; // only act once
+    }
+    pilotInputValid = false;
+    set_neutral_controls();
+    if (g.failsafe_pilot_input == FS_PILOT_INPUT_DISABLED) {
+        failsafe.pilot_input = false;
+        return;
     }
 
     failsafe.pilot_input = true;

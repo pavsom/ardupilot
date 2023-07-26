@@ -250,7 +250,8 @@ private:
     uint8_t depth_sensor_idx;
 
     AP_Motors6DOF motors;
-
+    
+    bool pilotInputValid;
     // Circle
     bool circle_pilot_yaw_override; // true if pilot is overriding yaw
 
