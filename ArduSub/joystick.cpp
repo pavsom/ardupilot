@@ -123,21 +123,21 @@ void Sub::transform_manual_control_to_rc_override(int16_t x, int16_t y, int16_t 
         xTot = x + xTrim;
     }
 
-    RC_Channels::set_override(0, constrain_int16(pitchTrim + rpyCenter,1100,1900), tnow); // pitch
-    RC_Channels::set_override(1, constrain_int16(rollTrim  + rpyCenter,1100,1900), tnow); // roll
+    RC_Channels::set_override((rcmap.pitch()-1), constrain_int16(pitchTrim + rpyCenter,1100,1900), tnow); // pitch
+    RC_Channels::set_override((rcmap.roll()-1), constrain_int16(rollTrim  + rpyCenter,1100,1900), tnow); // roll
 
-    RC_Channels::set_override(2, constrain_int16((zTot)*throttleScale+throttleBase,1100,1900), tnow); // throttle
-    RC_Channels::set_override(3, constrain_int16(r*rpyScale+rpyCenter,1100,1900), tnow);                 // yaw
+    RC_Channels::set_override((rcmap.throttle()-1), constrain_int16((zTot)*throttleScale+throttleBase,1100,1900), tnow); // throttle
+    RC_Channels::set_override((rcmap.yaw()-1), constrain_int16(r*rpyScale+rpyCenter,1100,1900), tnow);                 // yaw
 
     // maneuver mode:
     if (roll_pitch_flag == 0) {
         // adjust forward and lateral with joystick input instead of roll and pitch
-        RC_Channels::set_override(4, constrain_int16((xTot)*rpyScale+rpyCenter,1100,1900), tnow); // forward for ROV
-        RC_Channels::set_override(5, constrain_int16((yTot)*rpyScale+rpyCenter,1100,1900), tnow); // lateral for ROV
+        RC_Channels::set_override((rcmap.forward()-1), constrain_int16((xTot)*rpyScale+rpyCenter,1100,1900), tnow); // forward for ROV
+        RC_Channels::set_override((rcmap.lateral()-1), constrain_int16((yTot)*rpyScale+rpyCenter,1100,1900), tnow); // lateral for ROV
     } else {
         // neutralize forward and lateral input while we are adjusting roll and pitch
-        RC_Channels::set_override(4, constrain_int16(xTrim*rpyScale+rpyCenter,1100,1900), tnow); // forward for ROV
-        RC_Channels::set_override(5, constrain_int16(yTrim*rpyScale+rpyCenter,1100,1900), tnow); // lateral for ROV
+        RC_Channels::set_override((rcmap.forward()-1), constrain_int16(xTrim*rpyScale+rpyCenter,1100,1900), tnow); // forward for ROV
+        RC_Channels::set_override((rcmap.lateral()-1), constrain_int16(yTrim*rpyScale+rpyCenter,1100,1900), tnow); // lateral for ROV
     }
 
     RC_Channels::set_override(6, cam_pan, tnow);       // camera pan
@@ -775,7 +775,12 @@ void Sub::set_neutral_controls()
     for (uint8_t i = 0; i < 6; i++) {
         RC_Channels::set_override(i, 1500, tnow);
     }
-
+    channel_roll->set_override(1500, tnow);
+    channel_pitch->set_override(1500, tnow);
+    channel_yaw->set_override(1500, tnow);
+    channel_throttle->set_override(1500, tnow);
+    channel_forward->set_override(1500, tnow);
+    channel_lateral->set_override(1500, tnow);
     // Clear pitch/roll trim settings
     pitchTrim = 0;
     rollTrim  = 0;
