@@ -182,6 +182,10 @@ void Sub::init_ardupilot()
 
     // flag that initialisation has completed
     ap.initialised = true;
+
+    if (g.failsafe_pilot_input == FS_PILOT_INPUT_DISABLED) {
+        failsafe.pilot_input = false;
+    }
 }
 
 
