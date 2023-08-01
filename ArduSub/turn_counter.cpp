@@ -26,7 +26,7 @@ void Sub::update_turn_counter()
     // Determine state
     //AP::ahrs().writeExtNavVelData(vel_corrected, _frontend.get_vel_noise(), time_ms, _frontend.get_delay_ms());
     uint32_t tnow = AP_HAL::millis();
-    if (!trim){
+    if (!(static_cast<int32_t>(trim*100))){
         //trim = abs(1485 - (motors.get_pwm_output_max() + motors.get_pwm_output_min())/2);
         //trim = trim / ((motors.get_pwm_output_max() - motors.get_pwm_output_min())/2);
         

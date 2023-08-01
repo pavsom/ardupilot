@@ -38,8 +38,8 @@ float Sub::get_pilot_desired_yaw_rate(float stick_angle) const
 {
     // convert pilot input to the desired yaw rate
 
-    if (!attitude_control.get_ang_vel_yaw_max_rads()){
-        if (!g.acro_yaw_p) return stick_angle;
+    if (!(static_cast<int32_t>(attitude_control.get_ang_vel_yaw_max_rads()*100))){
+        if (!(static_cast<int32_t>(g.acro_yaw_p*100))) return stick_angle;
         return stick_angle * g.acro_yaw_p;
     }
     float max = degrees(attitude_control.get_ang_vel_yaw_max_rads()) * 100.f;

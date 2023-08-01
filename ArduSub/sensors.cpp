@@ -8,8 +8,8 @@ void Sub::read_barometer()
     // If we are reading a positive altitude, the sensor needs calibration
     // Even a few meters above the water we should have no significant depth reading
     if (!rangefinder_alt_ok()){
-        if (!rangefinder_state.enabled || !depthTerrain){
-            depthTerrain = !g.depth_bottom? g.depth_max : MAX(g.depth_bottom, g.depth_max);
+        if (!rangefinder_state.enabled || !(static_cast<int32_t>(depthTerrain*100))){
+            depthTerrain = !(static_cast<int32_t>(g.depth_bottom*100))? g.depth_max : MAX(g.depth_bottom, g.depth_max);
         }
     }else{
         float rangeFinderDistance = rangefinder_state.alt_cm_filt.get();
