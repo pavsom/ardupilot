@@ -41,12 +41,11 @@ void Sub::update_surface_and_bottom_detector()
                 bottom_detector_count++;
             } else {
                 set_bottomed(true);
-                depthTerrain = current_depth;
             }
 
         } else {
             if (ap.at_bottom) {
-            set_bottomed(current_depth < depthTerrain - 5);
+                set_bottomed(current_depth < depthTerrain + 5);
             }else {
                 set_bottomed(current_depth < depthTerrain);
             }
