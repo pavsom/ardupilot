@@ -99,7 +99,7 @@
 #endif
 
 #ifndef EKF_ORIGIN_MAX_DIST_M
-# define EKF_ORIGIN_MAX_DIST_M         50000   // EKF origin and waypoints (including home) must be within 50km
+# define EKF_ORIGIN_MAX_DIST_M         500000   // EKF origin and waypoints (including home) must be within 50km
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
