@@ -47,6 +47,17 @@ void Sub::userhook_SuperSlowLoop()
     hal.console->printf("ship class %d\n\r",(uint8_t)ahrs.get_vehicle_class());  
     if (!ahrs.have_inertial_nav())
         hal.console->printf("no inertial navigation\n\r");
+    /* Location temp_loc;
+    bool getLoc = ahrs.get_location(temp_loc);
+    if (!getLoc) printf("get loc fail ");
+    float alt = barometer.get_altitude() * 100.0f;
+    printf("alt = %d baroAlt = %d ||", static_cast<int32_t>(temp_loc.alt),static_cast<int32_t>(alt*100));
+
+    Location loc;
+    bool res = ahrs.get_origin(loc);
+    if (!res) printf("ekfOrigin fail ");
+    printf("ekfAlt = %d || ", static_cast<int32_t>(loc.alt) );
+    printf("homeAlt = %d\n\r", static_cast<int32_t>(ahrs.get_home().alt) ); */
     /* AP_MotorsMatrix* mMatrix = AP_Motors6DOF::get_singleton();
     AP_Motors6DOF* motorz = static_cast<AP_Motors6DOF*>(mMatrix);
 
