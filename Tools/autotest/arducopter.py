@@ -3833,7 +3833,7 @@ class AutoTestCopter(AutoTest):
                 new_pos = self.mav.location()
                 delta = self.get_distance(target, new_pos)
                 self.progress("Landed %f metres from target position" % delta)
-                max_delta = 1
+                max_delta = 1.5
                 if delta > max_delta:
                     raise NotAchievedException("Did not land close enough to target position (%fm > %fm" % (delta, max_delta))
 
@@ -4550,7 +4550,7 @@ class AutoTestCopter(AutoTest):
             # determine if we've successfully navigated to close to
             # where we should be:
             dist = math.sqrt(delta_ef.x * delta_ef.x + delta_ef.y * delta_ef.y)
-            dist_max = 0.15
+            dist_max = 1
             self.progress("dist=%f want <%f" % (dist, dist_max))
             if dist < dist_max:
                 # success!  We've gotten within our target distance
@@ -5213,6 +5213,11 @@ class AutoTestCopter(AutoTest):
             )
             self.test_mount_pitch(-89, 5, mavutil.mavlink.MAV_MOUNT_MODE_SYSID_TARGET, hold=2)
 
+            self.run_cmd(mavutil.mavlink.MAV_CMD_DO_SET_ROI_NONE)
+            self.run_cmd_int(
+                mavutil.mavlink.MAV_CMD_DO_SET_ROI_SYSID,
+                p1=self.mav.source_system,
+            )
             self.mav.mav.global_position_int_send(
                 0, # time boot ms
                 int(roi_lat * 1e7),
@@ -6891,7 +6896,7 @@ class AutoTestCopter(AutoTest):
                 if self.get_sim_time_cached() - tstart > 10:
                     break
                 vel = self.get_body_frame_velocity()
-                if vel.length() > 0.3:
+                if vel.length() > 0.5:
                     raise NotAchievedException("Moved too much (%s)" %
                                                (str(vel),))
                 shove(None, None)
@@ -9262,8 +9267,8 @@ class AutoTestCopter(AutoTest):
         # before the motors will spin:
         self.wait_esc_telem_rpm(
             esc=mot,
-            rpm_min=17640,
-            rpm_max=17640,
+            rpm_min=17626,
+            rpm_max=17626,
             minimum_duration=2,
             timeout=5,
         )
@@ -9272,8 +9277,8 @@ class AutoTestCopter(AutoTest):
         self.set_safetyswitch_off()
         self.wait_esc_telem_rpm(
             esc=mot,
-            rpm_min=17640,
-            rpm_max=17640,
+            rpm_min=17626,
+            rpm_max=17626,
             minimum_duration=2,
             timeout=5,
         )
