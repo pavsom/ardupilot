@@ -359,6 +359,16 @@ extern const AP_Param::Info        var_info[];
 
 // Sub-specific default parameters
 static const struct AP_Param::defaults_table_struct defaults_table[] = {
+    { "BRD_RTC_TYPE",        3 },
+    { "BARO_PROBE_EXT",      768 },
+    { "PSC_JERK_Z",          50.0f },
+    { "WPNAV_SPEED",         100.0f },
+    { "PILOT_SPEED_UP",      10.0f },
+    { "PSC_JERK_Z",          50.0f },
+    { "PSC_VELXY_P",         6.0f },
+    { "EK3_SRC1_VELZ",       0 },
+    { "MNT_RC_IN_PAN",       7 },
+    { "MNT_RC_IN_TILT",      8 },
     { "BRD_SAFETY_DEFLT",    0 },
     { "ARMING_CHECK",        AP_Arming::ARMING_CHECK_RC |
                              AP_Arming::ARMING_CHECK_VOLTAGE |
