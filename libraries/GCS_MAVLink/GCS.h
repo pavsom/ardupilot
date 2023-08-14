@@ -645,7 +645,10 @@ protected:
     MAV_RESULT handle_command_do_set_roi_none();
 
     virtual MAV_RESULT handle_command_mount(const mavlink_command_long_t &packet, const mavlink_message_t &msg);
-    MAV_RESULT handle_command_mag_cal(const mavlink_command_long_t &packet);
+
+    MAV_RESULT handle_command_mag_cal(const mavlink_command_int_t &packet);
+    MAV_RESULT handle_command_fixed_mag_cal_yaw(const mavlink_command_int_t &packet);
+
     MAV_RESULT try_command_long_as_command_int(const mavlink_command_long_t &packet);
     virtual MAV_RESULT handle_command_long_packet(const mavlink_command_long_t &packet);
     MAV_RESULT handle_command_camera(const mavlink_command_long_t &packet);
@@ -669,8 +672,6 @@ protected:
     void handle_can_frame(const mavlink_message_t &msg) const;
 
     void handle_optical_flow(const mavlink_message_t &msg);
-
-    MAV_RESULT handle_command_fixed_mag_cal_yaw(const mavlink_command_int_t &packet);
 
     void handle_manual_control(const mavlink_message_t &msg);
 
@@ -767,6 +768,7 @@ private:
     virtual void        handleMessage(const mavlink_message_t &msg) = 0;
 
     MAV_RESULT handle_servorelay_message(const mavlink_command_long_t &packet);
+    bool send_relay_status() const;
 
     static bool command_long_stores_location(const MAV_CMD command);
 

@@ -2139,34 +2139,19 @@ class AutoTest(ABC):
             "SIM_ACC1_BIAS_Y",
             "SIM_ACC1_BIAS_Z",
             "SIM_ACC1_RND",
-            "SIM_ACC1_SCAL_X",
-            "SIM_ACC1_SCAL_Y",
-            "SIM_ACC1_SCAL_Z",
             "SIM_ACC2_BIAS_X",
             "SIM_ACC2_BIAS_Y",
             "SIM_ACC2_BIAS_Z",
             "SIM_ACC2_RND",
-            "SIM_ACC2_SCAL_X",
-            "SIM_ACC2_SCAL_Y",
-            "SIM_ACC2_SCAL_Z",
             "SIM_ACC3_BIAS_X",
             "SIM_ACC3_BIAS_Y",
             "SIM_ACC3_BIAS_Z",
             "SIM_ACC3_RND",
-            "SIM_ACC3_SCAL_X",
-            "SIM_ACC3_SCAL_Y",
-            "SIM_ACC3_SCAL_Z",
             "SIM_ACC4_RND",
-            "SIM_ACC4_SCAL_X",
-            "SIM_ACC4_SCAL_Y",
-            "SIM_ACC4_SCAL_Z",
             "SIM_ACC4_BIAS_X",
             "SIM_ACC4_BIAS_Y",
             "SIM_ACC4_BIAS_Z",
             "SIM_ACC5_RND",
-            "SIM_ACC5_SCAL_X",
-            "SIM_ACC5_SCAL_Y",
-            "SIM_ACC5_SCAL_Z",
             "SIM_ACC5_BIAS_X",
             "SIM_ACC5_BIAS_Y",
             "SIM_ACC5_BIAS_Z",
@@ -2223,7 +2208,6 @@ class AutoTest(ABC):
             "SIM_BARO_WCF_RGT",
             "SIM_BARO_WCF_UP",
             "SIM_BATT_CAP_AH",
-            "SIM_BATT_VOLTAGE",
             "SIM_BAUDLIMIT_EN",
             "SIM_DRIFT_SPEED",
             "SIM_DRIFT_TIME",
@@ -2281,25 +2265,10 @@ class AutoTest(ABC):
             "SIM_GPS_VERR_Y",
             "SIM_GPS_VERR_Z",
             "SIM_GYR1_RND",
-            "SIM_GYR1_SCALE_X",
-            "SIM_GYR1_SCALE_Y",
-            "SIM_GYR1_SCALE_Z",
             "SIM_GYR2_RND",
-            "SIM_GYR2_SCALE_X",
-            "SIM_GYR2_SCALE_Y",
-            "SIM_GYR2_SCALE_Z",
             "SIM_GYR3_RND",
-            "SIM_GYR3_SCALE_X",
-            "SIM_GYR3_SCALE_Y",
-            "SIM_GYR3_SCALE_Z",
             "SIM_GYR4_RND",
-            "SIM_GYR4_SCALE_X",
-            "SIM_GYR4_SCALE_Y",
-            "SIM_GYR4_SCALE_Z",
             "SIM_GYR5_RND",
-            "SIM_GYR5_SCALE_X",
-            "SIM_GYR5_SCALE_Y",
-            "SIM_GYR5_SCALE_Z",
             "SIM_GYR_FAIL_MSK",
             "SIM_GYR_FILE_RW",
             "SIM_IE24_ENABLE",
@@ -10005,10 +9974,11 @@ Also, ignores heartbeats not from our target system'''
         '''
         if mission_type == mavutil.mavlink.MAV_MISSION_TYPE_ALL:
             # recurse
-            if not self.is_tracker() and not self.is_plane():
+            if not self.is_tracker() and not self.is_blimp():
                 self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_FENCE)
-            self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_MISSION)
-            if not self.is_sub() and not self.is_tracker():
+            if not self.is_blimp():
+                self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_MISSION)
+            if not self.is_sub() and not self.is_tracker() and not self.is_blimp():
                 self.clear_mission(mavutil.mavlink.MAV_MISSION_TYPE_RALLY)
             self.last_wp_load = time.time()
             return
@@ -10958,6 +10928,9 @@ Also, ignores heartbeats not from our target system'''
         self.do_RTL(distance_min=0, distance_max=wp_accuracy)
         self.disarm_vehicle()
 
+    def is_blimp(self):
+        return False
+
     def is_copter(self):
         return False
 
@@ -11623,6 +11596,17 @@ switch value'''
                     (v, pname, expected_v, error_pct))
             self.progress("Correct value %.4f for %s error %.2f%%" %
                           (v, pname, error_pct))
+
+    def user_takeoff(self, alt_min=30, timeout=30, max_err=5):
+        '''takeoff using mavlink takeoff command'''
+        self.run_cmd(
+            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+            p7=alt_min, # param7
+        )
+        self.wait_altitude(alt_min - 1,
+                           (alt_min + max_err),
+                           relative=True,
+                           timeout=timeout)
 
     def ahrstrim_attitude_correctness(self):
         self.wait_ready_to_arm()
@@ -13003,6 +12987,7 @@ switch value'''
             (6, "SBP", None, "SBP", 5, 'detected'),
             # (7, "SBP2", 9, "SBP2", 5),  # broken, "waiting for config data"
             (8, "NOVA", 15, "NOVA", 5, 'detected'),  # no attempt to auto-detect this in AP_GPS
+            (11, "GSOF", 11, "GSOF", 5, 'detected'),
             (19, "MSP", 19, "MSP", 32, 'specified'),  # no attempt to auto-detect this in AP_GPS
             # (9, "FILE"),
         ]

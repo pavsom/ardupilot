@@ -486,7 +486,7 @@ void AP_Mount::handle_command_gimbal_manager_set_pitchyaw(const mavlink_message_
     if (!isnan(packet.pitch) && !isnan(packet.yaw)) {
         const float pitch_angle_deg = degrees(packet.pitch);
         const float yaw_angle_deg = degrees(packet.yaw);
-        set_angle_target(instance, 0, pitch_angle_deg, yaw_angle_deg, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
+        backend->set_angle_target(0, pitch_angle_deg, yaw_angle_deg, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
         return;
     }
 
@@ -494,7 +494,7 @@ void AP_Mount::handle_command_gimbal_manager_set_pitchyaw(const mavlink_message_
     if (!isnan(packet.pitch_rate) && !isnan(packet.yaw_rate)) {
         const float pitch_rate_degs = degrees(packet.pitch_rate);
         const float yaw_rate_degs = degrees(packet.yaw_rate);
-        set_rate_target(instance, 0, pitch_rate_degs, yaw_rate_degs, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
+        backend->set_rate_target(0, pitch_rate_degs, yaw_rate_degs, flags & GIMBAL_MANAGER_FLAGS_YAW_LOCK);
         return;
     }
 }
@@ -805,25 +805,23 @@ bool AP_Mount::set_lens(uint8_t instance, uint8_t lens)
 }
 
 // send camera information message to GCS
-void AP_Mount::send_camera_information(mavlink_channel_t chan) const
+void AP_Mount::send_camera_information(uint8_t instance, mavlink_channel_t chan) const
 {
-    // call send_camera_information for each instance
-    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
-        if (_backends[instance] != nullptr) {
-            _backends[instance]->send_camera_information(chan);
-        }
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
     }
+    backend->send_camera_information(chan);
 }
 
 // send camera settings message to GCS
-void AP_Mount::send_camera_settings(mavlink_channel_t chan) const
+void AP_Mount::send_camera_settings(uint8_t instance, mavlink_channel_t chan) const
 {
-    // call send_camera_settings for each instance
-    for (uint8_t instance=0; instance<AP_MOUNT_MAX_INSTANCES; instance++) {
-        if (_backends[instance] != nullptr) {
-            _backends[instance]->send_camera_settings(chan);
-        }
+    auto *backend = get_instance(instance);
+    if (backend == nullptr) {
+        return;
     }
+    backend->send_camera_settings(chan);
 }
 
 AP_Mount_Backend *AP_Mount::get_primary() const

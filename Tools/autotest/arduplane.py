@@ -3082,9 +3082,9 @@ class AutoTestPlane(AutoTest):
         '''Test VectorNav EAHRS support'''
         self.fly_external_AHRS("VectorNav", 1, "ap1.txt")
 
-    def LordEAHRS(self):
-        '''Test LORD Microstrain EAHRS support'''
-        self.fly_external_AHRS("LORD", 2, "ap1.txt")
+    def MicroStrainEAHRS(self):
+        '''Test MicroStrain EAHRS support'''
+        self.fly_external_AHRS("MicroStrain", 2, "ap1.txt")
 
     def get_accelvec(self, m):
         return Vector3(m.xacc, m.yacc, m.zacc) * 0.001 * 9.81
@@ -4636,6 +4636,31 @@ class AutoTestPlane(AutoTest):
         ])
         self.start_SITL()
 
+    def MAV_CMD_GUIDED_CHANGE_ALTITUDE(self):
+        '''test handling of MAV_CMD_GUIDED_CHANGE_ALTITUDE'''
+        self.takeoff(30, relative=True)
+        self.change_mode('GUIDED')
+        for alt in 50, 70:
+            self.run_cmd_int(
+                mavutil.mavlink.MAV_CMD_GUIDED_CHANGE_ALTITUDE,
+                p7=alt,
+                frame=mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+            )
+            self.wait_altitude(alt-1, alt+1, timeout=30, relative=True)
+
+        # test for #24535
+        self.change_mode('LOITER')
+        self.delay_sim_time(5)
+        self.change_mode('GUIDED')
+        self.wait_altitude(
+            alt-3,  # NOTE: reuse of alt from above loop!
+            alt+3,
+            minimum_duration=10,
+            timeout=30,
+            relative=True,
+        )
+        self.fly_home_land_and_disarm()
+
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestPlane, self).tests()
@@ -4687,7 +4712,7 @@ class AutoTestPlane(AutoTest):
             self.TerrainMission,
             self.TerrainLoiter,
             self.VectorNavEAHRS,
-            self.LordEAHRS,
+            self.MicroStrainEAHRS,
             self.Deadreckoning,
             self.DeadreckoningNoAirSpeed,
             self.EKFlaneswitch,
@@ -4725,6 +4750,7 @@ class AutoTestPlane(AutoTest):
             self.NoArmWithoutMissionItems,
             self.MODE_SWITCH_RESET,
             self.ExternalPositionEstimate,
+            self.MAV_CMD_GUIDED_CHANGE_ALTITUDE,
         ])
         return ret
 

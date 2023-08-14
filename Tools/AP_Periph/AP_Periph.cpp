@@ -100,6 +100,10 @@ void AP_Periph_FW::init()
 
     can_start();
 
+#ifdef HAL_PERIPH_ENABLE_NETWORKING
+    networking.init();
+#endif
+
 #if HAL_GCS_ENABLED
     stm32_watchdog_pat();
     gcs().init();
@@ -264,6 +268,10 @@ void AP_Periph_FW::init()
 
 #if HAL_NMEA_OUTPUT_ENABLED
     nmea.init();
+#endif
+
+#ifdef HAL_PERIPH_ENABLE_RPM
+    rpm_sensor.init();
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_NOTIFY
@@ -471,11 +479,22 @@ void AP_Periph_FW::update()
     temperature_sensor.update();
 #endif
 
+#ifdef HAL_PERIPH_ENABLE_RPM
+    if (now - rpm_last_update_ms >= 100) {
+        rpm_last_update_ms = now;
+        rpm_sensor.update();
+    }
+#endif
+
 #if HAL_LOGGING_ENABLED
     logger.periodic_tasks();
 #endif
 
     can_update();
+
+#ifdef HAL_PERIPH_ENABLE_NETWORKING
+    networking.update();
+#endif
 
 #if (defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY) && HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY == 8) || defined(HAL_PERIPH_ENABLE_NOTIFY)
     update_rainbow();
