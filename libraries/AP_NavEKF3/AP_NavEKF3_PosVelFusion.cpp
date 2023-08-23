@@ -770,6 +770,16 @@ void NavEKF3_core::FuseVelPosNED()
             if (posTestRatio < 1.0f || (PV_AidingMode == AID_NONE)) {
                 posCheckPassed = true;
                 lastPosPassTime_ms = imuSampleTime_ms;
+            } else if ((frontend->_gpsGlitchRadiusMax <= 0) && (PV_AidingMode != AID_NONE)) {
+                // Handle the special case where the glitch radius parameter has been set to a non-positive number.
+                // The innovation variance is increased to limit the state update to an amount corresponding
+                // to a test ratio of 1.
+                posCheckPassed = true;
+                lastPosPassTime_ms = imuSampleTime_ms;
+                varInnovVelPos[3] *= posTestRatio;
+                varInnovVelPos[4] *= posTestRatio;
+                posCheckPassed = true;
+                lastPosPassTime_ms = imuSampleTime_ms;
             }
 
             // Use position data if healthy or timed out or bad IMU data
@@ -777,7 +787,9 @@ void NavEKF3_core::FuseVelPosNED()
             // from the measurement un-opposed if test threshold is exceeded.
             if (posCheckPassed || posTimeout || badIMUdata) {
                 // if timed out or outside the specified uncertainty radius, reset to the external sensor
-                if (posTimeout || ((P[8][8] + P[7][7]) > sq(ftype(frontend->_gpsGlitchRadiusMax)))) {
+                // if velocity drift is being constrained, dont reset until gps passes quality checks
+                const bool posVarianceIsTooLarge = (frontend->_gpsGlitchRadiusMax > 0) && (P[8][8] + P[7][7]) > sq(ftype(frontend->_gpsGlitchRadiusMax));
+                if (posTimeout || posVarianceIsTooLarge) {
                     // reset the position to the current external sensor position
                     ResetPosition(resetDataSource::DEFAULT);
 
@@ -833,6 +845,17 @@ void NavEKF3_core::FuseVelPosNED()
             if (velTestRatio < 1.0) {
                 velCheckPassed = true;
                 lastVelPassTime_ms = imuSampleTime_ms;
+            } else if (frontend->_gpsGlitchRadiusMax <= 0) {
+                // Handle the special case where the glitch radius parameter has been set to a non-positive number.
+                // The innovation variance is increased to limit the state update to an amount corresponding
+                // to a test ratio of 1.
+                posCheckPassed = true;
+                lastPosPassTime_ms = imuSampleTime_ms;
+                for (uint8_t i = 0; i<=imax; i++) {
+                    varInnovVelPos[i] *= velTestRatio;
+                }
+                velCheckPassed = true;
+                lastVelPassTime_ms = imuSampleTime_ms;
             }
 
             // Use velocity data if healthy, timed out or when IMU fault has been detected
@@ -865,8 +888,18 @@ void NavEKF3_core::FuseVelPosNED()
 
             // When on ground we accept a larger test ratio to allow the filter to handle large switch on IMU
             // bias errors without rejecting the height sensor.
-            const float maxTestRatio = (PV_AidingMode == AID_NONE && onGround)? 3.0f : 1.0f;
+            const bool onGroundNotNavigating = (PV_AidingMode == AID_NONE) && onGround;
+            const float maxTestRatio = onGroundNotNavigating ? 3.0f : 1.0f;
             if (hgtTestRatio < maxTestRatio) {
+                hgtCheckPassed = true;
+                lastHgtPassTime_ms = imuSampleTime_ms;
+            } else if ((frontend->_gpsGlitchRadiusMax <= 0) && !onGroundNotNavigating && (activeHgtSource == AP_NavEKF_Source::SourceZ::GPS)) {
+                // Handle the special case where the glitch radius parameter has been set to a non-positive number.
+                // The innovation variance is increased to limit the state update to an amount corresponding
+                // to a test ratio of 1.
+                posCheckPassed = true;
+                lastPosPassTime_ms = imuSampleTime_ms;
+                varInnovVelPos[5] *= hgtTestRatio;
                 hgtCheckPassed = true;
                 lastHgtPassTime_ms = imuSampleTime_ms;
             }
