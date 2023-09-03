@@ -1,0 +1,3 @@
+include ../f405-canUni/hwdef.inc
+
+define CAN_APP_NODE_NAME "org.ardupilot.f405_Echo"
