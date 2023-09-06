@@ -27,6 +27,21 @@ public:
     NeoPixel();
 
     uint16_t init_ports() override;
+
+
+    void rgb_set_id(uint8_t r, uint8_t g, uint8_t b, uint8_t id) override;
+
+    virtual void update() override;
+private:
+    uint16_t num_leds;
+    struct RGB {
+        uint8_t b;
+        uint8_t r;
+        uint8_t g;
+    };
+    RGB(*rgb)[2];
+    uint16_t enable_mask;
+    bool needUpdate = false;
 };
 
 #endif  // AP_NOTIFY_NEOPIXEL_ENABLED
