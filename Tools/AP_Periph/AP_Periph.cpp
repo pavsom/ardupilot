@@ -288,14 +288,14 @@ void AP_Periph_FW::init()
     start_ms = AP_HAL::native_millis();
 }
 
-#if (defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY) && HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY == 8) || defined(HAL_PERIPH_ENABLE_NOTIFY)
+#if (defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY) && HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY == 30) || defined(HAL_PERIPH_ENABLE_NOTIFY)
 /*
   rotating rainbow pattern on startup
  */
 void AP_Periph_FW::update_rainbow()
 {
 #ifdef HAL_PERIPH_ENABLE_NOTIFY
-    if (notify.get_led_len() != 8) {
+    if (notify.get_led_len() != 30) {
         return;
     }
 #endif
@@ -304,7 +304,7 @@ void AP_Periph_FW::update_rainbow()
         return;
     }
     uint32_t now = AP_HAL::native_millis();
-    if (now - start_ms > 1500) {
+    /* if (now - start_ms > 10000) {
         rainbow_done = true;
 #if defined (HAL_PERIPH_ENABLE_NOTIFY)
         periph.notify.handle_rgb(0, 0, 0);
@@ -313,9 +313,9 @@ void AP_Periph_FW::update_rainbow()
         hal.rcout->serial_led_send(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY);
 #endif
         return;
-    }
+    } */
     static uint32_t last_update_ms;
-    const uint8_t step_ms = 30;
+    const uint16_t step_ms = 20;
     if (now - last_update_ms < step_ms) {
         return;
     }
@@ -324,20 +324,62 @@ void AP_Periph_FW::update_rainbow()
         uint8_t green;
         uint8_t blue;
     } rgb_rainbow[] = {
-        { 255, 0, 0 },
+        /* { 255, 0, 0 },
         { 255, 127, 0 },
         { 255, 255, 0 },
         { 0,   255, 0 },
         { 0,   0,   255 },
         { 75,  0,   130 },
         { 143, 0,   255 },
-        { 0,   0,   0 },
+        { 0,   0,   0 }, */
+        {255, 0, 0},     // Красный
+        {255, 32, 0},
+        {255, 64, 0},
+        {255, 96, 0},
+        {255, 128, 0},   // Оранжевый
+        {255, 160, 0},
+        {255, 192, 0},
+        {255, 224, 0},
+        {255, 255, 0},   // Желтый
+        {192, 255, 0},
+        {128, 255, 0},   // Зеленый
+        {64, 255, 0},
+        {0, 255, 0},     // Салатовый
+        {0, 192, 64},
+        {0, 128, 128},   // Бирюзовый
+        {0, 64, 192},
+        {0, 0, 255},     // Голубой
+        {32, 0, 224},
+        {64, 0, 192},
+        {96, 0, 160},
+        {128, 0, 128},   // Синий
+        {160, 0, 96},
+        {192, 0, 64},
+        {224, 0, 32},
+        {255, 0, 0},     // Темно-синий
+        {224, 0, 0},
+        {192, 0, 0},
+        {160, 0, 0},
+        {128, 0, 0},     // Фиолетовый
+        {96, 0, 0},
+        {64, 0, 0}       // Малиновый
     };
     last_update_ms = now;
     static uint8_t step;
-    const uint8_t nsteps = ARRAY_SIZE(rgb_rainbow);
-    float brightness = 0.3;
-    for (uint8_t n=0; n<8; n++) {
+    const uint8_t nsteps = ARRAY_SIZE(rgb_rainbow)/2;
+    float brightness = 0.1;
+    for (uint8_t n=0; n<15; n++) {
+        uint8_t i = (step + n) % nsteps;
+        periph.notify.handle_rgb_id(
+                                        rgb_rainbow[i].red*brightness,
+                                        rgb_rainbow[i].green*brightness,
+                                        rgb_rainbow[i].blue*brightness,0);
+        periph.notify.handle_rgb_id(
+                                        rgb_rainbow[15 + i].red*brightness,
+                                        rgb_rainbow[15 + i].green*brightness,
+                                        rgb_rainbow[15 + i].blue*brightness,1);
+    }
+    /* for (uint8_t n=0; n<30; n++) {
         uint8_t i = (step + n) % nsteps;
 #if defined (HAL_PERIPH_ENABLE_NOTIFY)
         periph.notify.handle_rgb(
@@ -347,7 +389,8 @@ void AP_Periph_FW::update_rainbow()
                                         rgb_rainbow[i].red*brightness,
                                         rgb_rainbow[i].green*brightness,
                                         rgb_rainbow[i].blue*brightness);
-    }
+    } */
+    if (brightness != 0)
     step++;
 
 #if defined(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY)
@@ -388,6 +431,13 @@ void AP_Periph_FW::update()
 
     static uint32_t last_led_ms;
     uint32_t now = AP_HAL::native_millis();
+    if (now - last_led_ms > 500){
+#ifdef HAL_GPIO_PIN_LED
+        if (no_iface_finished_dna) {
+            palToggleLine(HAL_GPIO_PIN_LED);
+        }
+#endif        
+    }
     if (now - last_led_ms > 1000) {
         last_led_ms = now;
 #ifdef HAL_GPIO_PIN_LED
@@ -395,7 +445,7 @@ void AP_Periph_FW::update()
             palToggleLine(HAL_GPIO_PIN_LED);
         }
 #endif
-#if 0
+#if 1
 #ifdef HAL_PERIPH_ENABLE_GPS
         hal.serial(0)->printf("GPS status: %u\n", (unsigned)gps.status());
 #endif
@@ -504,7 +554,7 @@ void AP_Periph_FW::update()
     networking.update();
 #endif
 
-#if (defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY) && HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY == 8) || defined(HAL_PERIPH_ENABLE_NOTIFY)
+#if (defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY) && HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY == 30) || defined(HAL_PERIPH_ENABLE_NOTIFY)
     update_rainbow();
 #endif
 #ifdef HAL_PERIPH_ENABLE_ADSB
