@@ -2136,26 +2136,11 @@ class AutoTest(ABC):
     def get_sim_parameter_documentation_get_whitelist(self):
         # common parameters
         ret = set([
-            "SIM_ACC1_BIAS_X",
-            "SIM_ACC1_BIAS_Y",
-            "SIM_ACC1_BIAS_Z",
             "SIM_ACC1_RND",
-            "SIM_ACC2_BIAS_X",
-            "SIM_ACC2_BIAS_Y",
-            "SIM_ACC2_BIAS_Z",
             "SIM_ACC2_RND",
-            "SIM_ACC3_BIAS_X",
-            "SIM_ACC3_BIAS_Y",
-            "SIM_ACC3_BIAS_Z",
             "SIM_ACC3_RND",
             "SIM_ACC4_RND",
-            "SIM_ACC4_BIAS_X",
-            "SIM_ACC4_BIAS_Y",
-            "SIM_ACC4_BIAS_Z",
             "SIM_ACC5_RND",
-            "SIM_ACC5_BIAS_X",
-            "SIM_ACC5_BIAS_Y",
-            "SIM_ACC5_BIAS_Z",
             "SIM_ACC_FILE_RW",
             "SIM_ACC_TRIM_X",
             "SIM_ACC_TRIM_Y",
@@ -2226,45 +2211,6 @@ class AutoTest(ABC):
             "SIM_FTOWESC_ENA",
             "SIM_FTOWESC_POW",
             "SIM_GND_BEHAV",
-            "SIM_GPS2_ACC",
-            "SIM_GPS2_ALT_OFS",
-            "SIM_GPS2_BYTELOS",
-            "SIM_GPS2_DRFTALT",
-            "SIM_GPS2_GLTCH_X",
-            "SIM_GPS2_GLTCH_Y",
-            "SIM_GPS2_GLTCH_Z",
-            "SIM_GPS2_HDG",
-            "SIM_GPS2_HZ",
-            "SIM_GPS2_LAG_MS",
-            "SIM_GPS2_LCKTIME",
-            "SIM_GPS2_NOISE",
-            "SIM_GPS2_NUMSATS",
-            "SIM_GPS2_POS_X",
-            "SIM_GPS2_POS_Y",
-            "SIM_GPS2_POS_Z",
-            "SIM_GPS2_VERR_X",
-            "SIM_GPS2_VERR_Y",
-            "SIM_GPS2_VERR_Z",
-            "SIM_GPS_ACC",
-            "SIM_GPS_ALT_OFS",
-            "SIM_GPS_BYTELOSS",
-            "SIM_GPS_DRIFTALT",
-            "SIM_GPS_GLITCH_X",
-            "SIM_GPS_GLITCH_Y",
-            "SIM_GPS_GLITCH_Z",
-            "SIM_GPS_HDG",
-            "SIM_GPS_HZ",
-            "SIM_GPS_LAG_MS",
-            "SIM_GPS_LOCKTIME",
-            "SIM_GPS_LOG_NUM",
-            "SIM_GPS_NOISE",
-            "SIM_GPS_NUMSATS",
-            "SIM_GPS_POS_X",
-            "SIM_GPS_POS_Y",
-            "SIM_GPS_POS_Z",
-            "SIM_GPS_VERR_X",
-            "SIM_GPS_VERR_Y",
-            "SIM_GPS_VERR_Z",
             "SIM_GYR1_RND",
             "SIM_GYR2_RND",
             "SIM_GYR3_RND",
@@ -2388,9 +2334,6 @@ class AutoTest(ABC):
             "SIM_IMUT_FIXED",
             "SIM_IMUT_START",
             "SIM_IMUT_TCONST",
-            "SIM_INIT_ALT_OFS",
-            "SIM_INIT_LAT_OFS",
-            "SIM_INIT_LON_OFS",
             "SIM_INS_THR_MIN",
             "SIM_LED_LAYOUT",
             "SIM_LOOP_DELAY",
@@ -2595,7 +2538,7 @@ class AutoTest(ABC):
     def find_format_defines(self, lines):
         ret = {}
         for line in lines:
-            if type(line) == bytes:
+            if isinstance(line, bytes):
                 line = line.decode("utf-8")
             m = re.match(r'#define (\w+_(?:LABELS|FMT|UNITS|MULTS))\s+(".*")', line)
             if m is None:
@@ -2652,7 +2595,7 @@ class AutoTest(ABC):
             for line in open(f).readlines():
                 if debug:
                     print("line: %s" % line)
-                if type(line) == bytes:
+                if isinstance(line, bytes):
                     line = line.decode("utf-8")
                 line = re.sub("//.*", "", line) # trim comments
                 if re.match(r"\s*$", line):
@@ -2731,7 +2674,7 @@ class AutoTest(ABC):
         linestate_within = 90
         linestate = linestate_none
         for line in open(filepath, 'rb').readlines():
-            if type(line) == bytes:
+            if isinstance(line, bytes):
                 line = line.decode("utf-8")
             line = re.sub("//.*", "", line) # trim comments
             if re.match(r"\s*$", line):
@@ -2831,7 +2774,7 @@ class AutoTest(ABC):
                         continue
                     count = 0
                     for line in open(filepath, 'rb').readlines():
-                        if type(line) == bytes:
+                        if isinstance(line, bytes):
                             line = line.decode("utf-8")
                         if state == state_outside:
                             if (re.match(r"\s*AP::logger\(\)[.]Write(?:Streaming)?\(", line) or
@@ -4486,13 +4429,14 @@ class AutoTest(ABC):
                 raise ValueError("count %u not handled" % count)
         self.progress("Rally content same")
 
-    def load_rally(self, filename):
+    def load_rally_using_mavproxy(self, filename):
         """Load rally points from a file to flight controller."""
         self.progress("Loading rally points (%s)" % filename)
         path = os.path.join(testdir, self.current_test_name_directory, filename)
         mavproxy = self.start_mavproxy()
         mavproxy.send('rally load %s\n' % path)
         mavproxy.expect("Loaded")
+        self.delay_sim_time(10)  # allow transfer to complete
         self.stop_mavproxy(mavproxy)
 
     def load_sample_mission(self):
@@ -4853,7 +4797,7 @@ class AutoTest(ABC):
     def set_rc_from_map(self, _map, timeout=20):
         map_copy = _map.copy()
         for v in map_copy.values():
-            if type(v) != int:
+            if not isinstance(v, int):
                 raise NotAchievedException("RC values must be integers")
         self.rc_queue.put(map_copy)
 
@@ -5508,7 +5452,7 @@ class AutoTest(ABC):
 
     def send_get_parameter_direct(self, name):
         encname = name
-        if sys.version_info.major >= 3 and type(encname) != bytes:
+        if sys.version_info.major >= 3 and not isinstance(encname, bytes):
             encname = bytes(encname, 'ascii')
         self.mav.mav.param_request_read_send(self.sysid_thismav(),
                                              1,
@@ -5704,6 +5648,7 @@ class AutoTest(ABC):
                     p5=None,
                     p6=None,
                     p7=None,
+                    quiet=False,
                     ):
 
         if p5 is not None:
@@ -5721,6 +5666,23 @@ class AutoTest(ABC):
         self.get_sim_time() # required for timeout in run_cmd_get_ack to work
 
         """Send a MAVLink command int."""
+        if not quiet:
+            try:
+                command_name = mavutil.mavlink.enums["MAV_CMD"][command].name
+            except KeyError:
+                command_name = "UNKNOWN=%u" % command
+            self.progress("Sending COMMAND_INT to (%u,%u) (%s) (p1=%f p2=%f p3=%f p4=%f p5=%u p6=%u  p7=%f)" %
+                          (
+                              target_sysid,
+                              target_compid,
+                              command_name,
+                              p1,
+                              p2,
+                              p3,
+                              p4,
+                              x,
+                              y,
+                              z))
         self.mav.mav.command_int_send(target_sysid,
                                       target_compid,
                                       frame,
@@ -5757,11 +5719,11 @@ class AutoTest(ABC):
             target_sysid = self.sysid_thismav()
         if target_compid is None:
             target_compid = 1
-        try:
-            command_name = mavutil.mavlink.enums["MAV_CMD"][command].name
-        except KeyError:
-            command_name = "UNKNOWN=%u" % command
         if not quiet:
+            try:
+                command_name = mavutil.mavlink.enums["MAV_CMD"][command].name
+            except KeyError:
+                command_name = "UNKNOWN=%u" % command
             self.progress("Sending COMMAND_LONG to (%u,%u) (%s) (p1=%f p2=%f p3=%f p4=%f p5=%f p6=%f  p7=%f)" %
                           (
                               target_sysid,
@@ -5885,7 +5847,7 @@ class AutoTest(ABC):
         for param in parameter_stuff:
             fetched_value = self.get_parameter(param)
             wanted_value = parameter_stuff[param]
-            if type(wanted_value) == tuple:
+            if isinstance(wanted_value, tuple):
                 max_delta = wanted_value[1]
                 wanted_value = wanted_value[0]
             if abs(fetched_value - wanted_value) > max_delta:
@@ -6419,6 +6381,10 @@ class AutoTest(ABC):
             **kwargs
         )
 
+    def groundspeed(self):
+        m = self.assert_receive_message('VFR_HUD')
+        return m.groundspeed
+
     def wait_groundspeed(self, speed_min, speed_max, timeout=30, **kwargs):
         self.wait_vfr_hud_speed("groundspeed", speed_min, speed_max, timeout=timeout, **kwargs)
 
@@ -6488,7 +6454,7 @@ class AutoTest(ABC):
         )
 
     def wait_and_maintain(self, value_name, target, current_value_getter, validator=None, accuracy=2.0, timeout=30, **kwargs):
-        if type(target) is Vector3:
+        if isinstance(target, Vector3):
             return self.wait_and_maintain_vector(
                 value_name,
                 target,
@@ -6612,7 +6578,10 @@ class AutoTest(ABC):
         while self.get_sim_time_cached() < tstart + timeout:  # if we failed to received message with the getter the sim time isn't updated  # noqa
             last_value = current_value_getter()
             if called_function is not None:
-                called_function(last_value, target)
+                if print_diagnostics_as_target_not_range:
+                    called_function(last_value, target)
+                else:
+                    called_function(last_value, minimum, maximum)
             if validator is not None:
                 if print_diagnostics_as_target_not_range:
                     is_value_valid = validator(last_value, target)
@@ -6641,7 +6610,7 @@ class AutoTest(ABC):
                          achieved_duration_bit)
                     )
                 else:
-                    if type(last_value) is float:
+                    if isinstance(last_value, float):
                         self.progress(
                             "%s=%0.2f (%s between %s and %s)%s" %
                             (value_name,
@@ -8061,10 +8030,11 @@ Also, ignores heartbeats not from our target system'''
         count = 0
         for sup_binary in self.sup_binaries:
             self.progress("Starting Supplementary Program ", sup_binary)
-            start_sitl_args["customisations"] = [sup_binary[1]]
+            start_sitl_args["customisations"] = [sup_binary['customisation']]
             start_sitl_args["supplementary"] = True
-            start_sitl_args["stdout_prefix"] = "%s-%u" % (os.path.basename(sup_binary[0]), count)
-            sup_prog_link = util.start_SITL(sup_binary[0], **start_sitl_args)
+            start_sitl_args["stdout_prefix"] = "%s-%u" % (os.path.basename(sup_binary['binary']), count)
+            start_sitl_args["defaults_filepath"] = sup_binary['param_file']
+            sup_prog_link = util.start_SITL(sup_binary['binary'], **start_sitl_args)
             self.sup_prog.append(sup_prog_link)
             self.expect_list_add(sup_prog_link)
             count += 1
@@ -8107,25 +8077,18 @@ Also, ignores heartbeats not from our target system'''
             "callgrind": self.callgrind,
             "wipe": True,
         }
-        if instance is None:
-            for sup_binary in self.sup_binaries:
-                start_sitl_args["customisations"] = [sup_binary[1]]
-                if args is not None:
-                    start_sitl_args["customisations"] = [sup_binary[1], args]
-                start_sitl_args["supplementary"] = True
-                sup_prog_link = util.start_SITL(sup_binary[0], **start_sitl_args)
-                time.sleep(3)
-                self.sup_prog.append(sup_prog_link) # add to list
-                self.expect_list_add(sup_prog_link) # add to expect list
-        else:
-            # start only the instance passed
-            start_sitl_args["customisations"] = [self.sup_binaries[instance][1]]
+        for i in range(len(self.sup_binaries)):
+            if instance is not None and instance != i:
+                continue
+            sup_binary = self.sup_binaries[i]
+            start_sitl_args["customisations"] = [sup_binary['customisation']]
             if args is not None:
-                start_sitl_args["customisations"] = [self.sup_binaries[instance][1], args]
+                start_sitl_args["customisations"] = [sup_binary['customisation'], args]
             start_sitl_args["supplementary"] = True
-            sup_prog_link = util.start_SITL(self.sup_binaries[instance][0], **start_sitl_args)
-            time.sleep(3)
-            self.sup_prog[instance] = sup_prog_link # add to list
+            start_sitl_args["defaults_filepath"] = sup_binary['param_file']
+            sup_prog_link = util.start_SITL(sup_binary['binary'], **start_sitl_args)
+            time.sleep(1)
+            self.sup_prog[i] = sup_prog_link # add to list
             self.expect_list_add(sup_prog_link) # add to expect list
 
     def sitl_is_running(self):
@@ -9725,7 +9688,7 @@ Also, ignores heartbeats not from our target system'''
 
     def set_message_rate_hz(self, id, rate_hz, mav=None):
         '''set a message rate in Hz; 0 for original, -1 to disable'''
-        if type(id) == str:
+        if isinstance(id, str):
             id = eval("mavutil.mavlink.MAVLINK_MSG_ID_%s" % id)
         if rate_hz == 0 or rate_hz == -1:
             set_interval = rate_hz
@@ -9741,7 +9704,7 @@ Also, ignores heartbeats not from our target system'''
     def send_get_message_interval(self, victim_message, mav=None):
         if mav is None:
             mav = self.mav
-        if type(victim_message) == str:
+        if isinstance(victim_message, str):
             victim_message = eval("mavutil.mavlink.MAVLINK_MSG_ID_%s" % victim_message)
         mav.mav.command_long_send(
             1,
@@ -9766,7 +9729,7 @@ Also, ignores heartbeats not from our target system'''
 
     def set_message_interval(self, victim_message, interval_us, mav=None):
         '''sets message interval in microseconds'''
-        if type(victim_message) == str:
+        if isinstance(victim_message, str):
             victim_message = eval("mavutil.mavlink.MAVLINK_MSG_ID_%s" % victim_message)
         self.run_cmd(
             mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
@@ -9929,7 +9892,7 @@ Also, ignores heartbeats not from our target system'''
     def send_poll_message(self, message_id, target_sysid=None, target_compid=None, quiet=False, mav=None):
         if mav is None:
             mav = self.mav
-        if type(message_id) == str:
+        if isinstance(message_id, str):
             message_id = eval("mavutil.mavlink.MAVLINK_MSG_ID_%s" % message_id)
         self.send_cmd(
             mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE,
@@ -9943,7 +9906,7 @@ Also, ignores heartbeats not from our target system'''
     def poll_message(self, message_id, timeout=10, quiet=False, mav=None):
         if mav is None:
             mav = self.mav
-        if type(message_id) == str:
+        if isinstance(message_id, str):
             message_id = eval("mavutil.mavlink.MAVLINK_MSG_ID_%s" % message_id)
         tstart = self.get_sim_time() # required for timeout in run_cmd_get_ack to work
         self.send_poll_message(message_id, quiet=quiet, mav=mav)
@@ -10998,7 +10961,7 @@ Also, ignores heartbeats not from our target system'''
         seq = 0
         items = []
         for locs in list_of_list_of_locs:
-            if type(locs) == dict:
+            if isinstance(locs, dict):
                 # circular fence
                 if vertex_type == mavutil.mavlink.MAV_CMD_NAV_FENCE_POLYGON_VERTEX_EXCLUSION:
                     v = mavutil.mavlink.MAV_CMD_NAV_FENCE_CIRCLE_EXCLUSION
@@ -12687,8 +12650,8 @@ switch value'''
         # grab a battery-remaining percentage
         self.run_cmd(
             mavutil.mavlink.MAV_CMD_BATTERY_RESET,
-            p1=255,  # battery mask
-            p2=96,   # percentage
+            p1=65535,   # battery mask
+            p2=96,      # percentage
         )
         m = self.assert_receive_message('BATTERY_STATUS', timeout=1)
         want_battery_remaining_pct = m.battery_remaining
@@ -12983,6 +12946,7 @@ switch value'''
         })
         self.assert_prearm_failure("Compasses inconsistent")
         self.context_pop()
+        self.wait_ready_to_arm()
 
     def AHRS_ORIENTATION(self):
         '''test AHRS_ORIENTATION parameter works'''
@@ -13185,7 +13149,7 @@ switch value'''
         '''write biunary content to filepath'''
         with open(filepath, "wb") as f:
             if sys.version_info.major >= 3:
-                if type(content) != bytes:
+                if not isinstance(content, bytes):
                     raise NotAchievedException("Want bytes to write_content_to_filepath")
             f.write(content)
             f.close()
@@ -13284,7 +13248,7 @@ SERIAL5_BAUD 128
             tests = self.tests()
         all_tests = []
         for test in tests:
-            if type(test) != Test:
+            if not isinstance(test, Test):
                 test = Test(test)
             all_tests.append(test)
 

@@ -14,6 +14,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include "GCS_config.h"
+
+#if HAL_GCS_ENABLED
+
 #include "GCS.h"
 
 #include <AC_Fence/AC_Fence.h>
@@ -2760,20 +2765,24 @@ void GCS_MAVLINK::send_home_position() const
     const Location &home = AP::ahrs().get_home();
 
     // get home position from origin
-    Vector3f home_pos_neu_cm;
-    if (!home.get_vector_from_origin_NEU(home_pos_neu_cm)) {
-        return;
+    Vector3f home_pos_ned;
+    if (home.get_vector_from_origin_NEU(home_pos_ned)) {
+        // convert NEU in cm to NED in meters
+        home_pos_ned *= 0.01f;
+        home_pos_ned.z *= -1;
+    } else {
+        home_pos_ned = Vector3f{NAN, NAN, NAN};
     }
 
-    const float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};
+    const float q[4] {NAN, NAN, NAN, NAN};
     mavlink_msg_home_position_send(
         chan,
         home.lat,
         home.lng,
         home.alt * 10,
-        home_pos_neu_cm.x * 0.01f, // position of home on x-axis in meters
-        home_pos_neu_cm.y * 0.01f, // position of home on y-axis in meters
-        home_pos_neu_cm.z * -0.01f, // position of home on z-axis in meters in NED frame
+        home_pos_ned.x,
+        home_pos_ned.y,
+        home_pos_ned.z,
         q,
         0.0f, 0.0f, 0.0f,
         AP_HAL::micros64());
@@ -3870,12 +3879,15 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
         handle_set_gps_global_origin(msg);
         break;
 
+#if AP_MAVLINK_MSG_DEVICE_OP_ENABLED
     case MAVLINK_MSG_ID_DEVICE_OP_READ:
         handle_device_op_read(msg);
         break;
     case MAVLINK_MSG_ID_DEVICE_OP_WRITE:
         handle_device_op_write(msg);
         break;
+#endif
+
     case MAVLINK_MSG_ID_TIMESYNC:
         handle_timesync(msg);
         break;
@@ -3944,14 +3956,18 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
 #endif
 
 #if HAL_MOUNT_ENABLED
+#if AP_MAVLINK_MSG_MOUNT_CONFIGURE_ENABLED
     case MAVLINK_MSG_ID_MOUNT_CONFIGURE: // deprecated. Use MAV_CMD_DO_MOUNT_CONFIGURE
         send_received_message_deprecation_warning("MOUNT_CONFIGURE");
         handle_mount_message(msg);
         break;
+#endif
+#if AP_MAVLINK_MSG_MOUNT_CONTROL_ENABLED
     case MAVLINK_MSG_ID_MOUNT_CONTROL: // deprecated. Use MAV_CMD_DO_MOUNT_CONTROL
         send_received_message_deprecation_warning("MOUNT_CONTROL");
         handle_mount_message(msg);
         break;
+#endif
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_INFORMATION:
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
@@ -3965,9 +3981,11 @@ void GCS_MAVLINK::handle_common_message(const mavlink_message_t &msg)
         handle_param_value(msg);
         break;
 
+#if AP_MAVLINK_MSG_SERIAL_CONTROL_ENABLED
     case MAVLINK_MSG_ID_SERIAL_CONTROL:
         handle_serial_control(msg);
         break;
+#endif
 
     case MAVLINK_MSG_ID_GPS_RTCM_DATA:
     case MAVLINK_MSG_ID_GPS_INPUT:
@@ -4622,16 +4640,15 @@ MAV_RESULT GCS_MAVLINK::handle_command_accelcal_vehicle_pos(const mavlink_comman
 #endif  // HAL_INS_ACCELCAL_ENABLED
 
 #if HAL_MOUNT_ENABLED
-MAV_RESULT GCS_MAVLINK::handle_command_mount(const mavlink_command_long_t &packet, const mavlink_message_t &msg)
+MAV_RESULT GCS_MAVLINK::handle_command_mount(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
     AP_Mount *mount = AP::mount();
     if (mount == nullptr) {
         return MAV_RESULT_UNSUPPORTED;
     }
-    return mount->handle_command_long(packet, msg);
-    return MAV_RESULT_UNSUPPORTED;
+    return mount->handle_command(packet, msg);
 }
-#endif
+#endif  // HAL_MOUNT_ENABLED
 
 MAV_RESULT GCS_MAVLINK::handle_command_component_arm_disarm(const mavlink_command_int_t &packet)
 {
@@ -4836,15 +4853,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_packet(const mavlink_command_long_t 
         result = handle_command_request_message(packet);
         break;
 
-#if AP_SERVORELAYEVENTS_ENABLED
-    case MAV_CMD_DO_SET_SERVO:
-    case MAV_CMD_DO_REPEAT_SERVO:
-    case MAV_CMD_DO_SET_RELAY:
-    case MAV_CMD_DO_REPEAT_RELAY:
-        result = handle_servorelay_message(packet);
-        break;
-#endif
-
     case MAV_CMD_DO_FLIGHTTERMINATION:
         result = handle_flight_termination(packet);
         break;
@@ -4866,16 +4874,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_packet(const mavlink_command_long_t 
     case MAV_CMD_PREFLIGHT_CALIBRATION:
         result = handle_command_preflight_calibration(packet, msg);
         break;
-
-#if HAL_MOUNT_ENABLED
-    case MAV_CMD_DO_MOUNT_CONFIGURE:
-    case MAV_CMD_DO_MOUNT_CONTROL:
-    case MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW:
-    case MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE:
-        // some mount commands require the source sysid and compid
-        result = handle_command_mount(packet, msg);
-        break;
-#endif
 
     default:
         result = try_command_long_as_command_int(packet, msg);
@@ -5077,34 +5075,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_external_position_estimate(const mavl
 }
 #endif // AP_AHRS_POSITION_RESET_ENABLED
 
-#if HAL_MOUNT_ENABLED
-MAV_RESULT GCS_MAVLINK::handle_command_do_set_roi_none()
-{
-    AP_Mount *mount = AP::mount();
-    if (mount == nullptr) {
-        return MAV_RESULT_UNSUPPORTED;
-    }
-    mount->set_mode_to_default();
-    return MAV_RESULT_ACCEPTED;
-}
-
-MAV_RESULT GCS_MAVLINK::handle_command_do_set_roi_sysid(const uint8_t sysid)
-{
-    AP_Mount *mount = AP::mount();
-    if (mount == nullptr) {
-        return MAV_RESULT_UNSUPPORTED;
-    }
-    mount->set_target_sysid(sysid);
-
-    return MAV_RESULT_ACCEPTED;
-}
-
-MAV_RESULT GCS_MAVLINK::handle_command_do_set_roi_sysid(const mavlink_command_int_t &packet)
-{
-    return handle_command_do_set_roi_sysid((uint8_t)packet.param1);
-}
-#endif
-
 MAV_RESULT GCS_MAVLINK::handle_command_do_set_roi(const mavlink_command_int_t &packet)
 {
     // be aware that this method is called for both MAV_CMD_DO_SET_ROI
@@ -5154,10 +5124,13 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
         return handle_command_do_set_roi(packet);
 #if HAL_MOUNT_ENABLED
     case MAV_CMD_DO_SET_ROI_SYSID:
-        return handle_command_do_set_roi_sysid(packet);
     case MAV_CMD_DO_SET_ROI_NONE:
-        return handle_command_do_set_roi_none();
-#endif
+    case MAV_CMD_DO_MOUNT_CONFIGURE:
+    case MAV_CMD_DO_MOUNT_CONTROL:
+    case MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW:
+    case MAV_CMD_DO_GIMBAL_MANAGER_CONFIGURE:
+        return handle_command_mount(packet, msg);
+#endif  // HAL_MOUNT_ENABLED
     case MAV_CMD_DO_SET_HOME:
         return handle_command_do_set_home(packet);
 #if AP_AHRS_POSITION_RESET_ENABLED
@@ -5174,6 +5147,14 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
     case MAV_CMD_DO_ACCEPT_MAG_CAL:
     case MAV_CMD_DO_CANCEL_MAG_CAL:
         return handle_command_mag_cal(packet);
+#endif
+
+#if AP_MAVLINK_SERVO_RELAY_ENABLED
+    case MAV_CMD_DO_SET_SERVO:
+    case MAV_CMD_DO_REPEAT_SERVO:
+    case MAV_CMD_DO_SET_RELAY:
+    case MAV_CMD_DO_REPEAT_RELAY:
+        return handle_servorelay_message(packet);
 #endif
 
 #if AP_SCRIPTING_ENABLED
@@ -6733,3 +6714,5 @@ MAV_RESULT GCS_MAVLINK::handle_control_high_latency(const mavlink_command_long_t
     return MAV_RESULT_ACCEPTED;
 }
 #endif // HAL_HIGH_LATENCY2_ENABLED
+
+#endif  // HAL_GCS_ENABLED

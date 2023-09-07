@@ -31,7 +31,7 @@ BUILD_OPTIONS = [
     Feature('AHRS', 'EKF3', 'HAL_NAVEKF3_AVAILABLE', 'Enable EKF3', 1, None),
     Feature('AHRS', 'EKF2', 'HAL_NAVEKF2_AVAILABLE', 'Enable EKF2', 0, None),
     Feature('AHRS', 'AHRS_EXT', 'HAL_EXTERNAL_AHRS_ENABLED', 'Enable External AHRS', 0, None),
-    Feature('AHRS', 'AHRS_EXT_MICROSTRAIN', 'AP_EXTERNAL_AHRS_MICROSTRAIN_ENABLED', 'Enable MICROSTRAIN External AHRS', 0, "AHRS_EXT"),  # noqa: E501
+    Feature('AHRS', 'AHRS_EXT_MICROSTRAIN5', 'AP_EXTERNAL_AHRS_MICROSTRAIN5_ENABLED', 'Enable MICROSTRAIN 5-series External AHRS', 0, "AHRS_EXT"),  # noqa: E501
     Feature('AHRS', 'AHRS_EXT_VECTORNAV', 'AP_EXTERNAL_AHRS_VECTORNAV_ENABLED', 'Enable VectorNav External AHRS', 0, "AHRS_EXT"),  # noqa
     Feature('AHRS', 'TEMPCAL', 'HAL_INS_TEMPERATURE_CAL_ENABLE', 'Enable IMU Temperature Calibration', 0, None),
     Feature('AHRS', 'VISUALODOM', 'HAL_VISUALODOM_ENABLED', 'Enable Visual Odometry', 0, 'EKF3_EXTNAV'),
@@ -53,8 +53,8 @@ BUILD_OPTIONS = [
     Feature('Battery', 'BATTERY_ESC_TELEM_OUTBOUND_ENABLED', 'AP_BATTERY_ESC_TELEM_OUTBOUND_ENABLED', 'Enable Synthetic Current Monitor', 0, None), # noqa: E501
 
     Feature('Ident', 'ADSB', 'HAL_ADSB_ENABLED', 'Enable ADSB', 0, None),
-    Feature('Ident', 'ADSB_SAGETECH', 'HAL_ADSB_SAGETECH_ENABLED', 'Enable SageTech ADSB', 0, 'ADSB'),
-    Feature('Ident', 'ADSB_SAGETECH_MXS', 'HAL_ADSB_SAGETECH_MXS_ENABLED', 'Enable SageTech MXS ADSB', 0, 'ADSB'),
+    Feature('Ident', 'ADSB_SAGETECH', 'HAL_ADSB_SAGETECH_ENABLED', 'Enable Sagetech ADSB', 0, 'ADSB'),
+    Feature('Ident', 'ADSB_SAGETECH_MXS', 'HAL_ADSB_SAGETECH_MXS_ENABLED', 'Enable Sagetech MXS ADSB', 0, 'ADSB'),
     Feature('Ident', 'ADSB_UAVIONIX', 'HAL_ADSB_UAVIONIX_MAVLINK_ENABLED', 'Enable UAvionix ADSB', 0, 'ADSB'),
     Feature('Ident', 'ADSB_UAVIONX_UCP', 'HAL_ADSB_UCP_ENABLED', 'Enable uAvionix UCP ADSB', 0 , 'ADSB'),
     Feature('Ident', 'AIS', 'AP_AIS_ENABLED', 'Enable AIS', 0, None),
@@ -274,6 +274,7 @@ BUILD_OPTIONS = [
     Feature('Sensors', 'TEMP', 'AP_TEMPERATURE_SENSOR_ENABLED', 'Enable Temperature Sensors', 0, None),
     Feature('Sensors', 'TEMP_TSYS01', 'AP_TEMPERATURE_SENSOR_TSYS01_ENABLED', 'Enable Temp Sensor - TSYS01', 0, "TEMP"),
     Feature('Sensors', 'TEMP_MCP9600', 'AP_TEMPERATURE_SENSOR_MCP9600_ENABLED', 'Enable Temp Sensor - MCP9600', 0, "TEMP"),
+    Feature('Sensors', 'TEMP_TSYS03', 'AP_TEMPERATURE_SENSOR_TSYS03_ENABLED', 'Enable Temp Sensor - TSYS03', 0, "TEMP"),
 
     Feature('Sensors', 'AIRSPEED', 'AP_AIRSPEED_ENABLED', 'Enable Airspeed Sensors', 1, None),    # Default to enabled to not annoy Plane users   # NOQA: E501
     Feature('Sensors', 'BEACON', 'AP_BEACON_ENABLED', 'Enable Beacon', 0, None),
@@ -298,7 +299,12 @@ BUILD_OPTIONS = [
     Feature('MAVLink', 'AP_MAVLINK_AUTOPILOT_VERSION_REQUEST_ENABLED', 'AP_MAVLINK_AUTOPILOT_VERSION_REQUEST_ENABLED', 'Enable old AUTOPILOT_VERSION_REQUEST mesage', 0, None),  # noqa
     Feature('MAVLink', 'AP_MAVLINK_MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES_ENABLED', 'AP_MAVLINK_MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES_ENABLED', 'Enable old REQUEST_AUTOPILOT_CAPABILITIES command', 0, None),  # noqa
     Feature('MAVLink', 'AP_MAVLINK_MSG_RELAY_STATUS_ENABLED', 'AP_MAVLINK_MSG_RELAY_STATUS_ENABLED', 'Enable sending of RELAY_STATUS message', 0, 'RELAY'),  # noqa
+    Feature('MAVLink', 'AP_MAVLINK_MSG_MOUNT_CONTROL_ENABLED', 'AP_MAVLINK_MSG_MOUNT_CONTROL_ENABLED', 'Enable handling of deprecated MOUNT_CONTROL message', 0, None),  # noqa
+    Feature('MAVLink', 'AP_MAVLINK_MSG_MOUNT_CONFIGURE_ENABLED', 'AP_MAVLINK_MSG_MOUNT_CONFIGURE_ENABLED', 'Enable handling of deprecated MOUNT_CONFIGURE message', 0, None),  # noqa
     Feature('MAVLink', 'AP_MAVLINK_BATTERY2_ENABLED', 'AP_MAVLINK_BATTERY2_ENABLED', 'Enable sending of old BATTERY2 message', 0, None),  # noqa
+    Feature('MAVLink', 'AP_MAVLINK_MSG_DEVICE_OP_ENABLED', 'AP_MAVLINK_MSG_DEVICE_OP_ENABLED', 'Enable handling of DeviceOp mavlink messages', 0, None),  # noqa
+    Feature('MAVLink', 'AP_MAVLINK_SERVO_RELAY_ENABLED', 'AP_MAVLINK_SERVO_RELAY_ENABLED', 'Enable handling of ServoRelay mavlink messages', 0, 'SERVORELAY_EVENTS'),  # noqa
+    Feature('MAVLink', 'AP_MAVLINK_MSG_SERIAL_CONTROL_ENABLED', 'AP_MAVLINK_MSG_SERIAL_CONTROL_ENABLED', 'Enable handling of Serial Control mavlink messages', 0, None),  # noqa
 
     Feature('Developer', 'KILL_IMU', 'AP_INERTIALSENSOR_KILL_IMU_ENABLED', 'Allow IMUs to be disabled at runtime', 0, None),
     Feature('Developer', 'CRASHCATCHER', 'AP_CRASHDUMP_ENABLED', 'Enable CrashCatcher', 0, None),
@@ -333,6 +339,8 @@ BUILD_OPTIONS = [
     Feature('Actuators', 'SBUS Output', 'AP_SBUSOUTPUT_ENABLED', 'Enable SBUS Output on serial ports', 0, None),
     Feature('Actuators', 'FETTecOneWire', 'AP_FETTEC_ONEWIRE_ENABLED', 'Enable FETTec OneWire ESCs', 0, None),
     Feature('Actuators', 'KDECAN', 'AP_KDECAN_ENABLED', 'KDE Direct KDECAN ESC', 0, None),
+    Feature('Actuators', 'HimarkServo', 'AP_DRONECAN_HIMARK_SERVO_SUPPORT', 'Enable Himark DroneCAN servos', 0, None),
+    Feature('Actuators', 'HobbywingESC', 'AP_DRONECAN_HOBBYWING_ESC_SUPPORT', 'Enable Hobbywing DroneCAN ESCs', 0, None),
 
     Feature('Precision Landing', 'PrecLand', 'AC_PRECLAND_ENABLED', 'Enable Precision Landing support', 0, None),
     Feature('Precision Landing', 'PrecLand - Companion', 'AC_PRECLAND_COMPANION_ENABLED', 'Enable Companion-Supported Precision Landing support', 0, "PrecLand"),  # noqa

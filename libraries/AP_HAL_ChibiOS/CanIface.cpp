@@ -77,7 +77,7 @@
 #define Debug(fmt, args...)
 #endif
 
-#if !defined(HAL_BUILD_AP_PERIPH) && !defined(HAL_BOOTLOADER_BUILD)
+#if !defined(HAL_BOOTLOADER_BUILD)
 #define PERF_STATS(x) (x++)
 #else
 #define PERF_STATS(x)
@@ -496,6 +496,9 @@ void CANIface::handleTxMailboxInterrupt(uint8_t mailbox_index, bool txok, const 
     if (txok && !txi.pushed) {
         txi.pushed = true;
         PERF_STATS(stats.tx_success);
+#if !defined(HAL_BOOTLOADER_BUILD)
+        stats.last_transmit_us = timestamp_us;
+#endif
     }
 }
 

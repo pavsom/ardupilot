@@ -756,13 +756,25 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_int_packet(const mavlink_command_i
     case MAV_CMD_DO_PAUSE_CONTINUE:
         return handle_command_pause_continue(packet);
 
+#if AC_MAVLINK_SOLO_BUTTON_COMMAND_HANDLING_ENABLED
+    // Solo user presses pause button
+    case MAV_CMD_SOLO_BTN_PAUSE_CLICK:
+        return handle_MAV_CMD_SOLO_BTN_PAUSE_CLICK(packet);
+    // Solo user presses Fly button:
+    case MAV_CMD_SOLO_BTN_FLY_HOLD:
+        return handle_MAV_CMD_SOLO_BTN_FLY_HOLD(packet);
+    // Solo user holds down Fly button for a couple of seconds
+    case MAV_CMD_SOLO_BTN_FLY_CLICK:
+        return handle_MAV_CMD_SOLO_BTN_FLY_CLICK(packet);
+#endif
+
     default:
         return GCS_MAVLINK::handle_command_int_packet(packet, msg);
     }
 }
 
 #if HAL_MOUNT_ENABLED
-MAV_RESULT GCS_MAVLINK_Copter::handle_command_mount(const mavlink_command_long_t &packet, const mavlink_message_t &msg)
+MAV_RESULT GCS_MAVLINK_Copter::handle_command_mount(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
     switch (packet.command) {
     case MAV_CMD_DO_MOUNT_CONTROL:
@@ -936,8 +948,14 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
         return MAV_RESULT_FAILED;
 #endif
 
-        /* Solo user presses Fly button */
-    case MAV_CMD_SOLO_BTN_FLY_CLICK: {
+    default:
+        return GCS_MAVLINK::handle_command_long_packet(packet, msg);
+    }
+}
+
+#if AC_MAVLINK_SOLO_BUTTON_COMMAND_HANDLING_ENABLED
+MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_SOLO_BTN_FLY_CLICK(const mavlink_command_int_t &packet)
+{
         if (copter.failsafe.radio) {
             return MAV_RESULT_ACCEPTED;
         }
@@ -947,10 +965,10 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
             copter.set_mode(Mode::Number::ALT_HOLD, ModeReason::GCS_COMMAND);
         }
         return MAV_RESULT_ACCEPTED;
-    }
+}
 
-        /* Solo user holds down Fly button for a couple of seconds */
-    case MAV_CMD_SOLO_BTN_FLY_HOLD: {
+MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_SOLO_BTN_FLY_HOLD(const mavlink_command_int_t &packet)
+{
         if (copter.failsafe.radio) {
             return MAV_RESULT_ACCEPTED;
         }
@@ -968,10 +986,10 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
             copter.set_mode(Mode::Number::LAND, ModeReason::GCS_COMMAND);
         }
         return MAV_RESULT_ACCEPTED;
-    }
+}
 
-        /* Solo user presses pause button */
-    case MAV_CMD_SOLO_BTN_PAUSE_CLICK: {
+MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_SOLO_BTN_PAUSE_CLICK(const mavlink_command_int_t &packet)
+{
         if (copter.failsafe.radio) {
             return MAV_RESULT_ACCEPTED;
         }
@@ -1001,12 +1019,8 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
             }
         }
         return MAV_RESULT_ACCEPTED;
-    }
-
-    default:
-        return GCS_MAVLINK::handle_command_long_packet(packet, msg);
-    }
 }
+#endif  // AC_MAVLINK_SOLO_BUTTON_COMMAND_HANDLING_ENABLED
 
 MAV_RESULT GCS_MAVLINK_Copter::handle_command_pause_continue(const mavlink_command_int_t &packet)
 {
