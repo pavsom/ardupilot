@@ -39,7 +39,7 @@
 #ifndef HAL_BOOTLOADER_BUILD
 #include <AP_Logger/AP_Logger.h>
 #endif
-
+#include <AP_InternalError/AP_InternalError.h>
 #if HAL_WITH_IO_MCU
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include <AP_IOMCU/AP_IOMCU.h>
