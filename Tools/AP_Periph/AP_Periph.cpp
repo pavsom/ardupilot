@@ -431,18 +431,19 @@ void AP_Periph_FW::update()
 
     static uint32_t last_led_ms;
     uint32_t now = AP_HAL::native_millis();
+    palClearLine(HAL_GPIO_PIN_LED);
     if (now - last_led_ms > 500){
-#ifdef HAL_GPIO_PIN_LED
-        if (no_iface_finished_dna) {
-            palToggleLine(HAL_GPIO_PIN_LED);
-        }
+#ifdef HAL_GPIO_PIN_LED_RED
+        //palSetLine(HAL_GPIO_PIN_LED_RED);
+        //palToggleLine(HAL_GPIO_PIN_LED_RED);
 #endif        
     }
     if (now - last_led_ms > 1000) {
         last_led_ms = now;
+        palToggleLine(HAL_GPIO_PIN_LED_RED);
 #ifdef HAL_GPIO_PIN_LED
         if (!no_iface_finished_dna) {
-            palToggleLine(HAL_GPIO_PIN_LED);
+            //palToggleLine(HAL_GPIO_PIN_LED);
         }
 #endif
 #if 1
@@ -555,7 +556,7 @@ void AP_Periph_FW::update()
 #endif
 
 #if (defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY) && HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY == 30) || defined(HAL_PERIPH_ENABLE_NOTIFY)
-    update_rainbow();
+    //update_rainbow();
 #endif
 #ifdef HAL_PERIPH_ENABLE_ADSB
     adsb_update();

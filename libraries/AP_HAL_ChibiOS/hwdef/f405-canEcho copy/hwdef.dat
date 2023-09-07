@@ -1,0 +1,40 @@
+include ../f405-canUni/hwdef.inc
+
+
+undef HAL_NO_RCOUT_THREAD
+
+# ---------------------- UARTs ---------------------------
+# order of UARTs
+#           | sr0  | sr1  | sr2  | GPS | MSP |
+SERIAL_ORDER USART1  
+
+STDOUT_SERIAL SD1
+STDOUT_BAUDRATE 57600
+
+
+# WS2812 LED
+PA1 TIM2_CH2 TIM2 PWM(1) GPIO(7)
+
+
+define HAL_PERIPH_ENABLE_NOTIFY
+define DEFAULT_NTF_LED_TYPES 256
+define NOTIFY_LED_LEN_DEFAULT 30
+define HAL_PERIPH_ENABLE_RC_OUT
+
+
+
+
+
+
+#define HAL_PERIPH_ENABLE_RC_OUT
+#define HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY 0
+#define HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY 30
+#define DEFAULT_NTF_LED_TYPES 256
+#define NOTIFY_LED_LEN_DEFAULT 30
+
+
+
+
+
+define HAL_CAN_DEFAULT_NODE_ID 100
+define CAN_APP_NODE_NAME "org.ardupilot.f405_LED"

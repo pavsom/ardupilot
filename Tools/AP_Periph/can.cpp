@@ -1308,7 +1308,7 @@ static void processRx(void)
             }
             CanardCANFrame rx_frame {};
 
-            //palToggleLine(HAL_GPIO_PIN_LED);
+            palSetLine(HAL_GPIO_PIN_LED);
             uint64_t timestamp;
             AP_HAL::CANIface::CanIOFlags flags;
             if (ins.iface->receive(rxmsg, timestamp, flags) <= 0) {
