@@ -308,8 +308,6 @@ void RGBLed::custom_override(void)
     if (AP_Notify::flags.armed){
         leds[0] = colorArmedLeft;
         leds[2] = colorArmedRight;
-        leds[3] = {255,255,255,0};
-        leds[1] = {255,255,255,0};
     }
 
     if (AP_Notify::flags.custom_blesk){
