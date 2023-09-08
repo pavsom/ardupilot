@@ -20,7 +20,7 @@
 #include <AP_GPS/AP_GPS.h>
 #include "RGBLed.h"
 #include "AP_Notify.h"
-
+#include "stdio.h"
 extern const AP_HAL::HAL& hal;
 
 RGBLed::RGBLed(uint8_t led_off, uint8_t led_bright, uint8_t led_medium, uint8_t led_dim):
@@ -279,7 +279,7 @@ void RGBLed::update_override(void)
 }
 
 void RGBLed::setBrightness(rgbHz& color, uint8_t& brightness){
-    float percent = brightness / 0xff;
+    float percent = static_cast<float>(brightness) / 0xff;
     color.r *= percent;
     color.g *= percent;
     color.b *= percent;
@@ -287,15 +287,19 @@ void RGBLed::setBrightness(rgbHz& color, uint8_t& brightness){
 
 void RGBLed::custom_override(void)
 {
+    static uint32_t lastTime = 0;
+    uint32_t tNow = AP_HAL::millis();
     if (!_led_override.start_ms) _led_override.start_ms = AP_HAL::millis();
 
     if (AP_Notify::flags.custom_pump_fault){
+        //printf("custom_pump_fault chosen \n\r");
         for (uint8_t i = 0; i < 4; i++){
             leds[i] = colorPumpFault;
         }
     }
 
     if (AP_Notify::flags.custom_slow_mode){
+        //printf("custom_slow_mode chosen \n\r");
         for (uint8_t i = 0; i < 4; i++){
             leds[i] = colorSlowMode;
         }
@@ -304,9 +308,12 @@ void RGBLed::custom_override(void)
     if (AP_Notify::flags.armed){
         leds[0] = colorArmedLeft;
         leds[2] = colorArmedRight;
+        leds[3] = {255,255,255,0};
+        leds[1] = {255,255,255,0};
     }
 
     if (AP_Notify::flags.custom_blesk){
+        //printf("custom_blesk chosen \n\r");
         leds[1] = colorBleks;
         leds[2] = colorBleks;
     }
@@ -322,6 +329,7 @@ void RGBLed::custom_override(void)
         uint32_t ms_per_cycle = 1000 / leds[i].hz;
         uint32_t cycle = (AP_HAL::millis() - _led_override.start_ms) % ms_per_cycle;
         if (cycle <= ms_per_cycle /2){
+             //printf("leds %d blink off \n\r",i);
             leds[i] = {0,0,0,0};
         }
     }
@@ -329,11 +337,14 @@ void RGBLed::custom_override(void)
     for (uint8_t i = 0; i < 4; i++){
         if (leds[i].r != ledsCurrent[i].r ||
         leds[i].g != ledsCurrent[i].g ||
-        leds[i].b != ledsCurrent[i].b){
+        leds[i].b != ledsCurrent[i].b || 
+        (tNow - lastTime > 1000)){
+            //printf("led %d %d %d %d %d \n\r",i,leds[i].r,leds[i].g,leds[i].b,leds[i].hz);
             ledsCurrent[i] = leds[i];
             hw_set_rgb_id(ledsCurrent[i].r, ledsCurrent[i].g, ledsCurrent[i].b, i);
         } 
     }
+    if (tNow - lastTime > 1000) lastTime = tNow;;
 }
 
 

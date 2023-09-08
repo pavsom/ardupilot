@@ -78,7 +78,7 @@ bool DroneCAN_RGB_LED::hw_set_rgb_id(uint8_t red, uint8_t green, uint8_t blue, u
     msg.commands.data[0].color.red = red >> 3;
     msg.commands.data[0].color.green = green >> 2;
     msg.commands.data[0].color.blue = blue >> 3;
-
+    //printf("canled %d %d %d %d \n\r",id,red,green,blue);
     // broadcast the message on all ifaces
     uint8_t can_num_drivers = AP::can().get_num_drivers();
     bool ok = false;
