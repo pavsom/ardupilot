@@ -1127,13 +1127,16 @@ void AP_Periph_FW::processTx(void)
                     sent = false;
                 }
             } else {
+#ifdef HAL_GPIO_PIN_LED_RED1
+                palSetLine(HAL_GPIO_PIN_LED_RED1);
+#endif                   
 #if CANARD_MULTI_IFACE
                 txf->iface_mask &= ~(1U<<_ins.index);
 #endif
             }
         }
         if (sent) {
-            canardPopTxQueue(&dronecan.canard);
+            canardPopTxQueue(&dronecan.canard);                  
             dronecan.tx_fail_count = 0;
         } else {
             // just exit and try again later. If we fail 8 times in a row
@@ -1216,8 +1219,9 @@ void AP_Periph_FW::processRx(void)
                 break;
             }
             CanardCANFrame rx_frame {};
-
-            palSetLine(HAL_GPIO_PIN_LED);
+#ifdef HAL_GPIO_PIN_LED_GREEN1
+            palSetLine(HAL_GPIO_PIN_LED_GREEN1);
+#endif            
             uint64_t timestamp;
             AP_HAL::CANIface::CanIOFlags flags;
             if (ins.iface->receive(rxmsg, timestamp, flags) <= 0) {
