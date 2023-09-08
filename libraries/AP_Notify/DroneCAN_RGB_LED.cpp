@@ -70,5 +70,27 @@ bool DroneCAN_RGB_LED::hw_set_rgb(uint8_t red, uint8_t green, uint8_t blue)
     return ok;
 }
 
+bool DroneCAN_RGB_LED::hw_set_rgb_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
+{
+    uavcan_equipment_indication_LightsCommand msg {};
+    msg.commands.len = 1;
+    msg.commands.data[0].light_id =id;
+    msg.commands.data[0].color.red = red >> 3;
+    msg.commands.data[0].color.green = green >> 2;
+    msg.commands.data[0].color.blue = blue >> 3;
+
+    // broadcast the message on all ifaces
+    uint8_t can_num_drivers = AP::can().get_num_drivers();
+    bool ok = false;
+    for (uint8_t i = 0; i < can_num_drivers; i++) {
+        auto *dronecan = AP_DroneCAN::get_dronecan(i);
+        if (dronecan != nullptr) {
+            ok |= dronecan->rgb_led.broadcast(msg);
+        }
+    }
+    return ok;
+}
+
+
 #endif // HAL_ENABLE_DRONECAN_DRIVERS
 
