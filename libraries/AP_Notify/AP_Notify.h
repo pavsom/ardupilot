@@ -142,6 +142,9 @@ public:
         bool video_recording;     // true when the vehicle is recording video
         bool temp_cal_running;    // true if a temperature calibration is running
         bool gyro_calibrated;     // true if calibrated gyro/acc
+        bool custom_pump_fault;          // true if pump failed
+        bool custom_slow_mode;           // true if in slow mode
+        bool custom_blesk;
     };
 
     /// notify_events_type - bitmask of active events.
