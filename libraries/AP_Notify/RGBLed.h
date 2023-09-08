@@ -49,6 +49,9 @@ protected:
     virtual void _set_rgb(uint8_t red, uint8_t green, uint8_t blue);
 
     void update_override();
+
+    virtual bool hw_set_rgb_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id){return false;};
+    void custom_override();
     
     // meta-data common to all hw devices
     uint8_t _red_curr, _green_curr, _blue_curr;  // current colours displayed by the led
@@ -57,12 +60,20 @@ protected:
     uint8_t _led_medium;
     uint8_t _led_dim;
 
-    struct {
+    struct{
         uint8_t r, g, b;
         uint8_t rate_hz;
         uint32_t start_ms;
     } _led_override;
-    
+
+    struct rgbHz {
+        uint8_t r;
+        uint8_t g;
+        uint8_t b;
+        uint8_t hz;
+    };
+    rgbHz leds[4];
+    rgbHz ledsCurrent[4];
 private:
     void update_colours();
     uint32_t get_colour_sequence() const;
@@ -104,12 +115,20 @@ private:
     const uint32_t sequence_disarmed_good_gps = DEFINE_COLOUR_SEQUENCE_SLOW(GREEN);
     const uint32_t sequence_disarmed_bad_gps = DEFINE_COLOUR_SEQUENCE_SLOW(BLUE);
 
+    const rgbHz colorSlowMode = {0,255,255,0};
+    const rgbHz colorArmedLeft = {255,0,0,0};
+    const rgbHz colorArmedRight = {0,255,0,0};
+    const rgbHz colorBleks = {255,191,0,0};
+    const rgbHz colorPumpFault = {255,0,0,0};
+    void setBrightness(rgbHz& color, uint8_t& brightness);
+    
     uint8_t last_step;
     enum rgb_source_t {
         standard = 0,
         mavlink = 1,
         obc = 2,
         traffic_light = 3,
+        custom = 4,
     };
     rgb_source_t rgb_source() const;
 

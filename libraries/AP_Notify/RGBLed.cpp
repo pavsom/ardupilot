@@ -204,6 +204,9 @@ void RGBLed::update()
     case traffic_light:
         current_colour_sequence = get_colour_sequence_traffic_light();
         break;
+    case custom:
+        custom_override();
+        return;
     }
 
     const uint8_t brightness = get_brightness();
@@ -274,6 +277,65 @@ void RGBLed::update_override(void)
         _set_rgb(0, 0, 0);
     }
 }
+
+void RGBLed::setBrightness(rgbHz& color, uint8_t& brightness){
+    float percent = brightness / 0xff;
+    color.r *= percent;
+    color.g *= percent;
+    color.b *= percent;
+}
+
+void RGBLed::custom_override(void)
+{
+    if (!_led_override.start_ms) _led_override.start_ms = AP_HAL::millis();
+
+    if (AP_Notify::flags.custom_pump_fault){
+        for (uint8_t i = 0; i < 4; i++){
+            leds[i] = colorPumpFault;
+        }
+    }
+
+    if (AP_Notify::flags.custom_slow_mode){
+        for (uint8_t i = 0; i < 4; i++){
+            leds[i] = colorSlowMode;
+        }
+    }
+
+    if (AP_Notify::flags.armed){
+        leds[0] = colorArmedLeft;
+        leds[2] = colorArmedRight;
+    }
+
+    if (AP_Notify::flags.custom_blesk){
+        leds[1] = colorBleks;
+        leds[2] = colorBleks;
+    }
+    uint8_t brightness = get_brightness();
+
+    for (uint8_t i = 0; i < 4; i++){
+        setBrightness(leds[i],brightness);
+    }
+
+  // blinking
+    for (uint8_t i = 0; i < 4; i++){
+        if (!leds[i].hz) break;
+        uint32_t ms_per_cycle = 1000 / leds[i].hz;
+        uint32_t cycle = (AP_HAL::millis() - _led_override.start_ms) % ms_per_cycle;
+        if (cycle <= ms_per_cycle /2){
+            leds[i] = {0,0,0,0};
+        }
+    }
+
+    for (uint8_t i = 0; i < 4; i++){
+        if (leds[i].r != ledsCurrent[i].r ||
+        leds[i].g != ledsCurrent[i].g ||
+        leds[i].b != ledsCurrent[i].b){
+            ledsCurrent[i] = leds[i];
+            hw_set_rgb_id(ledsCurrent[i].r, ledsCurrent[i].g, ledsCurrent[i].b, i);
+        } 
+    }
+}
+
 
 /*
   RGB control
