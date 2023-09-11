@@ -430,17 +430,14 @@ void AP_Periph_FW::update()
 #endif
 
     static uint32_t last_led_ms;
-    static uint32_t last_ms;
     uint32_t now = AP_HAL::millis();
-    if (now - last_ms > 100){
-        last_ms = now;
-#ifdef HAL_GPIO_PIN_LED_GREEN1    
+    #ifdef HAL_GPIO_PIN_LED_GREEN1    
         palClearLine(HAL_GPIO_PIN_LED_GREEN1);
 #endif    
 #ifdef HAL_GPIO_PIN_LED_RED1
         palClearLine(HAL_GPIO_PIN_LED_RED1);
-#endif          
-    }
+#endif 
+
     if (now - last_led_ms > 1000) {
         last_led_ms = now;
 #ifdef HAL_GPIO_PIN_LED_GREEN2        
