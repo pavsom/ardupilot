@@ -118,7 +118,7 @@ private:
     const rgbHz colorSlowMode = {0,255,255,0};
     const rgbHz colorArmedLeft = {255,0,0,0};
     const rgbHz colorArmedRight = {0,255,0,0};
-    const rgbHz colorBleks = {255,191,0,0};
+    const rgbHz colorBleks = {255,191,0,5};
     const rgbHz colorPumpFault = {255,0,0,0};
     void setBrightness(rgbHz& color, uint8_t& brightness);
     

@@ -291,6 +291,10 @@ void RGBLed::custom_override(void)
     uint32_t tNow = AP_HAL::millis();
     if (!_led_override.start_ms) _led_override.start_ms = AP_HAL::millis();
 
+    for (uint8_t i = 0; i < 4; i++){
+            leds[i] = {0,0,0,0};
+        }
+
     if (AP_Notify::flags.custom_pump_fault){
         //printf("custom_pump_fault chosen \n\r");
         for (uint8_t i = 0; i < 4; i++){
@@ -313,7 +317,7 @@ void RGBLed::custom_override(void)
     if (AP_Notify::flags.custom_blesk){
         //printf("custom_blesk chosen \n\r");
         leds[1] = colorBleks;
-        leds[2] = colorBleks;
+        leds[3] = colorBleks;
     }
     uint8_t brightness = get_brightness();
 
@@ -323,11 +327,12 @@ void RGBLed::custom_override(void)
 
   // blinking
     for (uint8_t i = 0; i < 4; i++){
-        if (!leds[i].hz) break;
+        if (!leds[i].hz) continue;
         uint32_t ms_per_cycle = 1000 / leds[i].hz;
-        uint32_t cycle = (AP_HAL::millis() - _led_override.start_ms) % ms_per_cycle;
+        uint32_t cycle = (tNow - _led_override.start_ms) % ms_per_cycle;
+        //printf("cycle %d =  %d - %d / %d \n\r",cycle,tNow,_led_override.start_ms,ms_per_cycle);
         if (cycle <= ms_per_cycle /2){
-             //printf("leds %d blink off \n\r",i);
+            //printf("leds %d blink off \n\r",i);
             leds[i] = {0,0,0,0};
         }
     }
