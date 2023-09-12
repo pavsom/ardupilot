@@ -442,6 +442,8 @@ public:
     uint8_t *get_tid_ptr(uint32_t transfer_desc);
     uint16_t pool_peak_percent();
     void set_rgb_led(uint8_t red, uint8_t green, uint8_t blue);
+    void set_rgb_led_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id);
+    
 
     struct dronecan_protocol_t {
         CanardInstance canard;

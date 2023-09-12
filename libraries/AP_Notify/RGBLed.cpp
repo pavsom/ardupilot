@@ -288,6 +288,10 @@ void RGBLed::setBrightness(rgbHz& color, uint8_t& brightness){
 void RGBLed::custom_override(void)
 {
     static uint32_t lastTime = 0;
+    for(uint8_t i = 0; i < 4; i++){
+        buff_id[i] = i;
+    }
+    static uint8_t flag_send = 0;
     uint32_t tNow = AP_HAL::millis();
     if (!_led_override.start_ms) _led_override.start_ms = AP_HAL::millis();
 
@@ -344,9 +348,16 @@ void RGBLed::custom_override(void)
         (tNow - lastTime > 1000)){
             //printf("led %d %d %d %d %d \n\r",i,leds[i].r,leds[i].g,leds[i].b,leds[i].hz);
             ledsCurrent[i] = leds[i];
-            hw_set_rgb_id(ledsCurrent[i].r, ledsCurrent[i].g, ledsCurrent[i].b, i);
-        } 
+            buff_red[i] = ledsCurrent[i].r;
+            buff_green[i] = ledsCurrent[i].g;
+            buff_blue[i] = ledsCurrent[i].b;
+            flag_send = 1;
+        }
     }
+    if (flag_send){
+        hw_set_rgb_id(buff_red, buff_green, buff_blue, buff_id);
+        flag_send = 0;
+    } 
     if (tNow - lastTime > 1000) lastTime = tNow;;
 }
 

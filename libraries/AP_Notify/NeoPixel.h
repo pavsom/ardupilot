@@ -39,7 +39,7 @@ private:
         uint8_t r;
         uint8_t g;
     };
-    RGB(*rgb)[2];
+    RGB **rgb;
     uint16_t enable_mask;
     bool needUpdate = false;
 };

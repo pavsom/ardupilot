@@ -529,11 +529,93 @@ void AP_Periph_FW::handle_arming_status(CanardInstance* canard_instance, CanardR
 
 
 
-#if defined(AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY) || defined(HAL_PERIPH_ENABLE_NOTIFY)
+/* #if defined(AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY) || defined(HAL_PERIPH_ENABLE_NOTIFY)
 void AP_Periph_FW::set_rgb_led(uint8_t red, uint8_t green, uint8_t blue)
 {
 #ifdef HAL_PERIPH_ENABLE_NOTIFY
     notify.handle_rgb(red, green, blue);
+#ifdef HAL_PERIPH_ENABLE_RC_OUT
+    rcout_has_new_data_to_update = true;
+#endif // HAL_PERIPH_ENABLE_RC_OUT
+#endif // HAL_PERIPH_ENABLE_NOTIFY
+
+#ifdef HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY
+    hal.rcout->set_serial_led_rgb_data(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY, -1, red, green, blue);
+    hal.rcout->serial_led_send(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY);
+#endif // HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY
+
+#ifdef HAL_PERIPH_ENABLE_NCP5623_LED_WITHOUT_NOTIFY
+    {
+        const uint8_t i2c_address = 0x38;
+        static AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev;
+        if (!dev) {
+            dev = std::move(hal.i2c_mgr->get_device(0, i2c_address));
+        }
+        WITH_SEMAPHORE(dev->get_semaphore());
+        dev->set_retries(0);
+        uint8_t v = 0x3f; // enable LED
+        dev->transfer(&v, 1, nullptr, 0);
+        v = 0x40 | red >> 3; // red
+        dev->transfer(&v, 1, nullptr, 0);
+        v = 0x60 | green >> 3; // green
+        dev->transfer(&v, 1, nullptr, 0);
+        v = 0x80 | blue >> 3; // blue
+        dev->transfer(&v, 1, nullptr, 0);
+    }
+#endif // HAL_PERIPH_ENABLE_NCP5623_LED_WITHOUT_NOTIFY
+
+#ifdef HAL_PERIPH_ENABLE_NCP5623_BGR_LED_WITHOUT_NOTIFY
+    {
+        const uint8_t i2c_address = 0x38;
+        static AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev;
+        if (!dev) {
+            dev = std::move(hal.i2c_mgr->get_device(0, i2c_address));
+        }
+        WITH_SEMAPHORE(dev->get_semaphore());
+        dev->set_retries(0);
+        uint8_t v = 0x3f; // enable LED
+        dev->transfer(&v, 1, nullptr, 0);
+        v = 0x40 | blue >> 3; // blue
+        dev->transfer(&v, 1, nullptr, 0);
+        v = 0x60 | green >> 3; // green
+        dev->transfer(&v, 1, nullptr, 0);
+        v = 0x80 | red >> 3; // red
+        dev->transfer(&v, 1, nullptr, 0);
+    }
+#endif // HAL_PERIPH_ENABLE_NCP5623_BGR_LED_WITHOUT_NOTIFY
+#ifdef HAL_PERIPH_ENABLE_TOSHIBA_LED_WITHOUT_NOTIFY
+    {
+#define TOSHIBA_LED_PWM0    0x01    // pwm0 register
+#define TOSHIBA_LED_ENABLE  0x04    // enable register
+#define TOSHIBA_LED_I2C_ADDR 0x55   // default I2C bus address
+
+        static AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev_toshiba;
+        if (!dev_toshiba) {
+            dev_toshiba = std::move(hal.i2c_mgr->get_device(0, TOSHIBA_LED_I2C_ADDR));
+        }
+        WITH_SEMAPHORE(dev_toshiba->get_semaphore());
+        dev_toshiba->set_retries(0); // use 0 because this is running on main thread.
+
+        // enable the led
+        dev_toshiba->write_register(TOSHIBA_LED_ENABLE, 0x03);
+
+        // 4-bit for each color 
+        uint8_t val[4] = { 
+            TOSHIBA_LED_PWM0, 
+            (uint8_t)(blue >> 4),
+            (uint8_t)(green / 16), 
+            (uint8_t)(red / 16) 
+        };
+        dev_toshiba->transfer(val, sizeof(val), nullptr, 0);
+    }
+#endif // HAL_PERIPH_ENABLE_TOSHIBA_LED_WITHOUT_NOTIFY
+} */
+
+#if defined(AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY) || defined(HAL_PERIPH_ENABLE_NOTIFY)
+void AP_Periph_FW::set_rgb_led_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
+{
+#ifdef HAL_PERIPH_ENABLE_NOTIFY
+    notify.handle_rgb_id(red, green, blue, id);
 #ifdef HAL_PERIPH_ENABLE_RC_OUT
     rcout_has_new_data_to_update = true;
 #endif // HAL_PERIPH_ENABLE_RC_OUT
@@ -627,6 +709,7 @@ void AP_Periph_FW::handle_lightscommand(CanardInstance* canard_instance, CanardR
         uint8_t red = cmd.color.red<<3U;
         uint8_t green = (cmd.color.green>>1U)<<3U;
         uint8_t blue = cmd.color.blue<<3U;
+        uint8_t id = cmd.light_id;
 #ifdef HAL_PERIPH_ENABLE_NOTIFY
         const int8_t brightness = notify.get_rgb_led_brightness_percent();
 #elif defined(AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY)
@@ -638,7 +721,7 @@ void AP_Periph_FW::handle_lightscommand(CanardInstance* canard_instance, CanardR
             green = constrain_int16(green * scale, 0, 255);
             blue = constrain_int16(blue * scale, 0, 255);
         }
-        set_rgb_led(red, green, blue);
+        set_rgb_led_id(red, green, blue, id);
     }
 }
 #endif // AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY

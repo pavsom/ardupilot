@@ -50,7 +50,7 @@ protected:
 
     void update_override();
 
-    virtual bool hw_set_rgb_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id){return false;};
+    virtual bool hw_set_rgb_id(uint8_t *red, uint8_t *green, uint8_t *blue, uint8_t *id){return false;};
     void custom_override();
     
     // meta-data common to all hw devices
@@ -74,6 +74,10 @@ protected:
     };
     rgbHz leds[4];
     rgbHz ledsCurrent[4];
+    uint8_t buff_red[4];
+    uint8_t buff_green[4];
+    uint8_t buff_blue[4];
+    uint8_t buff_id[4];
 private:
     void update_colours();
     uint32_t get_colour_sequence() const;

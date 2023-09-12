@@ -44,7 +44,9 @@ uint16_t NeoPixel::init_ports()
     uint16_t mask = 0;
     num_leds =  pNotify->get_led_len()/2;
 
-    rgb = new NeoPixel::RGB[num_leds][2];
+    rgb = new NeoPixel::RGB * [2];
+    rgb[0] = new NeoPixel::RGB [num_leds];
+    rgb[1] = new NeoPixel::RGB [num_leds];
     
     for (uint16_t i=0; i<AP_NOTIFY_NEOPIXEL_MAX_INSTANCES; i++) {
         const SRV_Channel::Aux_servo_function_t fn = (SRV_Channel::Aux_servo_function_t)((uint8_t)SRV_Channel::k_LED_neopixel1 + i);
