@@ -529,7 +529,7 @@ void AP_Periph_FW::handle_arming_status(CanardInstance* canard_instance, CanardR
 
 
 
-/* #if defined(AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY) || defined(HAL_PERIPH_ENABLE_NOTIFY)
+#if defined(AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY) || defined(HAL_PERIPH_ENABLE_NOTIFY)
 void AP_Periph_FW::set_rgb_led(uint8_t red, uint8_t green, uint8_t blue)
 {
 #ifdef HAL_PERIPH_ENABLE_NOTIFY
@@ -609,9 +609,9 @@ void AP_Periph_FW::set_rgb_led(uint8_t red, uint8_t green, uint8_t blue)
         dev_toshiba->transfer(val, sizeof(val), nullptr, 0);
     }
 #endif // HAL_PERIPH_ENABLE_TOSHIBA_LED_WITHOUT_NOTIFY
-} */
+}
 
-#if defined(AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY) || defined(HAL_PERIPH_ENABLE_NOTIFY)
+
 void AP_Periph_FW::set_rgb_led_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
 {
 #ifdef HAL_PERIPH_ENABLE_NOTIFY

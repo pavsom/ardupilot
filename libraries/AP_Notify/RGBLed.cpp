@@ -29,7 +29,6 @@ RGBLed::RGBLed(uint8_t led_off, uint8_t led_bright, uint8_t led_medium, uint8_t 
     _led_medium(led_medium),
     _led_dim(led_dim)
 {
-    init_flag = 0;
 }
 
 // set_rgb - set color as a combination of red, green and blue values
@@ -189,9 +188,6 @@ uint32_t RGBLed::get_colour_sequence_traffic_light(void) const
 // at 50Hz
 void RGBLed::update()
 {
-    if(!init_flag){
-        custom_init();
-    }
     uint32_t current_colour_sequence = 0;
 
     switch (rgb_source()) {
@@ -289,62 +285,47 @@ void RGBLed::setBrightness(rgbHz& color, uint8_t& brightness){
 }
 
 
-void RGBLed::custom_init(void){
-    for (uint8_t i = 0; i < 4; i++){
-            leds[i] = {0,0,0,0};
-        }
-    init_flag = 1;
-}
-
-
 void RGBLed::custom_override(void)
 {
-    static uint32_t lastTime = 0;
-    for(uint8_t i = 0; i < 4; i++){
-        buff_id[i] = i;
-    }
-    static uint8_t flag_send = 0;
+    // Time prepare
     uint32_t tNow = AP_HAL::millis();
     if (!_led_override.start_ms) _led_override.start_ms = AP_HAL::millis();
+    static uint32_t lastTime = 0;
+    
+    // Brightness, ready to send, led array
+    uint8_t brightness = get_brightness();
+    static uint8_t flag_send = 0;
+    rgbHz leds[4];
+    for(uint8_t i = 0; i < 4; i++){
+        leds[i] = {0,0,0,0};
+    }
 
-    if (AP_Notify::flags.custom_pump_fault){
-        //printf("custom_pump_fault chosen \n\r");
-        for (uint8_t i = 0; i < 4; i++){
+    for(int i = 0; i < 4; i++){
+        // Part of cycle that sets leds from flags
+        if (AP_Notify::flags.custom_pump_fault){
             leds[i] = colorPumpFault;
         }
-    }
-
-    if (AP_Notify::flags.custom_slow_mode){
-        //printf("custom_slow_mode chosen \n\r");
-        for (uint8_t i = 0; i < 4; i++){
+        if (AP_Notify::flags.custom_slow_mode){
             leds[i] = colorSlowMode;
         }
-    }
-
-    if (AP_Notify::flags.armed){
-        leds[0] = colorArmedLeft;
-        leds[2] = colorArmedRight;
-    }
-
-    if (AP_Notify::flags.custom_blesk){
-        //printf("custom_blesk chosen \n\r");
-        leds[1] = colorBleks;
-        leds[3] = colorBleks;
-    }
-    uint8_t brightness = get_brightness();
-
-    for (uint8_t i = 0; i < 4; i++){
+        if (AP_Notify::flags.armed){
+            if(i == 0){
+                leds[i] = colorArmedLeft;
+            }
+            if(i == 2){
+                leds[i] = colorArmedRight;
+            }
+        }
+        if ((AP_Notify::flags.custom_blesk) && (i % 2 == 1)){
+            leds[i] = colorBleks;
+        }
         setBrightness(leds[i],brightness);
-    }
 
-  // blinking
-    for (uint8_t i = 0; i < 4; i++){
+        // Part of cycle that does the blinking
         if (!leds[i].hz) continue;
         uint32_t ms_per_cycle = 1000 / leds[i].hz;
         uint32_t cycle = (tNow - _led_override.start_ms) % ms_per_cycle;
-        //printf("cycle %d =  %d - %d / %d \n\r",cycle,tNow,_led_override.start_ms,ms_per_cycle);
         if (cycle <= ms_per_cycle /2){
-            //printf("leds %d blink off \n\r",i);
             leds[i] = {0,0,0,0};
         }
     }
@@ -354,18 +335,19 @@ void RGBLed::custom_override(void)
         leds[i].g != ledsCurrent[i].g ||
         leds[i].b != ledsCurrent[i].b || 
         (tNow - lastTime > 1000)){
-            //printf("led %d %d %d %d %d \n\r",i,leds[i].r,leds[i].g,leds[i].b,leds[i].hz);
             ledsCurrent[i] = leds[i];
-            buff_red[i] = ledsCurrent[i].r;
-            buff_green[i] = ledsCurrent[i].g;
-            buff_blue[i] = ledsCurrent[i].b;
             flag_send = 1;
         }
+        ledsCurrent[i].id = i;
     }
+
+    // Sending multiple commands if flag_send >= 1
+    // Not sending if flag_send = 0
     if (flag_send){
-        hw_set_rgb_id(buff_red, buff_green, buff_blue, buff_id);
+        hw_set_rgb_id(ledsCurrent);
         flag_send = 0;
-    } 
+    }
+
     if (tNow - lastTime > 1000) lastTime = tNow;;
 }
 
