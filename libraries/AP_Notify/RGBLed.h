@@ -52,6 +52,7 @@ protected:
 
     virtual bool hw_set_rgb_id(uint8_t *red, uint8_t *green, uint8_t *blue, uint8_t *id){return false;};
     void custom_override();
+    void custom_init();
     
     // meta-data common to all hw devices
     uint8_t _red_curr, _green_curr, _blue_curr;  // current colours displayed by the led
@@ -78,6 +79,7 @@ protected:
     uint8_t buff_green[4];
     uint8_t buff_blue[4];
     uint8_t buff_id[4];
+    uint8_t init_flag;
 private:
     void update_colours();
     uint32_t get_colour_sequence() const;

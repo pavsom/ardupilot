@@ -29,7 +29,7 @@ RGBLed::RGBLed(uint8_t led_off, uint8_t led_bright, uint8_t led_medium, uint8_t 
     _led_medium(led_medium),
     _led_dim(led_dim)
 {
-
+    init_flag = 0;
 }
 
 // set_rgb - set color as a combination of red, green and blue values
@@ -189,6 +189,9 @@ uint32_t RGBLed::get_colour_sequence_traffic_light(void) const
 // at 50Hz
 void RGBLed::update()
 {
+    if(!init_flag){
+        custom_init();
+    }
     uint32_t current_colour_sequence = 0;
 
     switch (rgb_source()) {
@@ -285,6 +288,15 @@ void RGBLed::setBrightness(rgbHz& color, uint8_t& brightness){
     color.b *= percent;
 }
 
+
+void RGBLed::custom_init(void){
+    for (uint8_t i = 0; i < 4; i++){
+            leds[i] = {0,0,0,0};
+        }
+    init_flag = 1;
+}
+
+
 void RGBLed::custom_override(void)
 {
     static uint32_t lastTime = 0;
@@ -294,10 +306,6 @@ void RGBLed::custom_override(void)
     static uint8_t flag_send = 0;
     uint32_t tNow = AP_HAL::millis();
     if (!_led_override.start_ms) _led_override.start_ms = AP_HAL::millis();
-
-    for (uint8_t i = 0; i < 4; i++){
-            leds[i] = {0,0,0,0};
-        }
 
     if (AP_Notify::flags.custom_pump_fault){
         //printf("custom_pump_fault chosen \n\r");
