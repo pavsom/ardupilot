@@ -290,7 +290,7 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @Range: 0 200
     // @Increment: 1
     // @User: Advanced
-    GSCALAR(rangefinder_max_rate, "RNGFND_MAX_RATE", 50),
+    GSCALAR(rangefinder_max_rate, "RNGFND_MAX_RATE", 20),
     
     // Rangefinder driver
     // @Group: RNGFND
