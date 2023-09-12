@@ -35,6 +35,7 @@ public:
 
     virtual void handle_msg(const mavlink_message_t &msg) { return; }
 
+    virtual void supress(bool tState){};
 #if AP_SCRIPTING_ENABLED
     // Returns false if scripting backing hasn't been setup
     // Get distance from lua script
