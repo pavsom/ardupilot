@@ -12,14 +12,14 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Description: Type of connected rangefinder
     // @Values: 0:None,1:Analog,2:MaxbotixI2C,3:LidarLite-I2C,5:PWM,6:BBB-PRU,7:LightWareI2C,8:LightWareSerial,9:Bebop,10:MAVLink,11:USD1_Serial,12:LeddarOne,13:MaxbotixSerial,14:TeraRangerI2C,15:LidarLiteV3-I2C,16:VL53L0X or VL53L1X,17:NMEA,18:WASP-LRF,19:BenewakeTF02,20:Benewake-Serial,21:LidarLightV3HP,22:PWM,23:BlueRoboticsPing,24:DroneCAN,25:BenewakeTFminiPlus-I2C,26:LanbaoPSK-CM8JL65-CC5,27:BenewakeTF03,28:VL53L1X-ShortRange,29:LeddarVu8-Serial,30:HC-SR04,31:GYUS42v2,32:MSP,33:USD1_CAN,34:Benewake_CAN,35:TeraRangerSerial,36:Lua_Scripting,37:NoopLoop_TOFSense, 100:SITL
     // @User: Standard
-    AP_GROUPINFO_FLAGS("TYPE", 1, AP_RangeFinder_Params, type, 0, AP_PARAM_FLAG_ENABLE),
+    AP_GROUPINFO_FLAGS("TYPE", 1, AP_RangeFinder_Params, type, RANGEFINDER_TYPE_DEFAULT, AP_PARAM_FLAG_ENABLE),
 
     // @Param: PIN
     // @DisplayName: Rangefinder pin
     // @Description: Analog or PWM input pin that rangefinder is connected to. Airspeed ports can be used for Analog input, AUXOUT can be used for PWM input. When using analog pin 103, the maximum value of the input in 3.3V. For PWM input, the pin must be configured as a digital GPIO, see the Wiki's "GPIOs" section for details.
     // @Values: -1:Not Used,11:Pixracer,13:Pixhawk ADC4,14:Pixhawk ADC3,15:Pixhawk ADC6/Pixhawk2 ADC,50:AUX1,51:AUX2,52:AUX3,53:AUX4,54:AUX5,55:AUX6,103:Pixhawk SBUS
     // @User: Standard
-    AP_GROUPINFO("PIN",     2, AP_RangeFinder_Params, pin, -1),
+    AP_GROUPINFO("PIN",     2, AP_RangeFinder_Params, pin, RANGEFINDER_PIN_DEFAULT),
 
     // @Param: SCALING
     // @DisplayName: Rangefinder scaling
@@ -42,7 +42,7 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Description: Control over what function is used to calculate distance. For a linear function, the distance is (voltage-offset)*scaling. For a inverted function the distance is (offset-voltage)*scaling. For a hyperbolic function the distance is scaling/(voltage-offset). The functions return the distance in meters.
     // @Values: 0:Linear,1:Inverted,2:Hyperbolic
     // @User: Standard
-    AP_GROUPINFO("FUNCTION", 5, AP_RangeFinder_Params, function, 0),
+    AP_GROUPINFO("FUNCTION", 5, AP_RangeFinder_Params, function, RANGEFINDER_FUNCTION_DEFAULT),
 
     // @Param: MIN_CM
     // @DisplayName: Rangefinder minimum distance
@@ -50,7 +50,7 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Units: cm
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MIN_CM",  6, AP_RangeFinder_Params, min_distance_cm, 20),
+    AP_GROUPINFO("MIN_CM",  6, AP_RangeFinder_Params, min_distance_cm, RANGEFINDER_MIN_CM_DEFAULT),
 
     // @Param: MAX_CM
     // @DisplayName: Rangefinder maximum distance
@@ -58,14 +58,14 @@ const AP_Param::GroupInfo AP_RangeFinder_Params::var_info[] = {
     // @Units: cm
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("MAX_CM",  7, AP_RangeFinder_Params, max_distance_cm, 700),
+    AP_GROUPINFO("MAX_CM",  7, AP_RangeFinder_Params, max_distance_cm, RANGEFINDER_MAX_CM_DEFAULT),
 
     // @Param: STOP_PIN
     // @DisplayName: Rangefinder stop pin
     // @Description: Digital pin that enables/disables rangefinder measurement for the pwm rangefinder. A value of -1 means no pin. If this is set, then the pin is set to 1 to enable the rangefinder and set to 0 to disable it. This is used to enable powersaving when out of range. Some common values are given, but see the Wiki's "GPIOs" page for how to determine the pin number for a given autopilot.
     // @Values: -1:Not Used,50:AUX1,51:AUX2,52:AUX3,53:AUX4,54:AUX5,55:AUX6,111:PX4 FMU Relay1,112:PX4 FMU Relay2,113:PX4IO Relay1,114:PX4IO Relay2,115:PX4IO ACC1,116:PX4IO ACC2
     // @User: Standard
-    AP_GROUPINFO("STOP_PIN", 8, AP_RangeFinder_Params, stop_pin, -1),
+    AP_GROUPINFO("STOP_PIN", 8, AP_RangeFinder_Params, stop_pin, RANGEFINDER_STOP_PIN_DEFAULT),
 
     // 9 was SETTLE
 
