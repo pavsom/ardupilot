@@ -47,7 +47,6 @@
 #include "AP_Airspeed_SDP3X.h"
 #include "AP_Airspeed_DLVR.h"
 #include "AP_Airspeed_analog.h"
-#include "AP_Airspeed_Avxl100.h"
 #include "AP_Airspeed_ASP5033.h"
 #include "AP_Airspeed_Backend.h"
 #include "AP_Airspeed_DroneCAN.h"
