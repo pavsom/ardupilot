@@ -70,9 +70,10 @@ protected:
         uint8_t b;
         uint8_t hz;
         uint8_t id;
+        uint8_t flag;
     };
-    virtual bool hw_set_rgb_id(struct rgbHz ledsSet[4]){return false;};
-    rgbHz ledsCurrent[4];
+    virtual bool hw_set_rgb_id(rgbHz* pLeds, uint8_t struct_len){return false;};
+    rgbHz ledsCurrent[NOTIFY_LED_LEN_DEFAULT];
 
 private:
     void update_colours();
@@ -115,11 +116,11 @@ private:
     const uint32_t sequence_disarmed_good_gps = DEFINE_COLOUR_SEQUENCE_SLOW(GREEN);
     const uint32_t sequence_disarmed_bad_gps = DEFINE_COLOUR_SEQUENCE_SLOW(BLUE);
 
-    const rgbHz colorSlowMode = {0,255,255,0};
-    const rgbHz colorArmedLeft = {255,0,0,0};
-    const rgbHz colorArmedRight = {0,255,0,0};
-    const rgbHz colorBleks = {255,191,0,5};
-    const rgbHz colorPumpFault = {255,0,0,0};
+    const rgbHz colorSlowMode = {0,255,255,0,0,0};
+    const rgbHz colorArmedLeft = {255,0,0,0,0,0};
+    const rgbHz colorArmedRight = {0,255,0,0,0,0};
+    const rgbHz colorBlesk = {255,191,0,5,0,0};
+    const rgbHz colorPumpFault = {255,0,0,0,0,0};
     void setBrightness(rgbHz& color, uint8_t& brightness);
     
     uint8_t last_step;

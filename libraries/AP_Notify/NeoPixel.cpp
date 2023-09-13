@@ -87,11 +87,11 @@ void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
     }
     for (uint16_t i = 0; i < num_leds; i++) {
         if (rgb[id][i].r != red || rgb[id][i].g != green || rgb[id][i].b != blue){
-            needUpdate = true;
             rgb[id][i] = {blue, red, green};
+            needUpdate = true;
         }
         if (led != nullptr){
-            led->set_RGB(channel, id*num_leds + i, red, green, blue);
+            led->set_RGB(channel, id*num_leds + i, rgb[id][i].r, rgb[id][i].g, rgb[id][i].b);
         }
     }
 }

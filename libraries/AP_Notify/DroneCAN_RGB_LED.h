@@ -13,6 +13,6 @@ public:
     bool init() override;
 protected:
     virtual bool hw_set_rgb(uint8_t red, uint8_t green, uint8_t blue) override;
-    virtual bool hw_set_rgb_id(struct rgbHz ledsSet[4]) override;
+    virtual bool hw_set_rgb_id(rgbHz* pLeds, uint8_t struct_len) override;
 };
 #endif

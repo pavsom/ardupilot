@@ -71,15 +71,15 @@ bool DroneCAN_RGB_LED::hw_set_rgb(uint8_t red, uint8_t green, uint8_t blue)
 }
 
 
-bool DroneCAN_RGB_LED::hw_set_rgb_id(struct rgbHz ledsSet[4])
+bool DroneCAN_RGB_LED::hw_set_rgb_id(rgbHz* pLeds, uint8_t struct_len)
 {
     uavcan_equipment_indication_LightsCommand msg {};
-    msg.commands.len = 4;
-    for(uint8_t i = 0; i < msg.commands.len; i++){
-        msg.commands.data[i].light_id = ledsSet[i].id;
-        msg.commands.data[i].color.red = ledsSet[i].r >> 3;
-        msg.commands.data[i].color.green = ledsSet[i].g >> 2;
-        msg.commands.data[i].color.blue = ledsSet[i].b >> 3;
+    msg.commands.len = struct_len;
+    for(uint8_t i = 0; i < struct_len; i++){
+        msg.commands.data[i].light_id = pLeds[i].id;
+        msg.commands.data[i].color.red = pLeds[i].r >> 3;
+        msg.commands.data[i].color.green = pLeds[i].g >> 2;
+        msg.commands.data[i].color.blue = pLeds[i].b >> 3;
     }
     //printf("canled %d %d %d %d \n\r",id,red,green,blue);
     // broadcast the message on all ifaces
