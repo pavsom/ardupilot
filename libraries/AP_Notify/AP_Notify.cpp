@@ -147,6 +147,10 @@ AP_Notify *AP_Notify::_singleton;
 #define NOTIFY_LED_LEN_DEFAULT 30
 #endif
 
+#ifndef NOTIFY_ID_NUMS_DEFAULT
+#define NOTIFY_ID_NUMS_DEFAULT 4
+#endif
+
 #ifndef HAL_BUZZER_PIN
 #define HAL_BUZZER_PIN -1
 #endif
@@ -232,6 +236,14 @@ const AP_Param::GroupInfo AP_Notify::var_info[] = {
     // @User: Advanced
     // @RebootRequired: True
     AP_GROUPINFO("LED_LEN", 9, AP_Notify, _led_len, NOTIFY_LED_LEN_DEFAULT),
+
+    // @Param: ID_NUMS
+    // @DisplayName: Number of IDs to operate
+    // @Description: Number of IDs that are available for Pixhawk
+    // @Range: 0 255
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("ID_NUMS", 10, AP_Notify, _id_nums, NOTIFY_ID_NUMS_DEFAULT),
 
     AP_GROUPEND
 };

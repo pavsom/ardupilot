@@ -90,9 +90,6 @@ void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
             rgb[id][i] = {blue, red, green};
             needUpdate = true;
         }
-        if (led != nullptr){
-            led->set_RGB(channel, id*num_leds + i, rgb[id][i].r, rgb[id][i].g, rgb[id][i].b);
-        }
     }
 }
 void NeoPixel::update(){
@@ -102,6 +99,13 @@ void NeoPixel::update(){
     for (uint16_t chan=0; chan<16; chan++) {
         if ((1U<<chan) & enable_mask) {
             channel = chan + 1;
+        }
+    }
+    for (uint8_t id = 0; id < 2; id++){
+        for (uint8_t i = 0; i < num_leds; i++){
+            if (led != nullptr){
+                led->set_RGB(channel, id*num_leds + i, rgb[id][i].r, rgb[id][i].g, rgb[id][i].b);
+            }
         }
     }
     needUpdate = false;
