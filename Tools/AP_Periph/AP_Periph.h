@@ -129,6 +129,7 @@ public:
     void can_baro_update();
     void can_airspeed_update();
     void can_rangefinder_update();
+    void can_rangefinder_send(uint8_t id, enum Rotation orientation);
     void can_battery_update();
     void can_proximity_update();
     void can_buzzer_update(void);
@@ -237,7 +238,7 @@ public:
 
 #ifdef HAL_PERIPH_ENABLE_RANGEFINDER
     RangeFinder rangefinder;
-    uint32_t last_sample_ms;
+    uint32_t last_sample_ms[RANGEFINDER_MAX_INSTANCES];
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_PROXIMITY
