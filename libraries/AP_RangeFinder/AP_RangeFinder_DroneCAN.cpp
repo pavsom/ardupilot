@@ -136,6 +136,11 @@ void AP_RangeFinder_DroneCAN::handle_measurement(AP_DroneCAN *ap_dronecan, const
             break;
         }
     }
+
+    uint8_t orientation = (msg.beam_orientation_in_body_frame.fixed_axis_roll_pitch_yaw[1] << 4)|(msg.beam_orientation_in_body_frame.fixed_axis_roll_pitch_yaw[0]);
+    if ( (uint8_t)(driver->orientation()) != orientation){
+        driver->params.orientation.set(orientation);
+    }
     //copy over the sensor type of Rangefinder 
     switch (msg.sensor_type) {
         case UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT_SENSOR_TYPE_SONAR:
