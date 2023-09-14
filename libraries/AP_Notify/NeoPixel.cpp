@@ -41,17 +41,13 @@ NeoPixel::NeoPixel() :
 uint16_t NeoPixel::init_ports()
 {
     uint16_t mask = 0;
+
+    // Preparing values for rgb_set_id() operating
     num_sections = pNotify->get_num_section();
     num_leds =  pNotify->get_led_len() / num_sections;
+    first_section_id = pNotify->get_rx_id() * num_sections;
 
-    if (rx_id_buffer == nullptr) {
-        rx_id_marker = pNotify->get_rx_id();
-        rx_id_buffer = new uint8_t [num_sections];
-        for (uint8_t i = 0; i < num_sections; i++){
-            rx_id_buffer[i] = i + num_sections * (rx_id_marker - 1);
-        }
-    }
-
+    // Initializing rgb array of structure
     rgb = new NeoPixel::RGB * [num_sections];
     for (uint8_t i = 0; i < num_sections; i++){
         rgb[i] = new NeoPixel::RGB [num_leds];
@@ -84,17 +80,13 @@ uint16_t NeoPixel::init_ports()
 }
 void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
 {
-    uint8_t catch_flag = 0;
-    for (uint8_t i = 0; i < num_sections; i++){
-        if (id == rx_id_buffer[i]){
-            catch_flag += 1;
-        }
-    }
-    if (catch_flag == 0){
+    // Checking if id compares for current board IDs
+    if (id < first_section_id || id > (first_section_id + num_sections))
+    {
         return;
     }
-    id = id - num_sections * (rx_id_marker - 1);
-    catch_flag = 0;
+    // Transforming id
+    id = id - first_section_id;
     /* AP_SerialLED *led = AP_SerialLED::get_singleton();
     uint16_t channel = 0;
     for (uint16_t chan=0; chan<16; chan++) {
@@ -102,6 +94,7 @@ void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
             channel = chan + 1;
         }
     } */
+    // Setting new colors in rgb from message and raising up needUpdate flag
     for (uint16_t i = 0; i < num_leds; i++) {
         if (rgb[id][i].r != red || rgb[id][i].g != green || rgb[id][i].b != blue){
             rgb[id][i] = {blue, red, green};
@@ -118,6 +111,8 @@ void NeoPixel::update(){
             channel = chan + 1;
         }
     }
+
+    // Setting colors from rgb to PWM port and sending
     for (uint8_t id = 0; id < num_sections; id++){
         for (uint8_t i = 0; i < num_leds; i++){
             if (led != nullptr){

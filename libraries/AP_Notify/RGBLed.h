@@ -64,6 +64,7 @@ protected:
         uint32_t start_ms;
     } _led_override;
 
+    // Structure for DroneCAN sending from Pixhawk to indication board
     struct rgbHz {
         uint8_t r;
         uint8_t g;
@@ -72,7 +73,9 @@ protected:
         uint8_t id;
         uint8_t flag;
     };
+    // The send function
     virtual bool hw_set_rgb_id(rgbHz* pLeds, uint8_t send_len, uint8_t struct_len){return false;};
+    // Number of IDs that Pixhawk operate with
     uint8_t id_nums;
     rgbHz *ledsCurrent = nullptr;
 

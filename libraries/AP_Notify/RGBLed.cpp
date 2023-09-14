@@ -188,6 +188,8 @@ uint32_t RGBLed::get_colour_sequence_traffic_light(void) const
 // at 50Hz
 void RGBLed::update()
 {
+    // Initializing ledsCurrent array of structure that contains current leds colors, freq of blinking,
+    // id of messages and send flag
     if(ledsCurrent == nullptr){
         id_nums = pNotify->get_id_nums();
         ledsCurrent = new RGBLed::rgbHz[id_nums];
@@ -299,12 +301,15 @@ void RGBLed::custom_override(void)
     if (!_led_override.start_ms) _led_override.start_ms = AP_HAL::millis();
     static uint32_t lastTime = 0;
     
-    // Brightness, ready to send, led array
+    // Brightness prepare
     uint8_t brightness = get_brightness();
-    uint8_t flag_send = 0;
+    // The length of sending message
+    uint8_t send_len = 0;
 
     for(uint8_t i = 0; i < id_nums; i++){
+        // Buffer prepare
         rgbHz leds = {0,0,0,0,0,0};
+
         // Part of cycle that sets leds from flags
         if (AP_Notify::flags.custom_pump_fault){
             leds = colorPumpFault;
@@ -333,32 +338,37 @@ void RGBLed::custom_override(void)
                 leds = {0,0,0,0,0,0};
             }
         }
+
+        // Part of cycle that fills ledCurrent array for sending
         if (leds.r != ledsCurrent[i].r ||
         leds.g != ledsCurrent[i].g ||
         leds.b != ledsCurrent[i].b){
             leds.flag = 1;
             leds.id = i;
-            flag_send += 1;
+            send_len += 1;
             ledsCurrent[i] = leds;
         }
     }
+
+    // Sending message every second if no updating data
     if (tNow - lastTime > 1000){
         for (uint8_t i = 0; i < id_nums; i++){
                 ledsCurrent[i].flag = 1;
             }
-        flag_send = id_nums;
+        send_len = id_nums;
     }
 
-    // Sending multiple commands if flag_send >= 1
-    // Not sending if flag_send = 0
-    if (flag_send){
-        hw_set_rgb_id(ledsCurrent, flag_send, id_nums);
+    // Sending multiple commands if send_len >= 1
+    // Not sending if send_len = 0
+    if (send_len){
+        hw_set_rgb_id(ledsCurrent, send_len, id_nums);
         for (uint8_t i = 0; i < id_nums; i++){
                 ledsCurrent[i].flag = 0;
             }
-        flag_send = 0;
+        send_len = 0;
     }
 
+    // Updating the time for guaranteed sending message every second
     if (tNow - lastTime > 1000) lastTime = tNow;;
 }
 

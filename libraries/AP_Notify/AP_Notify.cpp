@@ -264,7 +264,7 @@ const AP_Param::GroupInfo AP_Notify::var_info[] = {
     // @Param: RX_ID
     // @DisplayName: ID's that indication board receives
     // @Description: ID diapason for indication board. Needs for board to know if it's left or right
-    // @Range: 1 10
+    // @Range: 0 9
     // @User: Advanced
     // @RebootRequired: True
     AP_GROUPINFO("RX_ID", 12, AP_Notify, _rx_id, NOTIFY_RX_ID_DEFAULT),

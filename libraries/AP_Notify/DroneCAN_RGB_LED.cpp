@@ -76,7 +76,7 @@ bool DroneCAN_RGB_LED::hw_set_rgb_id(rgbHz* pLeds, uint8_t send_len, uint8_t str
     uavcan_equipment_indication_LightsCommand msg {};
     msg.commands.len = send_len;
     uint8_t inc = 0;
-    for(uint8_t i = 0; i < struct_len; i++){
+    for(uint8_t i = 0; i < send_len; i++){
         if (pLeds[i].flag){
             msg.commands.data[inc].light_id = pLeds[i].id;
             msg.commands.data[inc].color.red = pLeds[i].r >> 3;
@@ -84,7 +84,6 @@ bool DroneCAN_RGB_LED::hw_set_rgb_id(rgbHz* pLeds, uint8_t send_len, uint8_t str
             msg.commands.data[inc++].color.blue = pLeds[i].b >> 3;
         }
     }
-    //printf("canled %d %d %d %d \n\r",id,red,green,blue);
     // broadcast the message on all ifaces
     uint8_t can_num_drivers = AP::can().get_num_drivers();
     bool ok = false;
