@@ -74,7 +74,7 @@ protected:
     };
     virtual bool hw_set_rgb_id(rgbHz* pLeds, uint8_t send_len, uint8_t struct_len){return false;};
     uint8_t id_nums;
-    rgbHz *ledsCurrent;
+    rgbHz *ledsCurrent = nullptr;
 
 private:
     void update_colours();

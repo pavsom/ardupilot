@@ -29,11 +29,6 @@ RGBLed::RGBLed(uint8_t led_off, uint8_t led_bright, uint8_t led_medium, uint8_t 
     _led_medium(led_medium),
     _led_dim(led_dim)
 {
-    id_nums = pNotify->get_id_nums();
-    ledsCurrent = new RGBLed::rgbHz[id_nums];
-    for(uint8_t i = 0; i < id_nums; i++){
-        ledsCurrent[i] = {0,0,0,0,0,0};
-    }
 }
 
 // set_rgb - set color as a combination of red, green and blue values
@@ -193,6 +188,13 @@ uint32_t RGBLed::get_colour_sequence_traffic_light(void) const
 // at 50Hz
 void RGBLed::update()
 {
+    if(ledsCurrent == nullptr){
+        id_nums = pNotify->get_id_nums();
+        ledsCurrent = new RGBLed::rgbHz[id_nums];
+        for(uint8_t i = 0; i < id_nums; i++){
+            ledsCurrent[i] = {0,0,0,0,0,0};
+        }
+    }
     uint32_t current_colour_sequence = 0;
 
     switch (rgb_source()) {
@@ -324,11 +326,12 @@ void RGBLed::custom_override(void)
         setBrightness(leds,brightness);
 
         // Part of cycle that does the blinking
-        if (!leds.hz) continue;
-        uint32_t ms_per_cycle = 1000 / leds.hz;
-        uint32_t cycle = (tNow - _led_override.start_ms) % ms_per_cycle;
-        if (cycle <= ms_per_cycle /2){
-            leds = {0,0,0,0,0,0};
+        if (leds.hz){
+            uint32_t ms_per_cycle = 1000 / leds.hz;
+            uint32_t cycle = (tNow - _led_override.start_ms) % ms_per_cycle;
+            if (cycle <= ms_per_cycle /2){
+                leds = {0,0,0,0,0,0};
+            }
         }
         if (leds.r != ledsCurrent[i].r ||
         leds.g != ledsCurrent[i].g ||
@@ -339,18 +342,20 @@ void RGBLed::custom_override(void)
             ledsCurrent[i] = leds;
         }
     }
-
-    for (uint8_t i = 0; i < id_nums; i++){
-        if ((tNow - lastTime > 1000)){
-            flag_send = id_nums;
-            ledsCurrent[i].flag = 1;
-        }
+    if (tNow - lastTime > 1000){
+        for (uint8_t i = 0; i < id_nums; i++){
+                ledsCurrent[i].flag = 1;
+            }
+        flag_send = id_nums;
     }
 
     // Sending multiple commands if flag_send >= 1
     // Not sending if flag_send = 0
     if (flag_send){
         hw_set_rgb_id(ledsCurrent, flag_send, id_nums);
+        for (uint8_t i = 0; i < id_nums; i++){
+                ledsCurrent[i].flag = 0;
+            }
         flag_send = 0;
     }
 

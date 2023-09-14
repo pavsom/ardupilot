@@ -34,6 +34,9 @@ public:
     virtual void update() override;
 private:
     uint16_t num_leds;
+    uint8_t num_sections;
+    uint8_t rx_id_marker;
+    uint8_t *rx_id_buffer = nullptr;
     struct RGB {
         uint8_t b;
         uint8_t r;

@@ -33,7 +33,6 @@
 #define NEOPIXEL_LED_OFF    0x00
 
 extern const AP_HAL::HAL& hal;
-
 NeoPixel::NeoPixel() :
     SerialLED(NEOPIXEL_LED_OFF, NEOPIXEL_LED_HIGH, NEOPIXEL_LED_MEDIUM, NEOPIXEL_LED_LOW)
 {
@@ -42,11 +41,21 @@ NeoPixel::NeoPixel() :
 uint16_t NeoPixel::init_ports()
 {
     uint16_t mask = 0;
-    num_leds =  pNotify->get_led_len()/2;
+    num_sections = pNotify->get_num_section();
+    num_leds =  pNotify->get_led_len() / num_sections;
 
-    rgb = new NeoPixel::RGB * [2];
-    rgb[0] = new NeoPixel::RGB [num_leds];
-    rgb[1] = new NeoPixel::RGB [num_leds];
+    if (rx_id_buffer == nullptr) {
+        rx_id_marker = pNotify->get_rx_id();
+        rx_id_buffer = new uint8_t [num_sections];
+        for (uint8_t i = 0; i < num_sections; i++){
+            rx_id_buffer[i] = i + num_sections * (rx_id_marker - 1);
+        }
+    }
+
+    rgb = new NeoPixel::RGB * [num_sections];
+    for (uint8_t i = 0; i < num_sections; i++){
+        rgb[i] = new NeoPixel::RGB [num_leds];
+    }
     
     for (uint16_t i=0; i<AP_NOTIFY_NEOPIXEL_MAX_INSTANCES; i++) {
         const SRV_Channel::Aux_servo_function_t fn = (SRV_Channel::Aux_servo_function_t)((uint8_t)SRV_Channel::k_LED_neopixel1 + i);
@@ -75,16 +84,24 @@ uint16_t NeoPixel::init_ports()
 }
 void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
 {
-    if (id >= 2) {
+    uint8_t catch_flag = 0;
+    for (uint8_t i = 0; i < num_sections; i++){
+        if (id == rx_id_buffer[i]){
+            catch_flag += 1;
+        }
+    }
+    if (catch_flag == 0){
         return;
     }
-    AP_SerialLED *led = AP_SerialLED::get_singleton();
+    id = id - num_sections * (rx_id_marker - 1);
+    catch_flag = 0;
+    /* AP_SerialLED *led = AP_SerialLED::get_singleton();
     uint16_t channel = 0;
     for (uint16_t chan=0; chan<16; chan++) {
         if ((1U<<chan) & enable_mask) {
             channel = chan + 1;
         }
-    }
+    } */
     for (uint16_t i = 0; i < num_leds; i++) {
         if (rgb[id][i].r != red || rgb[id][i].g != green || rgb[id][i].b != blue){
             rgb[id][i] = {blue, red, green};
@@ -101,7 +118,7 @@ void NeoPixel::update(){
             channel = chan + 1;
         }
     }
-    for (uint8_t id = 0; id < 2; id++){
+    for (uint8_t id = 0; id < num_sections; id++){
         for (uint8_t i = 0; i < num_leds; i++){
             if (led != nullptr){
                 led->set_RGB(channel, id*num_leds + i, rgb[id][i].r, rgb[id][i].g, rgb[id][i].b);
