@@ -855,6 +855,20 @@ bool RangeFinder::prearm_healthy(char *failure_msg, const uint8_t failure_msg_le
     return true;
 }
 
+bool RangeFinder::get_orientation(uint8_t id, enum Rotation& orientation){
+    if (id >= num_instances) {
+        return false;
+    }
+    if (drivers[id] != nullptr) {
+        if (drivers[id]->type() == Type::NONE) {
+            // pretend it isn't here; disabled at runtime?
+            return false;
+        }
+    }
+    orientation = drivers[id]->orientation();
+    return true;
+}
+
 RangeFinder *RangeFinder::_singleton;
 
 namespace AP {

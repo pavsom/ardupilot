@@ -227,6 +227,7 @@ public:
 
     static RangeFinder *get_singleton(void) { return _singleton; }
 
+    bool get_orientation(uint8_t id, enum Rotation& orientation);
 protected:
     AP_RangeFinder_Params params[RANGEFINDER_MAX_INSTANCES];
 
