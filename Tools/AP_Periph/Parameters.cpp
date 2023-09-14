@@ -294,6 +294,15 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @RebootRequired: True
     GSCALAR(rangefinder_port, "RNGFND_PORT", AP_PERIPH_RANGEFINDER_PORT_DEFAULT),
 
+    // @Param: RNGFND_PORT
+    // @DisplayName: Rangefinder Serial Port
+    // @Description: This is the serial port number where SERIALx_PROTOCOL will be set to Rangefinder.
+    // @Range: 0 10
+    // @Increment: 1
+    // @User: Advanced
+    // @RebootRequired: True
+    GSCALAR(rangefinder_port2, "RNGFND_PORT2", AP_PERIPH_RANGEFINDER_PORT_DEFAULT),
+
     // @Param: RNGFND_MAX_RATE
     // @DisplayName: Rangefinder max rate
     // @Description: This is the maximum rate we send rangefinder data in Hz. Zero means no limit
