@@ -33,7 +33,6 @@
 #define NEOPIXEL_LED_OFF    0x00
 
 extern const AP_HAL::HAL& hal;
-
 NeoPixel::NeoPixel() :
     SerialLED(NEOPIXEL_LED_OFF, NEOPIXEL_LED_HIGH, NEOPIXEL_LED_MEDIUM, NEOPIXEL_LED_LOW)
 {
@@ -42,9 +41,17 @@ NeoPixel::NeoPixel() :
 uint16_t NeoPixel::init_ports()
 {
     uint16_t mask = 0;
-    num_leds =  pNotify->get_led_len()/2;
 
-    rgb = new NeoPixel::RGB[num_leds][2];
+    // Preparing values for rgb_set_id() operating
+    num_sections = pNotify->get_num_section();
+    num_leds =  pNotify->get_led_len() / num_sections;
+    first_section_id = pNotify->get_rx_id() * num_sections;
+
+    // Initializing rgb array of structure
+    rgb = new NeoPixel::RGB * [num_sections];
+    for (uint8_t i = 0; i < num_sections; i++){
+        rgb[i] = new NeoPixel::RGB [num_leds];
+    }
     
     for (uint16_t i=0; i<AP_NOTIFY_NEOPIXEL_MAX_INSTANCES; i++) {
         const SRV_Channel::Aux_servo_function_t fn = (SRV_Channel::Aux_servo_function_t)((uint8_t)SRV_Channel::k_LED_neopixel1 + i);
@@ -73,23 +80,25 @@ uint16_t NeoPixel::init_ports()
 }
 void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
 {
-    if (id >= 2) {
+    // Checking if id compares for current board IDs
+    if (id < first_section_id || id > (first_section_id + num_sections))
+    {
         return;
     }
-    AP_SerialLED *led = AP_SerialLED::get_singleton();
+    // Transforming id
+    id = id - first_section_id;
+    /* AP_SerialLED *led = AP_SerialLED::get_singleton();
     uint16_t channel = 0;
     for (uint16_t chan=0; chan<16; chan++) {
         if ((1U<<chan) & enable_mask) {
             channel = chan + 1;
         }
-    }
+    } */
+    // Setting new colors in rgb from message and raising up needUpdate flag
     for (uint16_t i = 0; i < num_leds; i++) {
         if (rgb[id][i].r != red || rgb[id][i].g != green || rgb[id][i].b != blue){
-            needUpdate = true;
             rgb[id][i] = {blue, red, green};
-            if (led != nullptr){
-                led->set_RGB(channel, id*num_leds + i, red, green, blue);
-            }
+            needUpdate = true;
         }
     }
 }
@@ -100,6 +109,15 @@ void NeoPixel::update(){
     for (uint16_t chan=0; chan<16; chan++) {
         if ((1U<<chan) & enable_mask) {
             channel = chan + 1;
+        }
+    }
+
+    // Setting colors from rgb to PWM port and sending
+    for (uint8_t id = 0; id < num_sections; id++){
+        for (uint8_t i = 0; i < num_leds; i++){
+            if (led != nullptr){
+                led->set_RGB(channel, id*num_leds + i, rgb[id][i].r, rgb[id][i].g, rgb[id][i].b);
+            }
         }
     }
     needUpdate = false;

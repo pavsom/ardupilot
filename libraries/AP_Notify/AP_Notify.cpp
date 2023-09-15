@@ -147,12 +147,24 @@ AP_Notify *AP_Notify::_singleton;
 #define NOTIFY_LED_LEN_DEFAULT 30
 #endif
 
+#ifndef NOTIFY_ID_NUMS_DEFAULT
+#define NOTIFY_ID_NUMS_DEFAULT 4
+#endif
+
 #ifndef HAL_BUZZER_PIN
 #define HAL_BUZZER_PIN -1
 #endif
 
 #ifndef DEFAULT_BUZZ_ON_LVL
 #define DEFAULT_BUZZ_ON_LVL 1
+#endif
+
+#ifndef NOTIFY_NUM_SECTIONS_DEFAULT
+#define NOTIFY_NUM_SECTIONS_DEFAULT 1
+#endif
+
+#ifndef NOTIFY_RX_ID_DEFAULT
+#define NOTIFY_RX_ID_DEFAULT 1
 #endif
 
 // table of user settable parameters
@@ -232,6 +244,30 @@ const AP_Param::GroupInfo AP_Notify::var_info[] = {
     // @User: Advanced
     // @RebootRequired: True
     AP_GROUPINFO("LED_LEN", 9, AP_Notify, _led_len, NOTIFY_LED_LEN_DEFAULT),
+
+    // @Param: ID_NUMS
+    // @DisplayName: Number of IDs to operate
+    // @Description: Number of IDs that are available for Pixhawk
+    // @Range: 0 255
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("ID_NUMS", 10, AP_Notify, _id_nums, NOTIFY_ID_NUMS_DEFAULT),
+
+    // @Param: NUM_SECTIONS
+    // @DisplayName: Number of indication sections
+    // @Description: Number of indication sections for indication board
+    // @Range: 1 10
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("NUM_SECTIONS", 11, AP_Notify, _num_sections, NOTIFY_NUM_SECTIONS_DEFAULT),
+
+    // @Param: RX_ID
+    // @DisplayName: ID's that indication board receives
+    // @Description: ID diapason for indication board. Needs for board to know if it's left or right
+    // @Range: 0 9
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("RX_ID", 12, AP_Notify, _rx_id, NOTIFY_RX_ID_DEFAULT),
 
     AP_GROUPEND
 };

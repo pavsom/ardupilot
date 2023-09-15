@@ -220,7 +220,11 @@ public:
     uint8_t get_buzz_level() const  { return _buzzer_level; }
     uint8_t get_buzz_volume() const  { return _buzzer_volume; }
     uint8_t get_led_len() const { return _led_len; }
+    uint8_t get_id_nums() const { return _id_nums; }
     int8_t get_rgb_led_brightness_percent() const;
+
+    uint8_t get_num_section() const { return _num_sections; }
+    uint8_t get_rx_id() const { return _rx_id; }
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     HAL_Semaphore sf_window_mutex;
@@ -246,6 +250,9 @@ private:
     AP_Int8 _buzzer_level;
     AP_Int8 _buzzer_volume;
     AP_Int8 _led_len;
+    AP_Int8 _id_nums;
+    AP_Int8 _num_sections;
+    AP_Int8 _rx_id;
 
     char _send_text[NOTIFY_TEXT_BUFFER_SIZE];
     uint32_t _send_text_updated_millis; // last time text changed

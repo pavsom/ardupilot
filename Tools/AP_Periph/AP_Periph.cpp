@@ -400,8 +400,8 @@ void AP_Periph_FW::update_rainbow()
                                         rgb_rainbow[i].green*brightness,
                                         rgb_rainbow[i].blue*brightness);
     } */
-    if (brightness != 0)
-    step++;
+    /* if (brightness != 0)
+    step++; */
 
 #if defined(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY)
     hal.rcout->serial_led_send(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY);
