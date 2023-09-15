@@ -32,6 +32,9 @@ bool AP_RangeFinder_NMEA::get_reading(float &reading_m)
         return false;
     }
 
+    if (!isEnabled()){
+        return false;
+    }
     //printf("rng finder get_reading\n\r");
     // read any available lines from the lidar
     float sum = 0.0f;
@@ -207,4 +210,58 @@ bool AP_RangeFinder_NMEA::decode_latest_term()
     return false;
 }
 
+
+
+bool AP_RangeFinder_NMEA::isEnabled(){
+    if (params.stop_pin == -1) return true; 
+    if (supressed){
+        disable();
+        return false;
+    }
+    uint32_t now = AP_HAL::millis();
+    if (now - timeSinceEnabled > 30000 || range_valid_count() > 5){
+        timeSinceEnabled = now;
+        enable();
+        return true;
+    }else if (now - timeSinceEnabled > 3000){
+        disable();
+        return false;
+    }else{
+        return true;
+    }
+}
+
+
+void AP_RangeFinder_NMEA::enable(){
+    if (params.stop_pin == -1) return;
+    if (!params.function){
+        hal.gpio->write(params.stop_pin, 1);
+    }else{
+        hal.gpio->write(params.stop_pin, 0);
+    }
+    enableRX();
+}
+
+void AP_RangeFinder_NMEA::disable(){
+    if (params.stop_pin == -1) return;
+    if (!params.function){
+        hal.gpio->write(params.stop_pin, 0);
+    }else{
+        hal.gpio->write(params.stop_pin, 1);
+    }
+
+}
+
+void AP_RangeFinder_NMEA::enableRX(){
+    if (params.pin == -1) return;
+    if (!params.function){
+        hal.gpio->write(params.pin, 0);
+    }else{
+        hal.gpio->write(params.pin, 1);
+    }
+}
+
+void AP_RangeFinder_NMEA::supress(bool tState){
+    supressed = tState;
+}
 #endif  // AP_RANGEFINDER_NMEA_ENABLED

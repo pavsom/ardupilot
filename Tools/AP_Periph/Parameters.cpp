@@ -43,6 +43,10 @@ extern const AP_HAL::HAL &hal;
 #define AP_PERIPH_BARO_ENABLE_DEFAULT 1
 #endif
 
+#ifndef HAL_PERIPH_BATT_HIDE_MASK_DEFAULT
+#define HAL_PERIPH_BATT_HIDE_MASK_DEFAULT 0
+#endif
+
 #ifndef AP_PERIPH_EFI_PORT_DEFAULT
 #define AP_PERIPH_EFI_PORT_DEFAULT 3
 #endif
@@ -224,6 +228,13 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @Group: BATT
     // @Path: ../libraries/AP_BattMonitor/AP_BattMonitor.cpp
     GOBJECT(battery_lib, "BATT", AP_BattMonitor),
+
+    // @Param: BATT_HIDE_MASK
+    // @DisplayName: Battery hide mask
+    // @Description: Instance mask of local battery index(es) to prevent transmitting their status over CAN. This is useful for hiding a "battery" instance that is used locally in the peripheral but don't want them to be treated as a battery source(s) to the autopilot. For example, an AP_Periph battery monitor with multiple batteries that monitors each locally for diagnostic or other purposes, but only reports as a single SUM battery monitor to the autopilot.
+    // @Bitmask: 0:BATT, 1:BATT2, 2:BATT3, 3:BATT4, 4:BATT5, 5:BATT6, 6:BATT7, 7:BATT8, 8:BATT9, 9:BATTA, 10:BATTB, 11:BATTC, 12:BATTD, 13:BATTE, 14:BATTF, 15:BATTG
+    // @User: Advanced
+    GSCALAR(battery_hide_mask, "BATT_HIDE_MASK", HAL_PERIPH_BATT_HIDE_MASK_DEFAULT),
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_MAG
@@ -283,6 +294,15 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @RebootRequired: True
     GSCALAR(rangefinder_port, "RNGFND_PORT", AP_PERIPH_RANGEFINDER_PORT_DEFAULT),
 
+    // @Param: RNGFND_PORT
+    // @DisplayName: Rangefinder Serial Port
+    // @Description: This is the serial port number where SERIALx_PROTOCOL will be set to Rangefinder.
+    // @Range: 0 10
+    // @Increment: 1
+    // @User: Advanced
+    // @RebootRequired: True
+    GSCALAR(rangefinder_port2, "RNGFND_PORT2", AP_PERIPH_RANGEFINDER_PORT_DEFAULT),
+
     // @Param: RNGFND_MAX_RATE
     // @DisplayName: Rangefinder max rate
     // @Description: This is the maximum rate we send rangefinder data in Hz. Zero means no limit
@@ -290,7 +310,7 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @Range: 0 200
     // @Increment: 1
     // @User: Advanced
-    GSCALAR(rangefinder_max_rate, "RNGFND_MAX_RATE", 50),
+    GSCALAR(rangefinder_max_rate, "RNGFND_MAX_RATE", 20),
     
     // Rangefinder driver
     // @Group: RNGFND

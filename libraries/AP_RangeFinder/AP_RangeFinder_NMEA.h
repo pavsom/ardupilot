@@ -32,7 +32,8 @@ public:
         AP_RangeFinder_Params &_params) {
         return new AP_RangeFinder_NMEA(_state, _params);
     }
-
+    
+    void supress(bool tState) override;
 protected:
 
     MAV_DISTANCE_SENSOR _get_mav_distance_sensor_type() const override {
@@ -81,6 +82,13 @@ private:
     bool _term_is_checksum;                 // current term is the checksum
     sentence_types _sentence_type;          // the sentence type currently being processed
     bool _sentence_done;                    // true if this sentence has already been decoded
+
+    bool supressed = false;
+    void enable();
+    void disable();
+    bool isEnabled();
+    void enableRX();
+    uint32_t timeSinceEnabled = 0;
 };
 
 #endif  // AP_RANGEFINDER_NMEA_ENABLED

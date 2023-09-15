@@ -37,6 +37,7 @@ public:
         k_param_adsb_port,
         k_param_servo_channels,
         k_param_rangefinder_port,
+        k_param_rangefinder_port2,
         k_param_gps_port,
         k_param_msp_port,
         k_param_notify,
@@ -82,6 +83,7 @@ public:
         k_param_sitl,
         k_param_ahrs,
         k_param_battery_balance,
+        k_param_battery_hide_mask,
     };
 
     AP_Int16 format_version;
@@ -112,6 +114,7 @@ public:
 #ifdef HAL_PERIPH_ENABLE_RANGEFINDER
     AP_Int32 rangefinder_baud;
     AP_Int8 rangefinder_port;
+    AP_Int8 rangefinder_port2;
     AP_Int16 rangefinder_max_rate;
 #endif
 
@@ -181,6 +184,10 @@ public:
 
 #if HAL_GCS_ENABLED
     AP_Int16 sysid_this_mav;
+#endif
+
+#ifdef HAL_PERIPH_ENABLE_BATTERY
+    AP_Int32 battery_hide_mask;
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_EFI

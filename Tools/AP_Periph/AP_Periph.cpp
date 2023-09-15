@@ -228,8 +228,18 @@ void AP_Periph_FW::init()
                 serial_manager.set_protocol_and_baud(g.rangefinder_port, AP_SerialManager::SerialProtocol_Rangefinder, g.rangefinder_baud);
             }
         }
-        rangefinder.init(ROTATION_NONE);
     }
+    if (rangefinder.get_type(1) != RangeFinder::Type::NONE) {
+        if (g.rangefinder_port2 >= 0) {
+            // init uart for serial rangefinders
+            auto *uart = hal.serial(g.rangefinder_port2);
+            if (uart != nullptr) {
+                uart->begin(g.rangefinder_baud);
+                serial_manager.set_protocol_and_baud(g.rangefinder_port2, AP_SerialManager::SerialProtocol_Rangefinder, g.rangefinder_baud);
+            }
+        }
+    }
+    rangefinder.init(ROTATION_NONE);
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_PROXIMITY
@@ -332,37 +342,37 @@ void AP_Periph_FW::update_rainbow()
         { 75,  0,   130 },
         { 143, 0,   255 },
         { 0,   0,   0 }, */
-        {255, 0, 0},     // �������
+        {255, 0, 0},     // red
         {255, 32, 0},
         {255, 64, 0},
         {255, 96, 0},
-        {255, 128, 0},   // ���������
+        {255, 128, 0},   // orange
         {255, 160, 0},
         {255, 192, 0},
         {255, 224, 0},
-        {255, 255, 0},   // ������
+        {255, 255, 0},   // yellow
         {192, 255, 0},
-        {128, 255, 0},   // �������
+        {128, 255, 0},   // green
         {64, 255, 0},
-        {0, 255, 0},     // ���������
+        {0, 255, 0},     // lime
         {0, 192, 64},
-        {0, 128, 128},   // ���������
+        {0, 128, 128},   // teal
         {0, 64, 192},
-        {0, 0, 255},     // �������
+        {0, 0, 255},     // light blue
         {32, 0, 224},
         {64, 0, 192},
         {96, 0, 160},
-        {128, 0, 128},   // �����
+        {128, 0, 128},   //  blue
         {160, 0, 96},
         {192, 0, 64},
         {224, 0, 32},
-        {255, 0, 0},     // �����-�����
+        {255, 0, 0},     // dark blue
         {224, 0, 0},
         {192, 0, 0},
         {160, 0, 0},
-        {128, 0, 0},     // ����������
+        {128, 0, 0},     // purple
         {96, 0, 0},
-        {64, 0, 0}       // ���������
+        {64, 0, 0}       // magenta
     };
     last_update_ms = now;
     static uint8_t step;

@@ -47,7 +47,6 @@
 #include "AP_Airspeed_SDP3X.h"
 #include "AP_Airspeed_DLVR.h"
 #include "AP_Airspeed_analog.h"
-#include "AP_Airspeed_Avxl100.h"
 #include "AP_Airspeed_ASP5033.h"
 #include "AP_Airspeed_Backend.h"
 #include "AP_Airspeed_DroneCAN.h"
@@ -368,13 +367,7 @@ void AP_Airspeed::allocate()
 #if AP_AIRSPEED_ANALOG_ENABLED
             sensor[i] = new AP_Airspeed_Analog(*this, i);
 #endif
-            break;
-        case TYPE_AVXL100:
-#if AP_AIRSPEED_AVXL100_ENABLED
-            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Airspeed TYPE_AVXL100 %d", i);
-            sensor[i] = new AP_Airspeed_Avxl100(*this, i);
-#endif
-            break;            
+            break;          
         case TYPE_I2C_MS5525:
 #if AP_AIRSPEED_MS5525_ENABLED
             sensor[i] = new AP_Airspeed_MS5525(*this, i, AP_Airspeed_MS5525::MS5525_ADDR_AUTO);

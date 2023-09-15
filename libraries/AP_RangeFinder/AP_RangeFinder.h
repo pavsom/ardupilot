@@ -33,6 +33,30 @@
   #endif
 #endif
 
+#ifndef RANGEFINDER_TYPE_DEFAULT
+#define RANGEFINDER_TYPE_DEFAULT 0
+#endif
+
+#ifndef RANGEFINDER_PIN_DEFAULT
+#define RANGEFINDER_PIN_DEFAULT -1
+#endif
+
+#ifndef RANGEFINDER_FUNCTION_DEFAULT
+#define RANGEFINDER_FUNCTION_DEFAULT 0
+#endif
+
+#ifndef RANGEFINDER_MIN_CM_DEFAULT
+#define RANGEFINDER_MIN_CM_DEFAULT 20
+#endif
+
+#ifndef RANGEFINDER_MAX_CM_DEFAULT
+#define RANGEFINDER_MAX_CM_DEFAULT 700
+#endif
+
+#ifndef RANGEFINDER_STOP_PIN_DEFAULT
+#define RANGEFINDER_STOP_PIN_DEFAULT -1
+#endif
+
 #define RANGEFINDER_GROUND_CLEARANCE_CM_DEFAULT 10
 #define RANGEFINDER_PREARM_ALT_MAX_CM           200
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
@@ -94,6 +118,8 @@ public:
         TeraRanger_Serial = 35,
         Lua_Scripting = 36,
         NoopLoop_P = 37,
+        TOFSenseP_CAN = 38,
+        NRA24_CAN = 39,
         SIM = 100,
     };
 
@@ -201,6 +227,7 @@ public:
 
     static RangeFinder *get_singleton(void) { return _singleton; }
 
+    bool get_orientation(uint8_t id, enum Rotation& orientation);
 protected:
     AP_RangeFinder_Params params[RANGEFINDER_MAX_INSTANCES];
 

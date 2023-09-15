@@ -38,21 +38,37 @@ void AP_Periph_FW::can_rangefinder_update(void)
         return;
     }
     last_update_ms = now;
-    rangefinder.update();
-    RangeFinder::Status status = rangefinder.status_orient(ROTATION_NONE);
+    rangefinder.update(); 
+    uint8_t rangeFinderInstances = rangefinder.num_sensors();
+    for (uint8_t i = 0; i < rangeFinderInstances; i++){
+        enum Rotation orientation = Rotation::ROTATION_NONE;
+        if (rangefinder.get_orientation(i, orientation)){
+            can_rangefinder_send(i, orientation);
+        }
+    }
+}
+
+void AP_Periph_FW::can_rangefinder_send(uint8_t id, enum Rotation orientation)
+{
+    RangeFinder::Status status = rangefinder.status_orient(orientation);
     if (status <= RangeFinder::Status::NoData) {
         // don't send any data
         return;
     }
-    const uint32_t sample_ms = rangefinder.last_reading_ms(ROTATION_NONE);
-    if (last_sample_ms == sample_ms) {
+    const uint32_t sample_ms = rangefinder.last_reading_ms(orientation);
+    if (last_sample_ms[id] == sample_ms) {
         return;
     }
-    last_sample_ms = sample_ms;
-
-    uint16_t dist_cm = rangefinder.distance_cm_orient(ROTATION_NONE);
+    last_sample_ms[id] = sample_ms;
+    
+    uint16_t dist_cm = rangefinder.distance_cm_orient(orientation);
     uavcan_equipment_range_sensor_Measurement pkt {};
-    pkt.sensor_id = rangefinder.get_address(0);
+    pkt.sensor_id = rangefinder.get_address(id);
+    uavcan_CoarseOrientation orientationCan;
+    orientationCan.fixed_axis_roll_pitch_yaw[0] = orientation & 0x0F;
+    orientationCan.fixed_axis_roll_pitch_yaw[1] = (orientation>>4) & 0x0F;
+    orientationCan.orientation_defined = 1;
+    pkt.beam_orientation_in_body_frame = orientationCan;
     switch (status) {
     case RangeFinder::Status::OutOfRangeLow:
         pkt.reading_type = UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT_READING_TYPE_TOO_CLOSE;
@@ -67,7 +83,7 @@ void AP_Periph_FW::can_rangefinder_update(void)
         pkt.reading_type = UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT_READING_TYPE_UNDEFINED;
         break;
     }
-    switch (rangefinder.get_mav_distance_sensor_type_orient(ROTATION_NONE)) {
+    switch (rangefinder.get_mav_distance_sensor_type_orient(orientation)) {
     case MAV_DISTANCE_SENSOR_LASER:
         pkt.sensor_type = UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT_SENSOR_TYPE_LIDAR;
         break;
@@ -81,7 +97,7 @@ void AP_Periph_FW::can_rangefinder_update(void)
         pkt.sensor_type = UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT_SENSOR_TYPE_UNDEFINED;
         break;
     }
-
+    
     pkt.range = dist_cm * 0.01;
 
     uint8_t buffer[UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT_MAX_SIZE] {};
