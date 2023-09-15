@@ -301,7 +301,7 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @Increment: 1
     // @User: Advanced
     // @RebootRequired: True
-    GSCALAR(rangefinder_port2, "RNGFND_PORT2", AP_PERIPH_RANGEFINDER_PORT_DEFAULT),
+    GSCALAR(rangefinder_port2, "RNGFND_PORT2", AP_PERIPH_RANGEFINDER_PORT_DEFAULT+1),
 
     // @Param: RNGFND_MAX_RATE
     // @DisplayName: Rangefinder max rate
