@@ -81,7 +81,7 @@ uint16_t NeoPixel::init_ports()
 void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
 {
     // Checking if id compares for current board IDs
-    if (id < first_section_id || id > (first_section_id + num_sections))
+    if (id < first_section_id || id >= (first_section_id + num_sections))
     {
         return;
     }
