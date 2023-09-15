@@ -45,7 +45,6 @@ uint16_t NeoPixel::init_ports()
     // Preparing values for rgb_set_id() operating
     num_sections = pNotify->get_num_section();
     num_leds =  pNotify->get_led_len() / num_sections;
-    first_section_id = pNotify->get_rx_id() * num_sections;
 
     // Initializing rgb array of structure
     rgb = new NeoPixel::RGB * [num_sections];
@@ -80,6 +79,7 @@ uint16_t NeoPixel::init_ports()
 }
 void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
 {
+    first_section_id = pNotify->get_rx_id() * num_sections;
     // Checking if id compares for current board IDs
     if (id < first_section_id || id >= (first_section_id + num_sections))
     {
