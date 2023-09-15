@@ -115,8 +115,8 @@ define AP_BARO_MS56XX_ENABLED 1
 #BARO MS56XX I2C:1:0x76
 
 # ----------------- rangefinder,ADSB ----------------------
-define HAL_PERIPH_ENABLE_RANGEFINDER
-define RANGEFINDER_MAX_INSTANCES 2
+#define HAL_PERIPH_ENABLE_RANGEFINDER
+#define RANGEFINDER_MAX_INSTANCES 2
 
 
 # -------------------- Buzzer+NeoPixels --------------d------
@@ -163,3 +163,5 @@ define HAL_DEVICE_THREAD_STACK 0x300
 define AP_PARAM_MAX_EMBEDDED_PARAM 512
 
 define HAL_DISABLE_LOOP_DELAY
+
+PB0 LED_GREEN2 OUTPUT LOW GPIO(11)  # GREEN
