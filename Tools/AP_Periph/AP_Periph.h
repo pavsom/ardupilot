@@ -181,6 +181,7 @@ public:
 
 #ifdef HAL_PERIPH_ENABLE_BARO
     AP_Baro baro;
+    uint32_t baro_last_sample_ms[BARO_MAX_INSTANCES];
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_RPM
@@ -238,7 +239,7 @@ public:
 
 #ifdef HAL_PERIPH_ENABLE_RANGEFINDER
     RangeFinder rangefinder;
-    uint32_t last_sample_ms[RANGEFINDER_MAX_INSTANCES];
+    uint32_t rangeFinder_last_sample_ms[RANGEFINDER_MAX_INSTANCES];
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_PROXIMITY
@@ -363,7 +364,7 @@ public:
     uint32_t last_gps_update_ms;
     uint32_t last_gps_yaw_ms;
     uint32_t last_relposheading_ms;
-    uint32_t last_baro_update_ms;
+    //uint32_t last_baro_update_ms;
     uint32_t last_airspeed_update_ms;
     bool saw_gps_lock_once;
 
