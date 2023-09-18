@@ -36,6 +36,7 @@ private:
     uint16_t num_leds;
     uint8_t num_sections;
     uint8_t first_section_id;
+    uint8_t inited;
     struct RGB {
         uint8_t b;
         uint8_t r;

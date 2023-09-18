@@ -68,21 +68,42 @@ uint16_t NeoPixel::init_ports()
     if (led == nullptr) {
         return 0;
     }
+    uint8_t channel = 0;
 
     for (uint16_t chan=0; chan<16; chan++) {
         if ((1U<<chan) & mask) {
+            channel = chan + 1;
             led->set_num_neopixel(chan+1, (pNotify->get_led_len()));
         }
     }
+
+        for (uint8_t id = 0; id < num_sections; id++){
+            for (uint8_t i = 0; i < num_leds; i++){
+            if (led != nullptr){
+                if ((i == 2) && (id == 0)) {
+                    rgb[id][i] = {0, 10, 0};
+                }
+                else {
+                    rgb[id][i] = {0, 0, 0};
+                }
+                led->set_RGB(channel, id*num_leds + i, rgb[id][i].r, rgb[id][i].g, rgb[id][i].b);
+            }
+        }
+    }
+    led->send(channel);
+
     enable_mask = mask;
+    inited = 1;
     return mask;
 }
 void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
 {
+    if (inited != 1) {
+        return;
+    }
     first_section_id = pNotify->get_rx_id() * num_sections;
     // Checking if id compares for current board IDs
-    if (id < first_section_id || id >= (first_section_id + num_sections))
-    {
+    if (id < first_section_id || id >= (first_section_id + num_sections)) {
         return;
     }
     // Transforming id
