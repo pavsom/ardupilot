@@ -127,6 +127,7 @@ public:
     void send_moving_baseline_msg();
     void send_relposheading_msg();
     void can_baro_update();
+    void can_baro_send(uint8_t id);
     void can_airspeed_update();
     void can_rangefinder_update();
     void can_rangefinder_send(uint8_t id, enum Rotation orientation);

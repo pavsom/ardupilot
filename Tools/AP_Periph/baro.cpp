@@ -16,18 +16,34 @@ void AP_Periph_FW::can_baro_update(void)
     if (!periph.g.baro_enable) {
         return;
     }
+    uint32_t now = AP_HAL::millis();
+    static uint32_t last_update_ms;
+    if (g.baro_max_rate > 0 &&
+        now - last_update_ms < uint32_t(1000/g.baro_max_rate)) {
+        // limit to max rate
+        return;
+    }
+    last_update_ms = now;
     baro.update();
-    if (last_baro_update_ms == baro.get_last_update()) {
+    uint8_t baroInstances = baro.num_instances();
+    for (uint8_t i = 0; i < baroInstances; i++){
+        can_baro_send(i);
+    }
+}
+
+void AP_Periph_FW::can_baro_send(uint8_t id)
+{
+    if (baro_last_sample_ms[id] == baro.get_last_update(id)) {
         return;
     }
 
-    last_baro_update_ms = baro.get_last_update();
-    if (!baro.healthy()) {
+    baro_last_sample_ms[id] = baro.get_last_update(id);
+    if (!baro.healthy(id)) {
         // don't send any data
         return;
     }
-    const float press = baro.get_pressure();
-    const float temp = baro.get_temperature();
+    const float press = baro.get_pressure(id);
+    const float temp = baro.get_temperature(id);
 
     {
         uavcan_equipment_air_data_StaticPressure pkt {};
