@@ -50,7 +50,7 @@ PB13 CAN2_TX CAN2
 #define HAL_USE_CAN TRUE
 #define STM32_CAN_USE_CAN1 TRUE
 
-define CAN_APP_NODE_NAME "org.ardupilot.f405_bootLoader"
+define CAN_APP_NODE_NAME "bl405"
 
 # debugger support
 PA13 JTMS-SWDIO SWD
