@@ -864,6 +864,10 @@ void AP_Baro::_probe_i2c_barometers(void)
         { PROBE_LPS25H, AP_Baro_LPS2XH::probe, HAL_BARO_LPS25H_I2C_ADDR },
 #endif
 
+#ifndef AP_BARO_MS5837_ENABLED
+#define AP_BARO_MS5837_ENABLED 0
+#endif
+
 #if (AP_BARO_MS5837_ENABLED) & (AP_BARO_MS56XX_ENABLED)
         { PROBE_MS5837, AP_Baro_MS56XX::probe_5837, HAL_BARO_MS5837_I2C_ADDR },
 #endif
