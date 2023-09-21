@@ -1,6 +1,6 @@
 include ../f405-canUni/hwdef.inc
 
-define HAL_CAN_DEFAULT_NODE_ID 102
+#define HAL_CAN_DEFAULT_NODE_ID 102
 define CAN_APP_NODE_NAME "org.ardupilot.f405_Echo"
 
 define HAL_PERIPH_ENABLE_RANGEFINDER
@@ -84,4 +84,4 @@ define HAL_PERIPH_ENABLE_BARO
 define AP_BARO_MS5837_ENABLED 1
 define HAL_I2C_INTERNAL_MASK 4
 
-env OPTIMIZE -O0
+#env OPTIMIZE -O0
