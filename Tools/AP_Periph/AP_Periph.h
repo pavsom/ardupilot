@@ -135,6 +135,11 @@ public:
     void send_relposheading_msg();
     void can_baro_update();
     void can_baro_send(uint8_t id);
+    bool can_baro_data_good(uint8_t id);
+#if AP_DRONECAN_SNOWSTORM_SUPPORT
+    void can_baro_send_pressures();
+    void can_baro_send_altitudes();
+#endif    
     void can_airspeed_update();
     void can_rangefinder_update();
     void can_rangefinder_send(uint8_t id, enum Rotation orientation);
