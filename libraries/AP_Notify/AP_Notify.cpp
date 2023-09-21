@@ -531,6 +531,15 @@ void AP_Notify::handle_rgb_id(uint8_t r, uint8_t g, uint8_t b, uint8_t id)
     }
 }
 
+void AP_Notify::handle_rgb_id_2(uint8_t r, uint8_t g, uint8_t b, uint8_t id)
+{
+    for (uint8_t i = 0; i < _num_devices; i++) {
+        if (_devices[i] != nullptr) {
+            _devices[i]->rgb_set_id_2(r, g, b, id);
+        }
+    }
+}
+
 void AP_Notify::play_tune(const char *tune)
 {
     for (uint8_t i = 0; i < _num_devices; i++) {
