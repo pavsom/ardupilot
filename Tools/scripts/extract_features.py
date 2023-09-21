@@ -35,7 +35,7 @@ class ExtractFeatures(object):
         # FEATURE_NAME will have substitutions made from the match.
         # the substitutions will be upper-cased
         self.features = [
-            ('AP_ADVANCEDFAILSAFE_ENABLED', 'AP::advancedfailsafe',),
+            ('AP_ADVANCEDFAILSAFE_ENABLED', r'AP_AdvancedFailsafe::heartbeat\b',),
             ('AP_BOOTLOADER_FLASHING_ENABLED', 'ChibiOS::Util::flash_bootloader',),
             ('AP_AIRSPEED_ENABLED', 'AP_Airspeed::AP_Airspeed',),
             ('AP_AIRSPEED_{type}_ENABLED', r'AP_Airspeed_(?P<type>.*)::init',),
@@ -218,6 +218,8 @@ class ExtractFeatures(object):
 
             ('AP_DRONECAN_HIMARK_SERVO_SUPPORT', 'AP_DroneCAN::SRV_send_himark'),
             ('AP_DRONECAN_HOBBYWING_ESC_SUPPORT', 'AP_DroneCAN::hobbywing_ESC_update'),
+            ('COMPASS_CAL_ENABLED', 'CompassCalibrator::stop'),
+            ('AP_TUNING_ENABLED', 'AP_Tuning::check_input'),
         ]
 
     def progress(self, msg):

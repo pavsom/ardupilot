@@ -696,7 +696,7 @@ void GCS_MAVLINK_Plane::handle_change_alt_request(AP_Mission::Mission_Command &c
 }
 
 
-MAV_RESULT GCS_MAVLINK_Plane::handle_command_preflight_calibration(const mavlink_command_long_t &packet, const mavlink_message_t &msg)
+MAV_RESULT GCS_MAVLINK_Plane::handle_command_preflight_calibration(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
     plane.in_calibration = true;
     MAV_RESULT ret = GCS_MAVLINK::handle_command_preflight_calibration(packet, msg);
@@ -984,6 +984,19 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_packet(const mavlink_command_in
     case MAV_CMD_DO_CHANGE_SPEED:
         return handle_command_DO_CHANGE_SPEED(packet);
 
+#if PARACHUTE == ENABLED
+    case MAV_CMD_DO_PARACHUTE:
+        return handle_MAV_CMD_DO_PARACHUTE(packet);
+#endif
+
+#if HAL_QUADPLANE_ENABLED
+    case MAV_CMD_DO_MOTOR_TEST:
+        return handle_MAV_CMD_DO_MOTOR_TEST(packet);
+
+    case MAV_CMD_DO_VTOL_TRANSITION:
+        return handle_command_DO_VTOL_TRANSITION(packet);
+#endif
+
     default:
         return GCS_MAVLINK::handle_command_int_packet(packet, msg);
     }
@@ -1051,8 +1064,14 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_long_packet(const mavlink_command_l
         plane.autotune_enable(!is_zero(packet.param1));
         return MAV_RESULT_ACCEPTED;
 
+    default:
+        return GCS_MAVLINK::handle_command_long_packet(packet, msg);
+    }
+}
+
 #if PARACHUTE == ENABLED
-    case MAV_CMD_DO_PARACHUTE:
+MAV_RESULT GCS_MAVLINK_Plane::handle_MAV_CMD_DO_PARACHUTE(const mavlink_command_int_t &packet)
+{
         // configure or release parachute
         switch ((uint16_t)packet.param1) {
         case PARACHUTE_DISABLE:
@@ -1079,10 +1098,13 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_long_packet(const mavlink_command_l
             break;
         }
         return MAV_RESULT_FAILED;
+}
 #endif
 
+
 #if HAL_QUADPLANE_ENABLED
-    case MAV_CMD_DO_MOTOR_TEST:
+MAV_RESULT GCS_MAVLINK_Plane::handle_MAV_CMD_DO_MOTOR_TEST(const mavlink_command_int_t &packet)
+{
         // param1 : motor sequence number (a number from 1 to max number of motors on the vehicle)
         // param2 : throttle type (0=throttle percentage, 1=PWM, 2=pilot throttle channel pass-through. See MOTOR_TEST_THROTTLE_TYPE enum)
         // param3 : throttle (range depends upon param2)
@@ -1093,19 +1115,17 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_long_packet(const mavlink_command_l
                                                         (uint8_t)packet.param2,
                                                         (uint16_t)packet.param3,
                                                         packet.param4,
-                                                        (uint8_t)packet.param5);
+                                                        (uint8_t)packet.x);
+}
 
-    case MAV_CMD_DO_VTOL_TRANSITION:
+MAV_RESULT GCS_MAVLINK_Plane::handle_command_DO_VTOL_TRANSITION(const mavlink_command_int_t &packet)
+{
         if (!plane.quadplane.handle_do_vtol_transition((enum MAV_VTOL_STATE)packet.param1)) {
             return MAV_RESULT_FAILED;
         }
         return MAV_RESULT_ACCEPTED;
-#endif
-
-    default:
-        return GCS_MAVLINK::handle_command_long_packet(packet, msg);
-    }
 }
+#endif
 
 // this is called on receipt of a MANUAL_CONTROL packet and is
 // expected to call manual_override to override RC input on desired

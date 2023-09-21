@@ -1446,12 +1446,13 @@ class LocationInt(object):
 
 class Test(object):
     '''a test definition - information about a test'''
-    def __init__(self, function, attempts=1, speedup=None):
+    def __init__(self, function, kwargs={}, attempts=1, speedup=None):
         self.name = function.__name__
         self.description = function.__doc__
         if self.description is None:
             raise ValueError("%s is missing a docstring" % self.name)
         self.function = function
+        self.kwargs = kwargs
         self.attempts = attempts
         self.speedup = speedup
 
@@ -1590,6 +1591,7 @@ class AutoTest(ABC):
         )
         self.terrain_data_messages_sent = 0  # count of messages back
         self.dronecan_tests = dronecan_tests
+        self.statustext_id = 1
 
     def __del__(self):
         if self.rc_thread is not None:
@@ -1889,7 +1891,7 @@ class AutoTest(ABC):
             shutil.move(valgrind_log, backup_valgrind_log)
 
     def run_cmd_reboot(self):
-        self.run_cmd(
+        self.run_cmd_int(
             mavutil.mavlink.MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN,
             p1=1,  # reboot autopilot
         )
@@ -3137,7 +3139,7 @@ class AutoTest(ABC):
         """Called as each mavlink msg is received."""
 #        print("msg: %s" % str(msg))
         if msg.get_type() == 'STATUSTEXT':
-            self.progress("AP: %s" % msg.text)
+            self.progress("AP: %s" % msg.text, send_statustext=False)
 
         self.write_msg_to_tlog(msg)
 
@@ -4704,7 +4706,6 @@ class AutoTest(ABC):
         self.upload_using_mission_protocol(mission_type, items)
         self.progress("check %s upload/download: download items" % itype)
         downloaded_items = self.download_using_mission_protocol(mission_type)
-        self.progress("Downloaded items: (%s)" % str(downloaded_items))
         if len(items) != len(downloaded_items):
             raise NotAchievedException("Did not download same number of items as uploaded want=%u got=%u" %
                                        (len(items), len(downloaded_items)))
@@ -4978,6 +4979,12 @@ class AutoTest(ABC):
         self.send_cmd(
             mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
             p1=1,  # ARM
+        )
+
+    def send_mavlink_disarm_command(self):
+        self.send_cmd(
+            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            p1=0,  # DISARM
         )
 
     def send_mavlink_run_prearms_command(self):
@@ -5707,12 +5714,13 @@ class AutoTest(ABC):
             try:
                 command_name = mavutil.mavlink.enums["MAV_CMD"][command].name
             except KeyError:
-                command_name = "UNKNOWN=%u" % command
-            self.progress("Sending COMMAND_INT to (%u,%u) (%s) (p1=%f p2=%f p3=%f p4=%f p5=%u p6=%u  p7=%f)" %
+                command_name = "UNKNOWNu"
+            self.progress("Sending COMMAND_INT to (%u,%u) (%s=%u) (p1=%f p2=%f p3=%f p4=%f p5=%u p6=%u  p7=%f)" %
                           (
                               target_sysid,
                               target_compid,
                               command_name,
+                              command,
                               p1,
                               p2,
                               p3,
@@ -5760,12 +5768,13 @@ class AutoTest(ABC):
             try:
                 command_name = mavutil.mavlink.enums["MAV_CMD"][command].name
             except KeyError:
-                command_name = "UNKNOWN=%u" % command
-            self.progress("Sending COMMAND_LONG to (%u,%u) (%s) (p1=%f p2=%f p3=%f p4=%f p5=%f p6=%f  p7=%f)" %
+                command_name = "UNKNOWN"
+            self.progress("Sending COMMAND_LONG to (%u,%u) (%s=%u) (p1=%f p2=%f p3=%f p4=%f p5=%f p6=%f  p7=%f)" %
                           (
                               target_sysid,
                               target_compid,
                               command_name,
+                              command,
                               p1,
                               p2,
                               p3,
@@ -6525,6 +6534,7 @@ class AutoTest(ABC):
         achieving_duration_start = None
         sum_of_achieved_values = Vector3()
         last_value = Vector3()
+        last_fail_print = 0
         count_of_achieved_values = 0
         called_function = kwargs.get("called_function", None)
         minimum_duration = kwargs.get("minimum_duration", 0)
@@ -6534,7 +6544,15 @@ class AutoTest(ABC):
         self.progress("Waiting for %s=(%s)" % (value_name, str(target)))
 
         last_print_time = 0
-        while self.get_sim_time_cached() < tstart + timeout:  # if we failed to received message with the getter the sim time isn't updated  # noqa
+        while True:  # if we failed to received message with the getter the sim time isn't updated  # noqa
+            now = self.get_sim_time_cached()
+            if now - tstart > timeout:
+                raise AutoTestTimeoutException(
+                    "Failed to attain %s want %s, reached %s" %
+                    (value_name,
+                     str(target),
+                     str(sum_of_achieved_values / count_of_achieved_values) if count_of_achieved_values != 0 else str(last_value)))  # noqa
+
             last_value = current_value_getter()
             if called_function is not None:
                 called_function(last_value, target)
@@ -6571,11 +6589,10 @@ class AutoTest(ABC):
                 achieving_duration_start = None
                 sum_of_achieved_values.zero()
                 count_of_achieved_values = 0
-        raise AutoTestTimeoutException(
-            "Failed to attain %s want %s, reached %s" %
-            (value_name,
-             str(target),
-             str(sum_of_achieved_values / count_of_achieved_values) if count_of_achieved_values != 0 else str(last_value)))
+                if now - last_fail_print > 1:
+                    self.progress("Waiting for (%s), got %s" %
+                                  (target, last_value))
+                    last_fail_print = now
 
     def validate_kwargs(self, kwargs, valid={}):
         for key in kwargs:
@@ -6757,9 +6774,10 @@ class AutoTest(ABC):
     """Wait for a given speed vector."""
     def wait_speed_vector(self, speed_vector, accuracy=0.3, timeout=30, **kwargs):
         def validator(value2, target2):
-            return (math.fabs(value2.x - target2.x) <= accuracy and
-                    math.fabs(value2.y - target2.y) <= accuracy and
-                    math.fabs(value2.z - target2.z) <= accuracy)
+            for (want, got) in (target2.x, value2.x), (target2.y, value2.y), (target2.z, value2.z):
+                if want != float("nan") and (math.fabs(got - want) > accuracy):
+                    return False
+            return True
 
         self.wait_and_maintain(
             value_name="SpeedVector",
@@ -7201,7 +7219,7 @@ class AutoTest(ABC):
 
     def wait_gps_sys_status_not_present_or_enabled_and_healthy(self, timeout=30):
         self.progress("Waiting for GPS health")
-        tstart = self.get_sim_time_cached()
+        tstart = self.get_sim_time()
         while True:
             now = self.get_sim_time_cached()
             if now - tstart > timeout:
@@ -7221,7 +7239,8 @@ class AutoTest(ABC):
             if (not (m.onboard_control_sensors_health & mavutil.mavlink.MAV_SYS_STATUS_SENSOR_GPS)):
                 self.progress("GPS not healthy")
                 continue
-            self.progress("GPS healthy")
+            self.progress("GPS healthy after %f/%f seconds" %
+                          ((now - tstart), timeout))
             return
 
     def assert_sensor_state(self, sensor, present=True, enabled=True, healthy=True, verbose=False):
@@ -7717,7 +7736,14 @@ Also, ignores heartbeats not from our target system'''
             text = bytes(text, "ascii")
         elif 'unicode' in str(type(text)):
             text = text.encode('ascii')
-        self.mav.mav.statustext_send(mavutil.mavlink.MAV_SEVERITY_WARNING, text)
+        seq = 0
+        while len(text):
+            self.mav.mav.statustext_send(mavutil.mavlink.MAV_SEVERITY_WARNING, text[:50], id=self.statustext_id, chunk_seq=seq)
+            text = text[50:]
+            seq += 1
+        self.statustext_id += 1
+        if self.statustext_id > 255:
+            self.statustext_id = 1
 
     def get_stacktrace(self):
         return ''.join(traceback.format_stack())
@@ -7827,6 +7853,7 @@ Also, ignores heartbeats not from our target system'''
         name = test.name
         desc = test.description
         test_function = test.function
+        test_kwargs = test.kwargs
         if attempt != 1:
             self.progress("RETRYING %s" % name)
             test_output_filename = self.buildlogs_path("%s-%s-retry-%u.txt" %
@@ -7863,7 +7890,7 @@ Also, ignores heartbeats not from our target system'''
                 orig_speedup = self.get_parameter("SIM_SPEEDUP")
                 self.set_parameter("SIM_SPEEDUP", test.speedup)
 
-            test_function()
+            test_function(**test_kwargs)
         except Exception as e:
             self.print_exception_caught(e)
             ex = e
@@ -13257,6 +13284,77 @@ SERIAL5_BAUD 128
             binary_with_defaults = self.add_embedded_params_to_binary(self.binary, content)
             self.customise_SITL_commandline([], binary=binary_with_defaults)
             self.assert_parameter_values(param_values)
+
+    def _MotorTest(self,
+                   command,
+                   timeout=60,
+                   mot1_servo_chan=1,
+                   mot4_servo_chan=4,
+                   wait_finish_text=True,
+                   quadplane=False):
+        '''Run Motor Tests (with specific mavlink message)'''
+        self.start_subtest("Testing PWM output")
+        pwm_in = 1300
+        # default frame is "+" - start motor of 2 is "B", which is
+        # motor 1... see
+        # https://ardupilot.org/copter/docs/connect-escs-and-motors.html
+        command(
+            mavutil.mavlink.MAV_CMD_DO_MOTOR_TEST,
+            p1=2, # start motor
+            p2=mavutil.mavlink.MOTOR_TEST_THROTTLE_PWM,
+            p3=pwm_in, # pwm-to-output
+            p4=2, # timeout in seconds
+            p5=2, # number of motors to output
+            p6=0, # compass learning
+            timeout=timeout,
+        )
+        # long timeouts here because there's a pause before we start motors
+        self.wait_servo_channel_value(mot1_servo_chan, pwm_in, timeout=10)
+        self.wait_servo_channel_value(mot4_servo_chan, pwm_in, timeout=10)
+        if wait_finish_text:
+            self.wait_statustext("finished motor test")
+        self.wait_disarmed()
+        # wait_disarmed is not sufficient here; it's actually the
+        # *motors* being armed which causes the problem, not the
+        # vehicle's arm state!  Could we use SYS_STATUS here instead?
+        self.delay_sim_time(10)
+        self.end_subtest("Testing PWM output")
+
+        self.start_subtest("Testing percentage output")
+        percentage = 90.1
+        # since MOT_SPIN_MIN and MOT_SPIN_MAX are not set, the RC3
+        # min/max are used.
+        expected_pwm = 1000 + (self.get_parameter("RC3_MAX") - self.get_parameter("RC3_MIN")) * percentage/100.0
+        # quadplane doesn't use the expect value - it wants 1900
+        # rather than the calculated 1901...
+        if quadplane:
+            expected_pwm = 1900
+        self.progress("expected pwm=%f" % expected_pwm)
+        command(
+            mavutil.mavlink.MAV_CMD_DO_MOTOR_TEST,
+            p1=2, # start motor
+            p2=mavutil.mavlink.MOTOR_TEST_THROTTLE_PERCENT,
+            p3=percentage, # pwm-to-output
+            p4=2, # timeout in seconds
+            p5=2, # number of motors to output
+            p6=0, # compass learning
+            timeout=timeout,
+        )
+        self.wait_servo_channel_value(mot1_servo_chan, expected_pwm, timeout=10)
+        self.wait_servo_channel_value(mot4_servo_chan, expected_pwm, timeout=10)
+        if wait_finish_text:
+            self.wait_statustext("finished motor test")
+        self.wait_disarmed()
+        # wait_disarmed is not sufficient here; it's actually the
+        # *motors* being armed which causes the problem, not the
+        # vehicle's arm state!  Could we use SYS_STATUS here instead?
+        self.delay_sim_time(10)
+        self.end_subtest("Testing percentage output")
+
+    def MotorTest(self, timeout=60, **kwargs):
+        '''Run Motor Tests'''  # common to Copter and QuadPlane
+        self._MotorTest(self.run_cmd, **kwargs)
+        self._MotorTest(self.run_cmd_int, **kwargs)
 
     def tests(self):
         return [

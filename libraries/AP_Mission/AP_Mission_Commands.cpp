@@ -163,8 +163,39 @@ bool AP_Mission::start_command_camera(const AP_Mission::Mission_Command& cmd)
         return false;
 
     case MAV_CMD_IMAGE_START_CAPTURE:
-        camera->take_picture();
-        return true;
+        // check if this is a single picture request
+        if (cmd.content.image_start_capture.total_num_images == 1) {
+            if (cmd.content.image_start_capture.instance == 0) {
+                // take pictures for every backend
+                camera->take_picture();
+                return true;
+            }
+            return camera->take_picture(cmd.content.image_start_capture.instance-1);
+        } else if (cmd.content.image_start_capture.total_num_images == 0) {
+            // multiple picture request, take pictures forever
+            if (cmd.content.image_start_capture.instance == 0) {
+                // take pictures for every backend
+                camera->take_multiple_pictures(cmd.content.image_start_capture.interval_s*1000, -1);
+                return true;
+            }
+            return camera->take_multiple_pictures(cmd.content.image_start_capture.instance-1, cmd.content.image_start_capture.interval_s*1000, -1);
+        } else {
+            if (cmd.content.image_start_capture.instance == 0) {
+                // take pictures for every backend
+                camera->take_multiple_pictures(cmd.content.image_start_capture.interval_s*1000, cmd.content.image_start_capture.total_num_images);
+                return true;
+            }
+            return camera->take_multiple_pictures(cmd.content.image_start_capture.instance-1, cmd.content.image_start_capture.interval_s*1000, cmd.content.image_start_capture.total_num_images);
+        }
+        return false;
+
+    case MAV_CMD_IMAGE_STOP_CAPTURE:
+        if (cmd.p1 == 0) {
+            // stop capture for each backend
+            camera->stop_capture();
+            return true;
+        }
+        return camera->stop_capture(cmd.p1);
 
     case MAV_CMD_VIDEO_START_CAPTURE:
     case MAV_CMD_VIDEO_STOP_CAPTURE:

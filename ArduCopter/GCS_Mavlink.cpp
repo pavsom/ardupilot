@@ -653,9 +653,9 @@ void GCS_MAVLINK_Copter::handle_landing_target(const mavlink_landing_target_t &p
 #endif
 }
 
-MAV_RESULT GCS_MAVLINK_Copter::_handle_command_preflight_calibration(const mavlink_command_long_t &packet, const mavlink_message_t &msg)
+MAV_RESULT GCS_MAVLINK_Copter::_handle_command_preflight_calibration(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
-    if (is_equal(packet.param6,1.0f)) {
+    if (packet.y == 1) {
         // compassmot calibration
         return copter.mavlink_compassmot(*this);
     }
@@ -673,7 +673,7 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_do_set_roi(const Location &roi_loc
     return MAV_RESULT_ACCEPTED;
 }
 
-MAV_RESULT GCS_MAVLINK_Copter::handle_preflight_reboot(const mavlink_command_long_t &packet, const mavlink_message_t &msg)
+MAV_RESULT GCS_MAVLINK_Copter::handle_preflight_reboot(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
     // reject reboot if user has also specified they want the "Auto" ESC calibration on next reboot
     if (copter.g.esc_calibrate == (uint8_t)Copter::ESCCalibrationModes::ESCCAL_AUTO) {
@@ -739,6 +739,10 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_int_do_reposition(const mavlink_co
 MAV_RESULT GCS_MAVLINK_Copter::handle_command_int_packet(const mavlink_command_int_t &packet, const mavlink_message_t &msg)
 {
     switch(packet.command) {
+
+    case MAV_CMD_DO_CHANGE_SPEED:
+        return handle_MAV_CMD_DO_CHANGE_SPEED(packet);
+
 #if MODE_FOLLOW_ENABLED == ENABLED
     case MAV_CMD_DO_FOLLOW:
         // param1: sysid of target to follow
@@ -756,6 +760,14 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_int_packet(const mavlink_command_i
     case MAV_CMD_DO_PAUSE_CONTINUE:
         return handle_command_pause_continue(packet);
 
+    case MAV_CMD_DO_MOTOR_TEST:
+        return handle_MAV_CMD_DO_MOTOR_TEST(packet);
+
+#if PARACHUTE == ENABLED
+    case MAV_CMD_DO_PARACHUTE:
+        return handle_MAV_CMD_DO_PARACHUTE(packet);
+#endif
+
 #if AC_MAVLINK_SOLO_BUTTON_COMMAND_HANDLING_ENABLED
     // Solo user presses pause button
     case MAV_CMD_SOLO_BTN_PAUSE_CLICK:
@@ -766,6 +778,11 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_int_packet(const mavlink_command_i
     // Solo user holds down Fly button for a couple of seconds
     case MAV_CMD_SOLO_BTN_FLY_CLICK:
         return handle_MAV_CMD_SOLO_BTN_FLY_CLICK(packet);
+#endif
+
+#if MODE_AUTO_ENABLED == ENABLED
+    case MAV_CMD_MISSION_START:
+        return handle_MAV_CMD_MISSION_START(packet);
 #endif
 
 #if AP_WINCH_ENABLED
@@ -860,7 +877,13 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
         }
         return MAV_RESULT_FAILED;
 
-    case MAV_CMD_DO_CHANGE_SPEED:
+    default:
+        return GCS_MAVLINK::handle_command_long_packet(packet, msg);
+    }
+}
+
+MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_DO_CHANGE_SPEED(const mavlink_command_int_t &packet)
+{
         // param1 : Speed type (0 or 1=Ground Speed, 2=Climb Speed, 3=Descent Speed)
         // param2 : new speed in m/s
         // param3 : unused
@@ -884,9 +907,11 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
             }
         }
         return MAV_RESULT_FAILED;
+}
 
 #if MODE_AUTO_ENABLED == ENABLED
-    case MAV_CMD_MISSION_START:
+MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_MISSION_START(const mavlink_command_int_t &packet)
+{
         if (copter.set_mode(Mode::Number::AUTO, ModeReason::GCS_COMMAND)) {
             copter.set_auto_armed(true);
             if (copter.mode_auto.mission.state() != AP_Mission::MISSION_RUNNING) {
@@ -895,10 +920,14 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_FAILED;
+}
 #endif
 
+
+
 #if PARACHUTE == ENABLED
-    case MAV_CMD_DO_PARACHUTE:
+MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_DO_PARACHUTE(const mavlink_command_int_t &packet)
+{
         // configure or release parachute
         switch ((uint16_t)packet.param1) {
         case PARACHUTE_DISABLE:
@@ -913,9 +942,11 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_FAILED;
+}
 #endif
 
-    case MAV_CMD_DO_MOTOR_TEST:
+MAV_RESULT GCS_MAVLINK_Copter::handle_MAV_CMD_DO_MOTOR_TEST(const mavlink_command_int_t &packet)
+{
         // param1 : motor sequence number (a number from 1 to max number of motors on the vehicle)
         // param2 : throttle type (0=throttle percentage, 1=PWM, 2=pilot throttle channel pass-through. See MOTOR_TEST_THROTTLE_TYPE enum)
         // param3 : throttle (range depends upon param2)
@@ -927,11 +958,7 @@ MAV_RESULT GCS_MAVLINK_Copter::handle_command_long_packet(const mavlink_command_
                                                (uint8_t)packet.param2,
                                                packet.param3,
                                                packet.param4,
-                                               (uint8_t)packet.param5);
-
-    default:
-        return GCS_MAVLINK::handle_command_long_packet(packet, msg);
-    }
+                                               (uint8_t)packet.x);
 }
 
 #if AP_WINCH_ENABLED

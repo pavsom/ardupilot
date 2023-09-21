@@ -4752,6 +4752,155 @@ class AutoTestPlane(AutoTest):
         )
         self.fly_home_land_and_disarm()
 
+    def _MAV_CMD_PREFLIGHT_CALIBRATION(self, command):
+        self.context_push()
+        self.start_subtest("Denied when armed")
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        command(
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+            p1=1,
+            want_result=mavutil.mavlink.MAV_RESULT_FAILED,
+        )
+        self.disarm_vehicle()
+
+        self.context_collect('STATUSTEXT')
+
+        self.start_subtest("gyro cal")
+        command(
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+            p1=1,
+        )
+
+        self.start_subtest("baro cal")
+        command(
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+            p3=1,
+        )
+        self.wait_statustext('Barometer calibration complete', check_context=True)
+
+        # accelcal skipped here, it is checked elsewhere
+
+        self.start_subtest("ins trim")
+        command(
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+            p5=2,
+        )
+
+        # enforced delay between cals:
+        self.delay_sim_time(5)
+
+        self.start_subtest("simple accel cal")
+        command(
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+            p5=4,
+        )
+        # simple gyro cal makes the GPS units go unhealthy as they are
+        # not maintaining their update rate (gyro cal is synchronous
+        # in the main loop).  Usually ~30 seconds to recover...
+        self.wait_gps_sys_status_not_present_or_enabled_and_healthy(timeout=60)
+
+        self.start_subtest("force save accels")
+        command(
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+            p5=76,
+        )
+
+        self.start_subtest("force save compasses")
+        command(
+            mavutil.mavlink.MAV_CMD_PREFLIGHT_CALIBRATION,
+            p2=76,
+        )
+
+        self.context_pop()
+
+    def MAV_CMD_PREFLIGHT_CALIBRATION(self):
+        '''test MAV_CMD_PREFLIGHT_CALIBRATION mavlink handling'''
+        self._MAV_CMD_PREFLIGHT_CALIBRATION(self.run_cmd)
+        self._MAV_CMD_PREFLIGHT_CALIBRATION(self.run_cmd_int)
+
+    def MAV_CMD_DO_INVERTED_FLIGHT(self):
+        '''fly upside-down mission item'''
+        alt = 30
+        wps = self.create_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, alt),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 400, 0, alt),
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_DO_INVERTED_FLIGHT,
+                p1=1,
+            ),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 800, 0, alt),
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_DO_INVERTED_FLIGHT,
+                p1=0,
+            ),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 1200, 0, alt),
+            (mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0),
+        ])
+        self.check_mission_upload_download(wps)
+
+        self.change_mode('AUTO')
+        self.wait_ready_to_arm()
+
+        self.arm_vehicle()
+
+        self.wait_current_waypoint(2)  # upright flight
+        self.wait_message_field_values("NAV_CONTROLLER_OUTPUT", {
+            "nav_roll": 0,
+            "nav_pitch": 0,
+        }, epsilon=10)
+
+        def check_altitude(mav, m):
+            global initial_airspeed_threshold_reached
+            m_type = m.get_type()
+            if m_type != 'GLOBAL_POSITION_INT':
+                return
+            if abs(30 - m.relative_alt * 0.001) > 15:
+                raise NotAchievedException("Bad altitude while flying inverted")
+
+        self.context_push()
+        self.install_message_hook_context(check_altitude)
+
+        self.wait_current_waypoint(4)  # inverted flight
+        self.wait_message_field_values("NAV_CONTROLLER_OUTPUT", {
+            "nav_roll": 180,
+            "nav_pitch": 9,
+        }, epsilon=10,)
+
+        self.wait_current_waypoint(6)  # upright flight
+        self.wait_message_field_values("NAV_CONTROLLER_OUTPUT", {
+            "nav_roll": 0,
+            "nav_pitch": 0,
+        }, epsilon=10)
+
+        self.context_pop()  # remove the check_altitude call
+
+        self.wait_current_waypoint(7)
+
+        self.fly_home_land_and_disarm()
+
+    def DO_PARACHUTE(self):
+        '''test triggering parachute via mavlink'''
+        self.set_parameters({
+            "CHUTE_ENABLED": 1,
+            "CHUTE_TYPE": 10,
+            "SERVO9_FUNCTION": 27,
+            "SIM_PARA_ENABLE": 1,
+            "SIM_PARA_PIN": 9,
+            "FS_LONG_ACTN": 3,
+        })
+        for command in self.run_cmd, self.run_cmd_int:
+            self.wait_servo_channel_value(9, 1100)
+            self.wait_ready_to_arm()
+            self.arm_vehicle()
+            command(
+                mavutil.mavlink.MAV_CMD_DO_PARACHUTE,
+                p1=mavutil.mavlink.PARACHUTE_RELEASE,
+            )
+            self.wait_servo_channel_value(9, 1300)
+            self.disarm_vehicle()
+            self.reboot_sitl()
+
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestPlane, self).tests()
@@ -4770,6 +4919,7 @@ class AutoTestPlane(AutoTest):
             self.TestGripperMission,
             self.Parachute,
             self.ParachuteSinkRate,
+            self.DO_PARACHUTE,
             self.PitotBlockage,
             self.AIRSPEED_AUTOCAL,
             self.RangeFinder,
@@ -4843,6 +4993,8 @@ class AutoTestPlane(AutoTest):
             self.MODE_SWITCH_RESET,
             self.ExternalPositionEstimate,
             self.MAV_CMD_GUIDED_CHANGE_ALTITUDE,
+            self.MAV_CMD_PREFLIGHT_CALIBRATION,
+            self.MAV_CMD_DO_INVERTED_FLIGHT,
         ])
         return ret
 
