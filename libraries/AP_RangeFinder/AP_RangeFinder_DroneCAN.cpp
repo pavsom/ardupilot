@@ -121,12 +121,14 @@ void AP_RangeFinder_DroneCAN::handle_measurement(AP_DroneCAN *ap_dronecan, const
         //Additional states supported by RFND message
         case UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT_READING_TYPE_TOO_CLOSE:
         {
+            driver->_distance_cm = 0;
             driver->_last_reading_ms = AP_HAL::millis();
             driver->_status = RangeFinder::Status::OutOfRangeLow;
             break;
         }
         case UAVCAN_EQUIPMENT_RANGE_SENSOR_MEASUREMENT_READING_TYPE_TOO_FAR:
         {
+            driver->_distance_cm = 0;
             driver->_last_reading_ms = AP_HAL::millis();
             driver->_status = RangeFinder::Status::OutOfRangeHigh;
             break;

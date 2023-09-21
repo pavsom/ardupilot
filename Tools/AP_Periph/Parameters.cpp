@@ -255,6 +255,15 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     // @Values: 0:Disabled, 1:Enabled
     // @User: Standard
     GSCALAR(baro_enable, "BARO_ENABLE", AP_PERIPH_BARO_ENABLE_DEFAULT),
+
+    // @Param: BARO_MAX_RATE
+    // @DisplayName: Baro max rate
+    // @Description: This is the maximum rate we send baro data in Hz. Zero means no limit
+    // @Units: Hz
+    // @Range: 0 200
+    // @Increment: 1
+    // @User: Advanced
+    GSCALAR(baro_max_rate, "BARO_MAX_RATE", 2),
 #endif
 
 #ifdef AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY

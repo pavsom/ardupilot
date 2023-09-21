@@ -20,6 +20,7 @@ public:
         k_param_can_node,
         k_param_can_baudrate0,
         k_param_baro,
+        k_param_baro_max_rate,
         k_param_buzz_volume,
         k_param_led_brightness,
         k_param_airspeed,
@@ -106,6 +107,7 @@ public:
 #endif
 #ifdef HAL_PERIPH_ENABLE_BARO
     AP_Int8 baro_enable;
+    AP_Int16 baro_max_rate;
 #endif
 #if !defined(HAL_NO_FLASH_SUPPORT) && !defined(HAL_NO_ROMFS_SUPPORT)
     AP_Int8 flash_bootloader;

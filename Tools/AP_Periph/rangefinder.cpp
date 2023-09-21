@@ -56,10 +56,10 @@ void AP_Periph_FW::can_rangefinder_send(uint8_t id, enum Rotation orientation)
         return;
     }
     const uint32_t sample_ms = rangefinder.last_reading_ms(orientation);
-    if (last_sample_ms[id] == sample_ms) {
+    if (rangeFinder_last_sample_ms[id] == sample_ms) {
         return;
     }
-    last_sample_ms[id] = sample_ms;
+    rangeFinder_last_sample_ms[id] = sample_ms;
     
     uint16_t dist_cm = rangefinder.distance_cm_orient(orientation);
     uavcan_equipment_range_sensor_Measurement pkt {};

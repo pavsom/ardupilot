@@ -33,6 +33,7 @@ bool AP_RangeFinder_NMEA::get_reading(float &reading_m)
     }
 
     if (!isEnabled()){
+        reading_m = 0;
         return false;
     }
     //printf("rng finder get_reading\n\r");
@@ -219,11 +220,11 @@ bool AP_RangeFinder_NMEA::isEnabled(){
         return false;
     }
     uint32_t now = AP_HAL::millis();
-    if (now - timeSinceEnabled > 30000 || range_valid_count() > 5){
+    if (now - timeSinceEnabled > 60000 || state.range_valid_count > 5){
         timeSinceEnabled = now;
         enable();
         return true;
-    }else if (now - timeSinceEnabled > 3000){
+    }else if (now - timeSinceEnabled > 2000){
         disable();
         return false;
     }else{

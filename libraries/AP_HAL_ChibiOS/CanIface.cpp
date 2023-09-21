@@ -346,15 +346,15 @@ int16_t CANIface::send(const AP_HAL::CANFrame& frame, uint64_t tx_deadline,
         mb.TDHR = frame.data_32[1];
         mb.TDLR = frame.data_32[0];
 
+        CanTxItem& txi = pending_tx_[txmailbox];
+        txi.frame          = frame;
+        txi.loopback       = (flags & Loopback) != 0;
         mb.TIR |= bxcan::TIR_TXRQ;  // Go.
 
         /*
          * Registering the pending transmission so we can track its deadline and loopback it as needed
          */
-        CanTxItem& txi = pending_tx_[txmailbox];
         txi.deadline       = tx_deadline;
-        txi.frame          = frame;
-        txi.loopback       = (flags & Loopback) != 0;
         txi.abort_on_error = (flags & AbortOnError) != 0;
         // setup frame initial state
         txi.pushed         = false;
