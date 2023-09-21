@@ -298,7 +298,7 @@ void AP_Periph_FW::init()
     start_ms = AP_HAL::millis();
 }
 
-#if (defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY) && HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY == 30) || defined(HAL_PERIPH_ENABLE_NOTIFY)
+#if (defined(HAL_PERIPH_ENABLE_NOTIFY) || defined(HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY))
 /*
   rotating rainbow pattern on startup
  */
@@ -375,33 +375,32 @@ void AP_Periph_FW::update_rainbow()
         {64, 0, 0}       // magenta
     };
     last_update_ms = now;
-    static uint8_t step;
+    static uint8_t step = 0;
     const uint8_t nsteps = ARRAY_SIZE(rgb_rainbow)/2;
     float brightness = 0.1;
-    for (uint8_t n=0; n<15; n++) {
+    /* for (uint8_t n=0; n<15; n++) {
         uint8_t i = (step + n) % nsteps;
-        periph.notify.handle_rgb_id(
+        periph.notify.handle_rgb_id_2(
                                         rgb_rainbow[i].red*brightness,
                                         rgb_rainbow[i].green*brightness,
                                         rgb_rainbow[i].blue*brightness,0);
-        periph.notify.handle_rgb_id(
+        periph.notify.handle_rgb_id_2(
                                         rgb_rainbow[15 + i].red*brightness,
                                         rgb_rainbow[15 + i].green*brightness,
                                         rgb_rainbow[15 + i].blue*brightness,1);
-    }
-    /* for (uint8_t n=0; n<30; n++) {
+    } */
+    for (uint8_t n=0; n<30; n++) {
         uint8_t i = (step + n) % nsteps;
 #if defined (HAL_PERIPH_ENABLE_NOTIFY)
-        periph.notify.handle_rgb(
+        periph.notify.handle_rgb_id_2(rgb_rainbow[i].red*brightness, rgb_rainbow[i].green*brightness, rgb_rainbow[i].blue*brightness, n);
 #elif defined(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY)
         hal.rcout->set_serial_led_rgb_data(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY, n,
-#endif
                                         rgb_rainbow[i].red*brightness,
                                         rgb_rainbow[i].green*brightness,
-                                        rgb_rainbow[i].blue*brightness);
-    } */
-    /* if (brightness != 0)
-    step++; */
+                                        rgb_rainbow[i].blue*brightness); 
+#endif
+    }
+    step++;
 
 #if defined(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY)
     hal.rcout->serial_led_send(HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY);

@@ -193,6 +193,7 @@ public:
 
     // handle RGB from Scripting
     static void handle_rgb_id(uint8_t r, uint8_t g, uint8_t b, uint8_t id);
+    static void handle_rgb_id_2(uint8_t r, uint8_t g, uint8_t b, uint8_t id);
 
 #if AP_NOTIFY_MAVLINK_PLAY_TUNE_SUPPORT_ENABLED
     // handle a PLAY_TUNE message

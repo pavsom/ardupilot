@@ -51,6 +51,11 @@ uint16_t NeoPixel::init_ports()
     for (uint8_t i = 0; i < num_sections; i++){
         rgb[i] = new NeoPixel::RGB [num_leds];
     }
+
+    rgb_rainbow = new NeoPixel::RGB [num_leds * num_sections];
+    for (uint8_t i = 0; i < num_leds*num_sections; i++){
+        rgb_rainbow[i] = {0, 0, 0};
+    }
     
     for (uint16_t i=0; i<AP_NOTIFY_NEOPIXEL_MAX_INSTANCES; i++) {
         const SRV_Channel::Aux_servo_function_t fn = (SRV_Channel::Aux_servo_function_t)((uint8_t)SRV_Channel::k_LED_neopixel1 + i);
@@ -77,8 +82,8 @@ uint16_t NeoPixel::init_ports()
         }
     }
 
-        for (uint8_t id = 0; id < num_sections; id++){
-            for (uint8_t i = 0; i < num_leds; i++){
+    for (uint8_t id = 0; id < num_sections; id++){
+        for (uint8_t i = 0; i < num_leds; i++){
             if (led != nullptr){
                 if ((i == 2) && (id == 0)) {
                     rgb[id][i] = {0, 10, 0};
@@ -123,6 +128,14 @@ void NeoPixel::rgb_set_id(uint8_t red, uint8_t green, uint8_t blue, uint8_t id)
         }
     }
 }
+
+void NeoPixel::rgb_set_id_2(uint8_t red, uint8_t green, uint8_t blue, uint8_t id) {
+    if (inited != 1) {
+        return;
+    }
+    rgb_rainbow[id] = {red, green, blue};
+    needUpdate = true;
+}
 void NeoPixel::update(){
     if (!needUpdate) return;
     AP_SerialLED *led = AP_SerialLED::get_singleton();
@@ -141,6 +154,11 @@ void NeoPixel::update(){
             }
         }
     }
+    /* for (uint8_t i = 0; i < num_leds*num_sections; i++) {
+        if (led != nullptr) {
+            led->set_RGB(channel, i, rgb_rainbow[i].r, rgb_rainbow[i].g, rgb_rainbow[i].b);
+        }
+    } */
     needUpdate = false;
     led->send(channel);
 }
