@@ -863,6 +863,33 @@ bool CANIface::init(const uint32_t bitrate, const CANIface::OperatingMode mode)
             return false;
         }
     }
+#if defined(HAL_CAN_IFACE2_ENABLE) && !defined(HAL_CAN_IFACE1_ENABLE) && defined(CAN1_BASE)
+    ChibiOS::bxcan::CanType* pCan = reinterpret_cast<bxcan::CanType*>(uintptr_t(CAN1_BASE));
+#if defined(RCC_APB1ENR1_CAN1EN)
+    RCC->APB1ENR1 |=  RCC_APB1ENR1_CAN1EN;
+    RCC->APB1RSTR1 |=  RCC_APB1RSTR1_CAN1RST;
+    RCC->APB1RSTR1 &= ~RCC_APB1RSTR1_CAN1RST;
+#else
+    RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;
+    RCC->APB1RSTR |=  RCC_APB1RSTR_CAN1RST;
+    RCC->APB1RSTR &= ~RCC_APB1RSTR_CAN1RST;
+#endif
+    pCan->FMR |= bxcan::FMR_FINIT;
+
+    pCan->FMR &= 0xFFFFC0F1;
+    pCan->FMR |= static_cast<uint32_t>(NumFilters) << 8;  // Slave (CAN2) gets half of the filters
+
+    pCan->FFA1R = 0;                           // All assigned to FIFO0 by default
+    pCan->FM1R = 0;                            // Indentifier Mask mode
+
+    pCan->FS1R = 0x7ffffff;                    // Single 32-bit for all
+    pCan->FilterRegister[0].FR1 = 0;          // CAN1 accepts everything
+    pCan->FilterRegister[0].FR2 = 0;
+    pCan->FilterRegister[NumFilters].FR1 = 0; // CAN2 accepts everything
+    pCan->FilterRegister[NumFilters].FR2 = 0;
+    pCan->FA1R = 1 | (1 << NumFilters);        // One filter per each iface
+    pCan->FMR &= ~bxcan::FMR_FINIT;
+#elif defined(HAL_CAN_IFACE1_ENABLE)
     if (self_index_ == 1 && !can_ifaces[0]->is_initialized()) {
         Debug("Iface 0 is not initialized yet but we need it for Iface 1, trying to init it");
         Debug("Enabling CAN iface 0");
@@ -875,6 +902,7 @@ bool CANIface::init(const uint32_t bitrate, const CANIface::OperatingMode mode)
 
         Debug("Enabling CAN iface");
     }
+#endif    
     initOnce(true);
     /*
      * We need to silence the controller in the first order, otherwise it may interfere with the following operations.
