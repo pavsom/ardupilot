@@ -468,6 +468,9 @@ bool CANIface::waitMsrINakBitStateChange(bool target_state)
     const unsigned Timeout = 1000;
     for (unsigned wait_ack = 0; wait_ack < Timeout; wait_ack++) {
         const bool state = (can_->MSR & bxcan::MSR_INAK) != 0;
+#ifdef HAL_GPIO_PIN_LED_BOOTLOADER
+        palToggleLine(HAL_GPIO_PIN_LED_BOOTLOADER);
+#endif           
         if (state == target_state) {
             return true;
         }
@@ -867,7 +870,7 @@ bool CANIface::init(const uint32_t bitrate, const CANIface::OperatingMode mode)
         Debug("Initing iface 0...");
         if (!can_ifaces[0]->init(bitrate, mode)) {
             Debug("Iface 0 init failed");
-            return false;
+            //return false;
         }
 
         Debug("Enabling CAN iface");
@@ -883,6 +886,35 @@ bool CANIface::init(const uint32_t bitrate, const CANIface::OperatingMode mode)
         can_->MCR |= bxcan::MCR_INRQ;   // Request init
 
         can_->IER = 0;                  // Disable interrupts while initialization is in progress
+    }
+
+    /*
+     * Default filter configuration
+     */
+    if (self_index_ == 0) {
+        can_->FMR |= bxcan::FMR_FINIT;
+
+        can_->FMR &= 0xFFFFC0F1;
+        can_->FMR |= static_cast<uint32_t>(NumFilters) << 8;  // Slave (CAN2) gets half of the filters
+
+        can_->FFA1R = 0;                           // All assigned to FIFO0 by default
+        can_->FM1R = 0;                            // Indentifier Mask mode
+
+#if HAL_NUM_CAN_IFACES > 1
+        can_->FS1R = 0x7ffffff;                    // Single 32-bit for all
+        can_->FilterRegister[0].FR1 = 0;          // CAN1 accepts everything
+        can_->FilterRegister[0].FR2 = 0;
+        can_->FilterRegister[NumFilters].FR1 = 0; // CAN2 accepts everything
+        can_->FilterRegister[NumFilters].FR2 = 0;
+        can_->FA1R = 1 | (1 << NumFilters);        // One filter per each iface
+#else
+        can_->FS1R = 0x1fff;
+        can_->FilterRegister[0].FR1 = 0;
+        can_->FilterRegister[0].FR2 = 0;
+        can_->FA1R = 1;
+#endif
+
+        can_->FMR &= ~bxcan::FMR_FINIT;
     }
 
     if (!waitMsrINakBitStateChange(true)) {
@@ -928,41 +960,13 @@ bool CANIface::init(const uint32_t bitrate, const CANIface::OperatingMode mode)
                 bxcan::IER_FMPIE1;   // RX FIFO 1 is not empty
 
     can_->MCR &= ~bxcan::MCR_INRQ;   // Leave init mode
-
+    
     if (!waitMsrINakBitStateChange(false)) {
         Debug("MSR INAK not cleared");
         can_->MCR = bxcan::MCR_RESET;
         return false;
     }
-
-    /*
-     * Default filter configuration
-     */
-    if (self_index_ == 0) {
-        can_->FMR |= bxcan::FMR_FINIT;
-
-        can_->FMR &= 0xFFFFC0F1;
-        can_->FMR |= static_cast<uint32_t>(NumFilters) << 8;  // Slave (CAN2) gets half of the filters
-
-        can_->FFA1R = 0;                           // All assigned to FIFO0 by default
-        can_->FM1R = 0;                            // Indentifier Mask mode
-
-#if HAL_NUM_CAN_IFACES > 1
-        can_->FS1R = 0x7ffffff;                    // Single 32-bit for all
-        can_->FilterRegister[0].FR1 = 0;          // CAN1 accepts everything
-        can_->FilterRegister[0].FR2 = 0;
-        can_->FilterRegister[NumFilters].FR1 = 0; // CAN2 accepts everything
-        can_->FilterRegister[NumFilters].FR2 = 0;
-        can_->FA1R = 1 | (1 << NumFilters);        // One filter per each iface
-#else
-        can_->FS1R = 0x1fff;
-        can_->FilterRegister[0].FR1 = 0;
-        can_->FilterRegister[0].FR2 = 0;
-        can_->FA1R = 1;
-#endif
-
-        can_->FMR &= ~bxcan::FMR_FINIT;
-    }
+ 
     initialised_ = true;
 
     return true;
