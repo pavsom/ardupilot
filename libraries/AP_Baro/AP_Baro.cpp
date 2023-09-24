@@ -111,6 +111,7 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // @Increment: 0.1
     // @User: Advanced
     AP_GROUPINFO("_ALT_OFFSET", 5, AP_Baro, _alt_offset, 0),
+#endif // HAL_BUILD_AP_PERIPH
 
     // @Param: _PRIMARY
     // @DisplayName: Primary barometer
@@ -118,7 +119,7 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // @Values: 0:FirstBaro,1:2ndBaro,2:3rdBaro
     // @User: Advanced
     AP_GROUPINFO("_PRIMARY", 6, AP_Baro, _primary_baro, 0),
-#endif // HAL_BUILD_AP_PERIPH
+
 
     // @Param: _EXT_BUS
     // @DisplayName: External baro bus
@@ -133,6 +134,7 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // @Values: 1.0:Freshwater,1.024:Saltwater
     AP_GROUPINFO_FRAME("_SPEC_GRAV", 8, AP_Baro, _specific_gravity, 1.0, AP_PARAM_FRAME_SUB),
 
+#ifndef HAL_BUILD_AP_PERIPH
 #if BARO_MAX_INSTANCES > 1
     // @Param: 2_GND_PRESS
     // @DisplayName: Ground Pressure
@@ -160,6 +162,7 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
 
     // Slot 12 used to be TEMP3
 #endif
+#endif // HAL_BUILD_AP_PERIPH
 
     // @Param: _FLTR_RNG
     // @DisplayName: Range in which sample is accepted
