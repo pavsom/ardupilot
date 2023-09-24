@@ -21,6 +21,9 @@ public:
 
     static void handle_pressure(AP_DroneCAN *ap_dronecan, const CanardRxTransfer& transfer, const uavcan_equipment_air_data_StaticPressure &msg);
     static void handle_temperature(AP_DroneCAN *ap_dronecan, const CanardRxTransfer& transfer, const uavcan_equipment_air_data_StaticTemperature &msg);
+#if AP_DRONECAN_SNOWSTORM_SUPPORT
+    static void handle_pressure_short(AP_DroneCAN *ap_dronecan, const CanardRxTransfer& transfer, const com_snowstorm_Pressure &msg);
+#endif    
 #if AP_TEST_DRONECAN_DRIVERS
     void update_healthy_flag(uint8_t instance) override { _frontend.sensors[instance].healthy = !AP::sitl()->baro[instance].disable; };
 #endif
