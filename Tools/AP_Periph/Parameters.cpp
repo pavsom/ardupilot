@@ -3,6 +3,9 @@
 #include "AP_Periph.h"
 
 extern const AP_HAL::HAL &hal;
+#ifndef AP_PERIPH_IMU_ENABLE_DEFAULT
+#define AP_PERIPH_IMU_ENABLE_DEFAULT 0
+#endif
 
 #ifndef HAL_PERIPH_LED_BRIGHT_DEFAULT
 #define HAL_PERIPH_LED_BRIGHT_DEFAULT 100
