@@ -20,18 +20,11 @@ FLASH_SIZE_KB 1024
 PB0 LED_BOOTLOADER OUTPUT LOW GPIO(0)  # blue
 define HAL_LED_ON 1
 
-# reserve some space for params
-#APP_START_OFFSET_KB 4
-
 # order of UARTs
 SERIAL_ORDER USART1
 
 STDOUT_SERIAL SD1
 STDOUT_BAUDRATE 57600
-
-
-
-#define CH_CFG_ST_FREQUENCY 1000
 
 # USART1, for debug
 PA9  USART1_TX USART1 SPEED_HIGH 
@@ -40,28 +33,13 @@ PA10 USART1_RX USART1 SPEED_HIGH
 # ---------------------- CAN bus -------------------------
 define HAL_CAN_POOL_SIZE 4096
 # enable CAN support
-PB8 CAN1_RX CAN1
-PB9 CAN1_TX CAN1
 
 PB5 CAN2_RX CAN2
 PB13 CAN2_TX CAN2
 
-
-#define HAL_USE_CAN TRUE
-#define STM32_CAN_USE_CAN1 TRUE
-
 define CAN_APP_NODE_NAME "bl405"
 
+# ---------------------- -------------------------
 # debugger support
 PA13 JTMS-SWDIO SWD
 PA14 JTCK-SWCLK SWD
-
-# use PB6 (normally I2C1_SCL) as "hold in bootloader" pin
-# this has a hw pullup, so if we set it as input floating
-# and look for it low then we know user has pulled it down and
-# want to stay in the bootloader
-#PC1 STAY_IN_BOOTLOADER INPUT FLOATING
-
-
-# Add CS pins to ensure they are high in bootloader
-#PB0 MAG_CS CS
