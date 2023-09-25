@@ -29,7 +29,11 @@ void AP_Baro_DroneCAN::subscribe_msgs(AP_DroneCAN* ap_dronecan)
     if (Canard::allocate_sub_arg_callback(ap_dronecan, &handle_pressure, ap_dronecan->get_driver_index()) == nullptr) {
         AP_BoardConfig::allocation_error("pressure_sub");
     }
-
+#if AP_DRONECAN_SNOWSTORM_SUPPORT    
+    if (Canard::allocate_sub_arg_callback(ap_dronecan, &handle_pressure_short, ap_dronecan->get_driver_index()) == nullptr) {
+        AP_BoardConfig::allocation_error("pressure_short_sub");
+    }
+#endif    
     if (Canard::allocate_sub_arg_callback(ap_dronecan, &handle_temperature, ap_dronecan->get_driver_index()) == nullptr) {
         AP_BoardConfig::allocation_error("temperature_sub");
     }
@@ -137,7 +141,24 @@ void AP_Baro_DroneCAN::handle_pressure(AP_DroneCAN *ap_dronecan, const CanardRxT
         driver->new_pressure = true;
     }
 }
-
+#if AP_DRONECAN_SNOWSTORM_SUPPORT
+void AP_Baro_DroneCAN::handle_pressure_short(AP_DroneCAN *ap_dronecan, const CanardRxTransfer& transfer, const com_snowstorm_Pressure &msg)
+{
+    AP_Baro_DroneCAN* driver;
+    {
+        WITH_SEMAPHORE(_sem_registry);
+        driver = get_dronecan_backend(ap_dronecan, transfer.source_node_id, true);
+        if (driver == nullptr) {
+            return;
+        }
+    }
+    {
+        WITH_SEMAPHORE(driver->_sem_baro);
+        _update_and_wrap_accumulator(&driver->_pressure, msg.pressures.data[0].current_pressure, &driver->_pressure_count, 32);
+        driver->new_pressure = true;
+    }
+}
+#endif
 void AP_Baro_DroneCAN::handle_temperature(AP_DroneCAN *ap_dronecan, const CanardRxTransfer& transfer, const uavcan_equipment_air_data_StaticTemperature &msg)
 {
     AP_Baro_DroneCAN* driver;

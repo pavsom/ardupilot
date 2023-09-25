@@ -1,6 +1,6 @@
 #include "AP_Periph.h"
 
-#ifdef AP_INERTIALSENSOR_ENABLED
+#if AP_INERTIALSENSOR_ENABLED
 
 #include <dronecan_msgs.h>
 

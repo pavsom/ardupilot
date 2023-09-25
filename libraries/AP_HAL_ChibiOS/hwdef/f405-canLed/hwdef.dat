@@ -22,29 +22,13 @@ define NOTIFY_LED_LEN_DEFAULT 30
 define HAL_PERIPH_ENABLE_RC_OUT
 
 
-
-
-
-
-#define HAL_PERIPH_ENABLE_RC_OUT
-#define HAL_PERIPH_NEOPIXEL_CHAN_WITHOUT_NOTIFY 0
-#define HAL_PERIPH_NEOPIXEL_COUNT_WITHOUT_NOTIFY 30
-#define DEFAULT_NTF_LED_TYPES 256
-#define NOTIFY_LED_LEN_DEFAULT 30
-
-
-
-
-
-define HAL_CAN_DEFAULT_NODE_ID 100
 define CAN_APP_NODE_NAME "org.ardupilot.f405_LED"
 define NOTIFY_NUM_SECTIONS_DEFAULT 2
 define NOTIFY_RX_ID_DEFAULT 0
-
+# ---------------------- CAN bus -------------------------
+PB5 CAN2_RX CAN2
+PB13 CAN2_TX CAN2
 # ---------------------- I2C bus ------------------------
-undef PB8
-undef PB9
-
 I2C_ORDER I2C1
 
 PB8 I2C1_SCL I2C1

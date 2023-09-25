@@ -3,6 +3,9 @@
 #include "AP_Periph.h"
 
 extern const AP_HAL::HAL &hal;
+#ifndef AP_PERIPH_IMU_ENABLE_DEFAULT
+#define AP_PERIPH_IMU_ENABLE_DEFAULT 0
+#endif
 
 #ifndef HAL_PERIPH_LED_BRIGHT_DEFAULT
 #define HAL_PERIPH_LED_BRIGHT_DEFAULT 100
@@ -266,7 +269,7 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     GSCALAR(baro_max_rate, "BARO_MAX_RATE", 2),
 #endif
 
-#ifdef AP_INERTIALSENSOR_ENABLED
+#if AP_INERTIALSENSOR_ENABLED
     // @Param: IMU_ENABLE
     // @DisplayName: IMU Enable
     // @Description: IMU Enable

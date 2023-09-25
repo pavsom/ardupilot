@@ -31,40 +31,41 @@ void AP_Periph_FW::can_baro_update(void)
     baro.update();
 
 #if !AP_DRONECAN_SNOWSTORM_SUPPORT
-    uint8_t baroInstances = baro.num_instances();
-    for (uint8_t i = 0; i < baroInstances; i++){
-        can_baro_send(i);
-    }
+    can_baro_send(baro.get_primary());
 #else
-    static uint8_t sendPressureCounter = 0;
+    can_baro_send_pressures();
+    /* static uint8_t sendPressureCounter = 0;
     if ((sendPressureCounter++)%120){
         can_baro_send_altitudes();
     }else{
         can_baro_send_pressures();
-    }
-    
+    } */
 #endif 
 }
 
 #if AP_DRONECAN_SNOWSTORM_SUPPORT
 void AP_Periph_FW::can_baro_send_pressures(){
     uint8_t dataLength = 0;
-    com_snowstorm_sensors_Pressure msg {};
-    uint8_t baroInstances = baro.num_instances();
+    com_snowstorm_Pressure msg {};
+    if (!can_baro_data_good(baro.get_primary())) return;
+    msg.pressures.data[0].sensor_id = baro.get_primary();
+    msg.pressures.data[0].current_pressure = static_cast<uint32_t>(baro.get_pressure());
+    dataLength++;
+
+    /* uint8_t baroInstances = baro.num_instances();
     for (uint8_t i = 0; i < baroInstances; i++){
         if (!can_baro_data_good(i)) continue;
         msg.pressures.data[dataLength].sensor_id = i;
         msg.pressures.data[dataLength].current_pressure = static_cast<uint32_t>(baro.get_pressure(i));
-        msg.pressures.data[dataLength].current_pressure = static_cast<uint32_t>(baro.get_ground_pressure(i));
         dataLength++;
     }
-    if (!dataLength) return;
+    if (!dataLength) return; */
     msg.pressures.len = dataLength;
     {
-        uint8_t buffer[COM_SNOWSTORM_SENSORS_PRESSURE_MAX_SIZE] {};
-        uint16_t total_size = com_snowstorm_sensors_Pressure_encode(&msg, buffer, !periph.canfdout());
-        canard_broadcast(COM_SNOWSTORM_SENSORS_PRESSURE_SIGNATURE,
-                            COM_SNOWSTORM_SENSORS_PRESSURE_ID,
+        uint8_t buffer[COM_SNOWSTORM_PRESSURE_MAX_SIZE] {};
+        uint16_t total_size = com_snowstorm_Pressure_encode(&msg, buffer, !periph.canfdout());
+        canard_broadcast(COM_SNOWSTORM_PRESSURE_SIGNATURE,
+                            COM_SNOWSTORM_PRESSURE_ID,
                             CANARD_TRANSFER_PRIORITY_LOW,
                             &buffer[0],
                             total_size);
@@ -72,7 +73,7 @@ void AP_Periph_FW::can_baro_send_pressures(){
 }
 void AP_Periph_FW::can_baro_send_altitudes(){
     uint8_t dataLength = 0;
-    com_snowstorm_sensors_Altitude msg {};
+    com_snowstorm_Altitude msg {};
     uint8_t baroInstances = baro.num_instances();
     for (uint8_t i = 0; i < baroInstances; i++){
         if (!can_baro_data_good(i)) continue;
@@ -83,10 +84,10 @@ void AP_Periph_FW::can_baro_send_altitudes(){
     if (!dataLength) return;
     msg.altitudes.len = dataLength;
     {
-        uint8_t buffer[COM_SNOWSTORM_SENSORS_ALTITUDE_MAX_SIZE] {};
-        uint16_t total_size = com_snowstorm_sensors_Altitude_encode(&msg, buffer, !periph.canfdout());
-        canard_broadcast(COM_SNOWSTORM_SENSORS_ALTITUDE_SIGNATURE,
-                            COM_SNOWSTORM_SENSORS_ALTITUDE_ID,
+        uint8_t buffer[COM_SNOWSTORM_ALTITUDE_MAX_SIZE] {};
+        uint16_t total_size = com_snowstorm_Altitude_encode(&msg, buffer, !periph.canfdout());
+        canard_broadcast(COM_SNOWSTORM_ALTITUDE_SIGNATURE,
+                            COM_SNOWSTORM_ALTITUDE_ID,
                             CANARD_TRANSFER_PRIORITY_LOW,
                             &buffer[0],
                             total_size);

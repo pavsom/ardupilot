@@ -156,7 +156,7 @@ void AP_Periph_FW::init()
     compass.init();
 #endif
 
-#ifdef AP_INERTIALSENSOR_ENABLED
+#if AP_INERTIALSENSOR_ENABLED
     imu.init(1000);
 #endif
 
