@@ -83,8 +83,8 @@ define HAL_UART_STACK_SIZE 0x300
 # ---------------------- I2C bus ------------------------
 #I2C_ORDER I2C1
 
-#PB8 I2C1_SCL I2C1
-#PB9 I2C1_SDA I2C1
+#PB6 I2C1_SCL I2C1
+#PB7 I2C1_SDA I2C1
 
 #PB10 I2C2_SCL I2C2
 #PB11 I2C2_SDA I2C2
@@ -96,14 +96,13 @@ define HAL_UART_STACK_SIZE 0x300
 # ---------------------- CAN bus -------------------------
 define HAL_CAN_POOL_SIZE 6000
 # enable CAN support
-PB8 CAN1_RX CAN1
-PB9 CAN1_TX CAN1
+#PB8 CAN1_RX CAN1
+#PB9 CAN1_TX CAN1
 
-PB5 CAN2_RX CAN2
-PB13 CAN2_TX CAN2
+#PB5 CAN2_RX CAN2
+#PB13 CAN2_TX CAN2
 
 #define CAN_APP_NODE_NAME "org.ardupilot.f405_Echo"
-
 
 # --------------------- BAROS MS5837 ---------------------------
 #define HAL_PERIPH_ENABLE_BAROd
@@ -165,3 +164,5 @@ define AP_PARAM_MAX_EMBEDDED_PARAM 512
 define HAL_DISABLE_LOOP_DELAY
 
 PB0 LED_GREEN2 OUTPUT LOW GPIO(11)  # GREEN
+
+#define AP_DRONECAN_SNOWSTORM_SUPPORT 1
