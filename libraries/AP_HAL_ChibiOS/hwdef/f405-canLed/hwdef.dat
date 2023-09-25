@@ -40,3 +40,23 @@ define HAL_CAN_DEFAULT_NODE_ID 100
 define CAN_APP_NODE_NAME "org.ardupilot.f405_LED"
 define NOTIFY_NUM_SECTIONS_DEFAULT 2
 define NOTIFY_RX_ID_DEFAULT 0
+
+# ---------------------- I2C bus ------------------------
+I2C_ORDER I2C1
+
+PB8 I2C1_SCL I2C1
+PB9 I2C1_SDA I2C1
+
+#PB10 I2C2_SCL I2C2
+#PB11 I2C2_SDA I2C2
+
+define HAL_USE_I2C TRUE
+define STM32_I2C_USE_I2C1 TRUE
+#define STM32_I2C_USE_I2C2 TRUE
+define HAL_I2C_INTERNAL_MASK 0
+
+# ---------------------- INS ---------------------------
+define AP_INERTIALSENSOR_ENABLED 1
+define INS_MAX_INSTANCES 1
+define AP_PERIPH_IMU_ENABLE_DEFAULT 1
+IMU Invensense I2C:0:0x69 ROTATION_NONE

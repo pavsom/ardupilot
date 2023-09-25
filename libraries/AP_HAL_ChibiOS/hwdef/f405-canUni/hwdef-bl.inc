@@ -40,9 +40,6 @@ PA10 USART1_RX USART1 SPEED_HIGH
 # ---------------------- CAN bus -------------------------
 define HAL_CAN_POOL_SIZE 4096
 # enable CAN support
-PB8 CAN1_RX CAN1
-PB9 CAN1_TX CAN1
-
 PB5 CAN2_RX CAN2
 PB13 CAN2_TX CAN2
 
