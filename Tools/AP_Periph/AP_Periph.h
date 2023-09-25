@@ -36,6 +36,7 @@
 #include <AP_RCProtocol/AP_RCProtocol_config.h>
 #include "rc_in.h"
 #include "batt_balance.h"
+#include <AP_InertialSensor/AP_InertialSensor.h>
 
 #include <AP_NMEA_Output/AP_NMEA_Output.h>
 #if HAL_NMEA_OUTPUT_ENABLED && !(HAL_GCS_ENABLED && defined(HAL_PERIPH_ENABLE_GPS))
@@ -136,8 +137,6 @@ public:
     void can_baro_update();
     void can_baro_send(uint8_t id);
     bool can_baro_data_good(uint8_t id);
-    void can_baro_send_pressures();
-    void can_baro_send_altitudes();
     void can_airspeed_update();
     void can_rangefinder_update();
     void can_rangefinder_send(uint8_t id, enum Rotation orientation);
@@ -146,6 +145,10 @@ public:
     void can_buzzer_update(void);
     void can_safety_button_update(void);
     void can_safety_LED_update(void);
+
+    void can_imu_update(void);
+    void can_imu_send(void);
+    bool can_imu_data_good();
 
     void load_parameters();
     void prepare_reboot();
@@ -188,6 +191,11 @@ public:
 
 #ifdef HAL_PERIPH_ENABLE_MAG
     Compass compass;
+#endif
+
+#ifdef AP_INERTIALSENSOR_ENABLED
+    AP_InertialSensor imu;
+    uint32_t imu_last_sample_usec;
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_BARO

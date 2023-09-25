@@ -1808,6 +1808,10 @@ void AP_Periph_FW::can_update()
     static uint8_t led_idx = 0;
     static uint32_t last_led_change;
 
+#ifdef AP_INERTIALSENSOR_ENABLED
+        can_imu_update();
+#endif
+
     if ((now - last_led_change > led_change_period) && no_iface_finished_dna) {
         // blink LED in recognisable pattern while waiting for DNA
 #ifdef HAL_GPIO_PIN_LED

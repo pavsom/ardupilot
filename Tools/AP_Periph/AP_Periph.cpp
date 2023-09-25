@@ -156,6 +156,10 @@ void AP_Periph_FW::init()
     compass.init();
 #endif
 
+#ifdef AP_INERTIALSENSOR_ENABLED
+    imu.init(1000);
+#endif
+
 #ifdef HAL_PERIPH_ENABLE_BARO
     baro.init();
 #endif
@@ -561,7 +565,6 @@ void AP_Periph_FW::update()
 #if HAL_LOGGING_ENABLED
     logger.periodic_tasks();
 #endif
-
     can_update();
 
 #ifdef HAL_PERIPH_ENABLE_NETWORKING

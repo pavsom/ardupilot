@@ -266,6 +266,24 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     GSCALAR(baro_max_rate, "BARO_MAX_RATE", 2),
 #endif
 
+#ifdef AP_INERTIALSENSOR_ENABLED
+    // @Param: IMU_ENABLE
+    // @DisplayName: IMU Enable
+    // @Description: IMU Enable
+    // @Values: 0:Disabled, 1:Enabled
+    // @User: Standard
+    GSCALAR(imu_enable, "IMU_ENABLE", AP_PERIPH_IMU_ENABLE_DEFAULT),
+
+    // @Param: IMU_MAX_RATE
+    // @DisplayName: IMU max rate
+    // @Description: This is the maximum rate we send IMU data in Hz. Zero means no limit
+    // @Units: Hz
+    // @Range: 0 200
+    // @Increment: 1
+    // @User: Advanced
+    GSCALAR(imu_max_rate, "IMU_MAX_RATE", 1),
+#endif
+
 #ifdef AP_PERIPH_HAVE_LED_WITHOUT_NOTIFY
     // @Param: LED_BRIGHTNESS
     // @DisplayName: LED Brightness
