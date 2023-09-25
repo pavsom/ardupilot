@@ -11,8 +11,8 @@ void AP_Periph_FW::can_imu_update(void)
     }
     uint32_t now = AP_HAL::millis();
     static uint32_t last_update_ms;
-    if (g.imu_max_rate > 0 &&
-        now - last_update_ms < uint32_t(1000/g.imu_max_rate)) {
+    if ((g.imu_max_rate > 0 &&
+        now - last_update_ms < uint32_t(1000/g.imu_max_rate)) || !g.imu_max_rate) {
         // limit to max rate
         return;
     }
