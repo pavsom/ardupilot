@@ -1808,7 +1808,7 @@ void AP_Periph_FW::can_update()
     static uint8_t led_idx = 0;
     static uint32_t last_led_change;
 
-#ifdef AP_INERTIALSENSOR_ENABLED
+#if AP_INERTIALSENSOR_ENABLED
         can_imu_update();
 #endif
 

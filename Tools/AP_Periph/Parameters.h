@@ -113,7 +113,7 @@ public:
     AP_Int8 baro_enable;
     AP_Int16 baro_max_rate;
 #endif
-#ifdef AP_INERTIALSENSOR_ENABLED
+#if AP_INERTIALSENSOR_ENABLED
     AP_Int8 imu_enable;
     AP_Int16 imu_max_rate;
 #endif

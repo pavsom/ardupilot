@@ -137,6 +137,8 @@ public:
     void can_baro_update();
     void can_baro_send(uint8_t id);
     bool can_baro_data_good(uint8_t id);
+    void can_baro_send_pressures();
+    void can_baro_send_altitudes();
     void can_airspeed_update();
     void can_rangefinder_update();
     void can_rangefinder_send(uint8_t id, enum Rotation orientation);
@@ -193,7 +195,7 @@ public:
     Compass compass;
 #endif
 
-#ifdef AP_INERTIALSENSOR_ENABLED
+#if AP_INERTIALSENSOR_ENABLED
     AP_InertialSensor imu;
     uint32_t imu_last_sample_usec;
 #endif
