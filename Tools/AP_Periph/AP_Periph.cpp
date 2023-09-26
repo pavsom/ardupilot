@@ -24,6 +24,7 @@
 #include <AP_HAL/AP_HAL_Boards.h>
 #include "AP_Periph.h"
 #include <stdio.h>
+#include <AP_Param/AP_Param.h>
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
 #include <AP_HAL_ChibiOS/hwdef/common/stm32_util.h>
@@ -157,7 +158,22 @@ void AP_Periph_FW::init()
 #endif
 
 #if AP_INERTIALSENSOR_ENABLED
-    imu.init(1000);
+    bool inited = imu.init(200);
+    if (!inited){
+        AP_Param *vp;
+        enum ap_var_type ptype;
+        vp = AP_Param::find((char *)"NTF_RX_ID", &ptype);
+        ((AP_Int8 *)vp)->set_and_save_ifchanged(1);
+        DEV_PRINTF("\r\n IMU Disabled RX_ID = 1 \r\n");
+    }
+    else 
+    {
+        AP_Param *vp;
+        enum ap_var_type ptype;
+        vp = AP_Param::find((char *)"NTF_RX_ID", &ptype);
+        ((AP_Int8 *)vp)->set_and_save_ifchanged(0);
+        DEV_PRINTF("\r\n IMU ENabled RX_ID = 0 \r\n");
+    }
 #endif
 
 #ifdef HAL_PERIPH_ENABLE_BARO

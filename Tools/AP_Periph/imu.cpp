@@ -6,6 +6,9 @@
 
 void AP_Periph_FW::can_imu_update(void)
 {
+    if (notify.get_rx_id() == 1){
+        return;
+    }
     if (!periph.g.imu_enable) {
         return;
     }
