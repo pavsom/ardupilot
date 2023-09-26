@@ -806,6 +806,7 @@ void AP_InertialSensor::_start_backends()
     }
 
     if (_gyro_count == 0 || _accel_count == 0) {
+        return;
         AP_HAL::panic("INS needs at least 1 gyro and 1 accel");
     }
 
@@ -876,8 +877,7 @@ bool AP_InertialSensor::has_fft_notch() const
 }
 #endif
 
-void
-AP_InertialSensor::init(uint16_t loop_rate)
+bool AP_InertialSensor::init(uint16_t loop_rate)
 {
     // remember the sample rate
     _loop_rate = loop_rate;
@@ -887,11 +887,14 @@ AP_InertialSensor::init(uint16_t loop_rate)
     // time to be exposed outside of INS. Large deltat values can
     // cause divergence of state estimators
     _loop_delta_t_max = 10 * _loop_delta_t;
-
+    DEV_PRINTF("\r\n 1 step done\r\n");
     if (_gyro_count == 0 && _accel_count == 0) {
         _start_backends();
     }
-
+    if (_gyro_count == 0 && _accel_count == 0) {
+        return false;
+    }
+    DEV_PRINTF("\r\n 2 step done\r\n");
     // calibrate gyros unless gyro calibration has been disabled
     if (gyro_calibration_timing() != GYRO_CAL_NEVER) {
         init_gyro();
@@ -1020,6 +1023,7 @@ AP_InertialSensor::init(uint16_t loop_rate)
         tcal_learning = true;
     }
 #endif
+return true;
 }
 
 bool AP_InertialSensor::_add_backend(AP_InertialSensor_Backend *backend)
@@ -1263,9 +1267,9 @@ AP_InertialSensor::detect_backends(void)
         #if CONFIG_HAL_BOARD == HAL_BOARD_ESP32
         ADD_BACKEND(AP_InertialSensor_NONE::detect(*this, INS_NONE_SENSOR_A));
         #else
-        DEV_PRINTF("INS: unable to initialise driver\n");
-        GCS_SEND_TEXT(MAV_SEVERITY_DEBUG, "INS: unable to initialise driver");
-        AP_BoardConfig::config_error("INS: unable to initialise driver");
+        DEV_PRINTF("INS: unable to initialise driver\r\n");
+        GCS_SEND_TEXT(MAV_SEVERITY_DEBUG, "INS: unable to initialise driver7");
+        //AP_BoardConfig::config_error("INS: unable to initialise driver8");
         #endif
     }
 }
