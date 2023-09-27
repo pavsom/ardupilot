@@ -36,7 +36,7 @@ public:
         k_param_debug,
         k_param_imu_enable,
         k_param_imu_max_rate,
-        k_param_ins,
+        k_param_imu,
         k_param_serial_number,
         k_param_adsb_port,
         k_param_servo_channels,

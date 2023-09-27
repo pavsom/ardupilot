@@ -462,6 +462,12 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
     GOBJECT(notify, "NTF_",  AP_Notify),
 #endif
 
+#ifdef AP_INERTIALSENSOR_ENABLED
+    // @Group: INS
+    // @Path: ../libraries/AP_InertialSensor/AP_InertialSensor.cpp
+    GOBJECT(imu, "INS",  AP_InertialSensor),
+#endif
+
 #if HAL_LOGGING_ENABLED
     // @Group: LOG
     // @Path: ../libraries/AP_Logger/AP_Logger.cpp
