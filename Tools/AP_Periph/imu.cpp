@@ -6,10 +6,9 @@
 
 void AP_Periph_FW::can_imu_update(void)
 {
-    if (notify.get_rx_id() == 1){
-        return;
-    }
-    if (!periph.g.imu_enable) {
+     if ((notify.get_rx_id() == 1) ||
+    !imu.use_accel(0) ||
+    !periph.g.imu_enable){
         return;
     }
     uint32_t now = AP_HAL::millis();
@@ -31,16 +30,13 @@ void AP_Periph_FW::can_imu_update(void)
 void AP_Periph_FW::can_imu_send()
 {
     if (!can_imu_data_good()) return;
-    const Vector3f accel = imu.get_accel();
+    const Vector3f accel = imu.get_accel(0);
 
     {
         uavcan_equipment_camera_gimbal_Status pkt {};
-        pkt.gimbal_id = 0;
-        pkt.mode.command_mode = 2;
         pkt.camera_orientation_in_body_frame_xyzw[0] = accel.x;
         pkt.camera_orientation_in_body_frame_xyzw[1] = accel.y;
         pkt.camera_orientation_in_body_frame_xyzw[2] = accel.z;
-        pkt.camera_orientation_in_body_frame_xyzw[3] = 0;
 
         uint8_t buffer[UAVCAN_EQUIPMENT_CAMERA_GIMBAL_STATUS_MAX_SIZE] {};
         uint16_t total_size = uavcan_equipment_camera_gimbal_Status_encode(&pkt, buffer, !periph.canfdout());
