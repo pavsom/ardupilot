@@ -18,10 +18,18 @@
 // multiple sensor instances
 #define BARO_MAX_DRIVERS 3
 
+#ifndef AP_DRONECAN_SNOWSTORM_SUPPORT
+#define AP_DRONECAN_SNOWSTORM_SUPPORT 0
+#endif
 // timeouts for health reporting
+#if AP_DRONECAN_SNOWSTORM_SUPPORT
+#define BARO_TIMEOUT_MS                 1000     // timeout in ms since last successful read
+#define BARO_DATA_CHANGE_TIMEOUT_MS     5000    // timeout in ms since last successful read that involved temperature of pressure changing
+#else
 #define BARO_TIMEOUT_MS                 500     // timeout in ms since last successful read
 #define BARO_DATA_CHANGE_TIMEOUT_MS     2000    // timeout in ms since last successful read that involved temperature of pressure changing
 
+#endif
 class AP_Baro_Backend;
 
 class AP_Baro
@@ -50,6 +58,7 @@ public:
     // initialise the barometer object, loading backend drivers
     void init(void);
 
+    void initCan(void);
     // update the barometer object, asking backends to push data to
     // the frontend
     void update(void);
@@ -72,6 +81,7 @@ public:
     // get primary sensor
     uint8_t get_primary(void) const { return _primary; }
 
+    uint8_t get_primary_setting(void) const { return _primary_baro;}
     // pressure in Pascal. Divide by 100 for millibars or hectopascals
     float get_pressure(void) const { return get_pressure(_primary); }
     float get_pressure(uint8_t instance) const { return sensors[instance].pressure; }
@@ -209,6 +219,12 @@ public:
         return (uint16_t(_options.get()) & uint16_t(option)) != 0;
     }
 
+    enum AP_HAL::Device::BusType getDevId(uint8_t instance){
+        return AP_HAL::Device::devid_get_bus_type(static_cast<uint32_t>(sensors[instance].bus_id));
+    }
+    bool isBaroCan(uint8_t instance){
+        return getDevId(instance) == AP_HAL::Device::BUS_TYPE_UAVCAN;
+    }
 private:
     // singleton
     static AP_Baro *_singleton;
