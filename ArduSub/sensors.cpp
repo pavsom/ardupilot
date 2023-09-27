@@ -1,9 +1,24 @@
 #include "Sub.h"
 
+void Sub::checkBaroChange(){
+    if (depth_sensor_idx == barometer.get_primary()) 
+        return;
+    uint8_t _num_drivers = barometer.num_instances();
+    uint8_t healthyBaroCount = 0; 
+    for (uint8_t i=0; i<_num_drivers; i++) {
+        if (barometer.healthy(i)) healthyBaroCount++;
+    }
+    gcs().send_text(MAV_SEVERITY_INFO, "BARO%d %s changing primary to %d healthy baros left %d", 
+        depth_sensor_idx,barometer.healthy(depth_sensor_idx)?"healthy":"unhealthy", 
+        barometer.get_primary(), healthyBaroCount);
+    depth_sensor_idx = barometer.get_primary();
+}
 // return barometric altitude in centimeters
 void Sub::read_barometer()
 {
     uint32_t tnow = AP_HAL::millis();
+    checkBaroChange();
+    
     barometer.update();
     // If we are reading a positive altitude, the sensor needs calibration
     // Even a few meters above the water we should have no significant depth reading
@@ -19,7 +34,8 @@ void Sub::read_barometer()
     (tnow -  barometerCalibrationTime) > 1000) {
         barometerCalibrationTime = tnow;
         barometer.update_calibration();
-        gcs().send_text(MAV_SEVERITY_INFO, "alt =%f, baroOF =%f, eas2 =%f, exTmp =%f, filt =%d, gP  =%f, gT =%f, time =%ld, prs =%f, prCo =%f, prSea =%f, tmp =%f",
+        gcs().send_text(MAV_SEVERITY_INFO, "baro%d alt =%f, baroOF =%f, eas2 =%f, exTmp =%f, filt =%d, gP  =%f, gT =%f, time =%ld, prs =%f, prCo =%f, prSea =%f, tmp =%f",
+        barometer.get_primary(),
         barometer.get_altitude(),
         barometer.get_baro_drift_offset(),
         barometer.get_EAS2TAS(),
@@ -35,7 +51,7 @@ void Sub::read_barometer()
         
     }
 
-    if (ap.depth_sensor_present) {
+    if (ap.depth_sensor_present && (depth_sensor_idx == barometer.get_primary())) {
         sensor_health.depth = barometer.healthy(depth_sensor_idx);
     }
 }
