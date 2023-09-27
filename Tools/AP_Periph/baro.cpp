@@ -47,9 +47,10 @@ void AP_Periph_FW::can_baro_update(void)
 void AP_Periph_FW::can_baro_send_pressures(){
     uint8_t dataLength = 0;
     com_snowstorm_Pressure msg {};
-    if (!can_baro_data_good(baro.get_primary())) return;
-    msg.pressures.data[0].sensor_id = baro.get_primary();
-    msg.pressures.data[0].current_pressure = static_cast<uint32_t>(baro.get_pressure());
+    if (!can_baro_data_good(baro.get_primary_setting())) return;
+    msg.pressures.data[0].baro_type = baro.get_type(baro.get_primary());
+    msg.pressures.data[0].baro_id = baro.get_primary();
+    msg.pressures.data[0].pressure = static_cast<uint32_t>(baro.get_pressure());
     dataLength++;
 
     /* uint8_t baroInstances = baro.num_instances();
