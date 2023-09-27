@@ -1914,7 +1914,7 @@ check_sample:
         // IMUs to come in
         const uint8_t wait_per_loop = 100;
         const uint8_t wait_counter_limit = uint32_t(_loop_delta_t * 1.0e6) / (3*wait_per_loop);
-
+        
         while (true) {
             for (uint8_t i=0; i<_backend_count; i++) {
                 // this is normally a nop, but can be used by backends
@@ -1964,6 +1964,7 @@ check_sample:
                     _accel_wait_mask &= accel_available_mask;
                     break;
                 }
+                break;
             }
 
             hal.scheduler->delay_microseconds_boost(wait_per_loop);
