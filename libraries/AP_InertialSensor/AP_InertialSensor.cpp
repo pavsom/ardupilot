@@ -806,7 +806,9 @@ void AP_InertialSensor::_start_backends()
     }
 
     if (_gyro_count == 0 || _accel_count == 0) {
+        #ifdef HAL_BUILD_AP_PERIPH
         return;
+        #endif
         AP_HAL::panic("INS needs at least 1 gyro and 1 accel");
     }
 
@@ -1267,7 +1269,10 @@ AP_InertialSensor::detect_backends(void)
         #else
         DEV_PRINTF("INS: unable to initialise driver\r\n");
         GCS_SEND_TEXT(MAV_SEVERITY_DEBUG, "INS: unable to initialise driver");
-        //AP_BoardConfig::config_error("INS: unable to initialise driver");
+        #ifdef HAL_BUILD_AP_PERIPH
+        #else
+        AP_BoardConfig::config_error("INS: unable to initialise driver");
+        #endif
         #endif
     }
 }
