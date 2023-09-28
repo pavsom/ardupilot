@@ -4908,8 +4908,7 @@ class AutoTestCopter(AutoTest):
                           (mount_pitch, despitch))
             if success_start == 0:
                 success_start = now
-                continue
-            if now - success_start > hold:
+            if now - success_start >= hold:
                 self.progress("Mount pitch achieved")
                 return
 
@@ -7676,6 +7675,38 @@ class AutoTestCopter(AutoTest):
         self.change_mode('AUTO')
         self.wait_rtl_complete()
 
+    def MAV_CMD_AIRFRAME_CONFIGURATION(self):
+        '''deploy/retract landing gear using mavlink command'''
+        self.context_push()
+        self.set_parameters({
+            "LGR_ENABLE": 1,
+            "SERVO10_FUNCTION": 29,
+            "SERVO10_MIN": 1001,
+            "SERVO10_MAX": 1999,
+        })
+        self.reboot_sitl()
+
+        # starts loose:
+        self.wait_servo_channel_value(10, 0)
+
+        # 0 is down:
+        self.start_subtest("Put gear down")
+        self.run_cmd(mavutil.mavlink.MAV_CMD_AIRFRAME_CONFIGURATION, p2=0)
+        self.wait_servo_channel_value(10, 1999)
+
+        # 1 is up:
+        self.start_subtest("Put gear up")
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_AIRFRAME_CONFIGURATION, p2=1)
+        self.wait_servo_channel_value(10, 1001)
+
+        # 0 is down:
+        self.start_subtest("Put gear down")
+        self.run_cmd(mavutil.mavlink.MAV_CMD_AIRFRAME_CONFIGURATION, p2=0)
+        self.wait_servo_channel_value(10, 1999)
+
+        self.context_pop()
+        self.reboot_sitl()
+
     def WatchAlts(self):
         '''Ensure we can monitor different altitudes'''
         self.takeoff(30, mode='GUIDED')
@@ -8978,7 +9009,7 @@ class AutoTestCopter(AutoTest):
             raise NotAchievedException("Was expecting takeoff for longer than expected; got=%f want<=%f" %
                                        (duration, want_lt))
 
-    def MAV_CMD_CONDITION_YAW_absolute(self):
+    def _MAV_CMD_CONDITION_YAW(self, command):
         self.start_subtest("absolute")
         self.takeoff(20, mode='GUIDED')
 
@@ -8987,7 +9018,7 @@ class AutoTestCopter(AutoTest):
 
         self.progress("Ensuring initial heading is steady")
         target = initial_heading
-        self.run_cmd(
+        command(
             mavutil.mavlink.MAV_CMD_CONDITION_YAW,
             p1=target,  # target angle
             p2=10,  # degrees/second
@@ -8995,6 +9026,7 @@ class AutoTestCopter(AutoTest):
             p4=0,  # 1 for relative, 0 for absolute
         )
         self.wait_heading(target, minimum_duration=2, timeout=50)
+        self.wait_yaw_speed(0)
 
         degsecond = 2
 
@@ -9008,7 +9040,7 @@ class AutoTestCopter(AutoTest):
         self.progress("Yaw CW 60 degrees")
         target = initial_heading + 60
         part_way_target = initial_heading + 10
-        self.run_cmd(
+        command(
             mavutil.mavlink.MAV_CMD_CONDITION_YAW,
             p1=target,     # target angle
             p2=degsecond,  # degrees/second
@@ -9021,7 +9053,7 @@ class AutoTestCopter(AutoTest):
         self.progress("Yaw CCW 60 degrees")
         target = initial_heading
         part_way_target = initial_heading + 30
-        self.run_cmd(
+        command(
             mavutil.mavlink.MAV_CMD_CONDITION_YAW,
             p1=target,  # target angle
             p2=degsecond,  # degrees/second
@@ -9031,15 +9063,17 @@ class AutoTestCopter(AutoTest):
         self.wait_heading(part_way_target)
         self.wait_heading(target, minimum_duration=2)
 
-        self.do_RTL()
-
-    def MAV_CMD_CONDITION_YAW_relative(self):
-        pass
+        self.disarm_vehicle(force=True)
+        self.reboot_sitl()
 
     def MAV_CMD_CONDITION_YAW(self):
-        '''Test response to MAV_CMD_CONDITION_YAW'''
-        self.MAV_CMD_CONDITION_YAW_absolute()
-        self.MAV_CMD_CONDITION_YAW_relative()
+        '''Test response to MAV_CMD_CONDITION_YAW via mavlink'''
+        self.context_push()
+        self._MAV_CMD_CONDITION_YAW(self.run_cmd_int)
+        self.context_pop()
+        self.context_push()
+        self._MAV_CMD_CONDITION_YAW(self.run_cmd)
+        self.context_pop()
 
     def GroundEffectCompensation_touchDownExpected(self):
         '''Test EKF's handling of touchdown-expected'''
@@ -9965,6 +9999,7 @@ class AutoTestCopter(AutoTest):
              self.IE24,
              self.MAVLandedStateTakeoff,
              self.Weathervane,
+             self.MAV_CMD_AIRFRAME_CONFIGURATION,
         ])
         return ret
 
@@ -10229,6 +10264,23 @@ class AutoTestCopter(AutoTest):
         self.disarm_vehicle(force=True)
         self.reboot_sitl()
 
+    def _MAV_CMD_DO_FLIGHTTERMINATION(self, command):
+        self.set_parameters({
+            "SYSID_MYGCS": self.mav.source_system,
+            "DISARM_DELAY": 0,
+        })
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.context_collect('STATUSTEXT')
+        command(mavutil.mavlink.MAV_CMD_DO_FLIGHTTERMINATION, p1=1)
+        self.wait_disarmed()
+        self.reboot_sitl()
+
+    def MAV_CMD_DO_FLIGHTTERMINATION(self):
+        '''test MAV_CMD_DO_FLIGHTTERMINATION works on Copter'''
+        self._MAV_CMD_DO_FLIGHTTERMINATION(self.run_cmd)
+        self._MAV_CMD_DO_FLIGHTTERMINATION(self.run_cmd_int)
+
     def tests2b(self):  # this block currently around 9.5mins here
         '''return list of all tests'''
         ret = ([
@@ -10293,6 +10345,7 @@ class AutoTestCopter(AutoTest):
             self.RPLidarA2,
             self.SafetySwitch,
             self.BrakeZ,
+            self.MAV_CMD_DO_FLIGHTTERMINATION,
         ])
         return ret
 
