@@ -809,6 +809,11 @@ void AP_Baro::init(void)
 #endif
 }
 
+void AP_Baro::initCan(void){
+#if AP_BARO_DRONECAN_ENABLED
+    ADD_BACKEND(AP_Baro_DroneCAN::probe(*this));
+#endif
+}
 /*
   probe all the i2c barometers enabled with BARO_PROBE_EXT. This is
   used on boards without a builtin barometer
@@ -968,11 +973,21 @@ void AP_Baro::update(void)
 
     // choose primary sensor
     if (_primary_baro >= 0 && _primary_baro < _num_sensors && healthy(_primary_baro)) {
+#if AP_DRONECAN_SNOWSTORM_SUPPORT        
+        if (_primary != _primary_baro)
+            printf("GOOD changed primary from %d to primaryBaro %d\n\r",_primary,_primary_baro);
+#endif
         _primary = _primary_baro;
     } else {
+#if !AP_DRONECAN_SNOWSTORM_SUPPORT        
         _primary = 0;
+#endif
         for (uint8_t i=0; i<_num_sensors; i++) {
             if (healthy(i)) {
+#if AP_DRONECAN_SNOWSTORM_SUPPORT                
+                if (_primary != i)
+                    printf("BAD changed primary from %d to %d primaryBaro %d\n\r",_primary, i, _primary_baro);
+#endif
                 _primary = i;
                 break;
             }

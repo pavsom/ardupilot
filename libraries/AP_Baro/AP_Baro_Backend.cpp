@@ -22,9 +22,21 @@ void AP_Baro_Backend::update_healthy_flag(uint8_t instance)
     // last 0.5 seconds and values are non-zero and have changed within the last 2 seconds
     const uint32_t now = AP_HAL::millis();
     _frontend.sensors[instance].healthy =
+#if AP_DRONECAN_SNOWSTORM_SUPPORT
+        (now - _frontend.sensors[instance].last_update_ms 
+        < (_frontend.sensors[instance].healthy ? 
+                instance != _frontend.get_primary()? 60000 : BARO_TIMEOUT_MS : 
+                BARO_TIMEOUT_MS)) &&
+        (now - _frontend.sensors[instance].last_change_ms 
+        < (_frontend.sensors[instance].healthy ?
+                instance != _frontend.get_primary()? 60000 : BARO_DATA_CHANGE_TIMEOUT_MS :
+                BARO_DATA_CHANGE_TIMEOUT_MS)) &&
+        !is_zero(_frontend.sensors[instance].pressure);
+#else
         (now - _frontend.sensors[instance].last_update_ms < BARO_TIMEOUT_MS) &&
         (now - _frontend.sensors[instance].last_change_ms < BARO_DATA_CHANGE_TIMEOUT_MS) &&
         !is_zero(_frontend.sensors[instance].pressure);
+#endif
 
     if (_frontend.sensors[instance].temperature < -200 ||
         _frontend.sensors[instance].temperature > 200) {

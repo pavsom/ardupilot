@@ -474,6 +474,7 @@ private:
     void default_js_buttons(void);
     void clear_input_hold();
     void read_barometer(void);
+    void checkBaroChange(void);
     void init_rangefinder(void);
     void read_rangefinder(void);
     bool rangefinder_alt_ok(void) const;

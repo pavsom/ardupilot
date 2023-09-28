@@ -39,6 +39,9 @@ void Sub::userhook_SlowLoop()
 #ifdef USERHOOK_SUPERSLOWLOOP
 void Sub::userhook_SuperSlowLoop()
 {
+    if (barometer.num_instances() < 3){
+        barometer.initCan();
+    }
     if (!ahrs.healthy())
     hal.console->printf("ahrs healthy %d\n\r",ahrs.healthy());  
     if (!ahrs.EKF3.healthy())
@@ -47,6 +50,7 @@ void Sub::userhook_SuperSlowLoop()
     hal.console->printf("ship class %d\n\r",(uint8_t)ahrs.get_vehicle_class());  
     if (!ahrs.have_inertial_nav())
         hal.console->printf("no inertial navigation\n\r");
+    //printf("primary baro %d haelthy %s\n\r",barometer.get_primary(),(barometer.healthy()?"ok":"bad"));
     /* Location temp_loc;
     bool getLoc = ahrs.get_location(temp_loc);
     if (!getLoc) printf("get loc fail ");

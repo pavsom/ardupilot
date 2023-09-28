@@ -128,7 +128,11 @@ void Sub::init_ardupilot()
     barometer.update();
 
     for (uint8_t i = 0; i < barometer.num_instances(); i++) {
-        if (barometer.get_type(i) == AP_Baro::BARO_TYPE_WATER) {
+        if (barometer.get_type(i) == AP_Baro::BARO_TYPE_WATER 
+#if AP_DRONECAN_SNOWSTORM_SUPPORT
+        && barometer.getDevId(i) ==  AP_HAL::Device::BUS_TYPE_I2C 
+#endif
+        ){
             barometer.set_primary_baro(i);
             depth_sensor_idx = i;
             ap.depth_sensor_present = true;

@@ -49,6 +49,29 @@ private:
         AP_Baro_DroneCAN* driver;
     } _detected_modules[BARO_MAX_DRIVERS];
 
+#if AP_DRONECAN_SNOWSTORM_SUPPORT
+    uint32_t lastMessage;
+    // send text prefix string to reduce flash cost
+    static const char* send_text_prefix;
+    int8_t receiveRate = 0;
+    int8_t detectedModulesInstance = -1;
+    // DroneCAN parameter handling methods
+    FUNCTOR_DECLARE(param_int_cb, bool, AP_DroneCAN*, const uint8_t, const char*, int32_t &);
+    FUNCTOR_DECLARE(param_string_cb, bool, AP_DroneCAN*, const uint8_t, const char*, AP_DroneCAN::string &);
+    FUNCTOR_DECLARE(param_float_cb, bool, AP_DroneCAN*, const uint8_t, const char*, float &);
+    FUNCTOR_DECLARE(param_save_cb, void, AP_DroneCAN*, const uint8_t, bool);
+
+    bool handle_param_get_set_response_int(AP_DroneCAN* ap_dronecan, const uint8_t node_id, const char* name, int32_t &value);
+    bool handle_param_get_set_response_string(AP_DroneCAN* ap_dronecan, const uint8_t node_id, const char* name, AP_DroneCAN::string &value);
+    bool handle_param_get_set_response_float(AP_DroneCAN* ap_dronecan, const uint8_t node_id, const char* name, float &value);
+    void handle_param_save_response(AP_DroneCAN* ap_dronecan, const uint8_t node_id, bool success);
+
+    // helper function to get and set parameters
+    bool set_param_int32(const char* param_name, int32_t param_value);
+    bool set_param_string(const char* param_name, const AP_DroneCAN::string& param_value);
+    bool get_param_string(const char* param_name);
+    uint32_t last_send_getset_param_ms;             // system time that a get or set parameter message was sent
+#endif
     static HAL_Semaphore _sem_registry;
 };
 
