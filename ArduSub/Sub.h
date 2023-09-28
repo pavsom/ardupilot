@@ -68,11 +68,11 @@
 #include "defines.h"
 #include "config.h"
 #include "GCS_Mavlink.h"
+#include "mode.h"
 #include "RC_Channel.h"         // RC Channel Library
 #include "Parameters.h"
 #include "AP_Arming_Sub.h"
 #include "GCS_Sub.h"
-#include "mode.h"
 #include "script_button.h"
 
 #include <AP_OpticalFlow/AP_OpticalFlow.h>     // Optical Flow library
