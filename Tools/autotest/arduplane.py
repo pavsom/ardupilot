@@ -4879,6 +4879,14 @@ class AutoTestPlane(AutoTest):
 
         self.fly_home_land_and_disarm()
 
+    def MAV_CMD_DO_AUTOTUNE_ENABLE(self):
+        '''test enabling autotune via mavlink'''
+        self.context_collect('STATUSTEXT')
+        self.run_cmd(mavutil.mavlink.MAV_CMD_DO_AUTOTUNE_ENABLE, p1=1)
+        self.wait_statustext('Started autotune', check_context=True)
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_DO_AUTOTUNE_ENABLE, p1=0)
+        self.wait_statustext('Stopped autotune', check_context=True)
+
     def DO_PARACHUTE(self):
         '''test triggering parachute via mavlink'''
         self.set_parameters({
@@ -4900,6 +4908,42 @@ class AutoTestPlane(AutoTest):
             self.wait_servo_channel_value(9, 1300)
             self.disarm_vehicle()
             self.reboot_sitl()
+
+    def _MAV_CMD_DO_GO_AROUND(self, command):
+        self.load_mission("mission.txt")
+        self.set_parameter("RTL_AUTOLAND", 3)
+        self.change_mode('AUTO')
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.wait_current_waypoint(6)
+        command(mavutil.mavlink.MAV_CMD_DO_GO_AROUND, p1=150)
+        self.wait_current_waypoint(5)
+        self.wait_altitude(135, 165, relative=True)
+        self.wait_disarmed(timeout=300)
+
+    def MAV_CMD_DO_GO_AROUND(self):
+        '''test MAV_CMD_DO_GO_AROUND as a mavlink command'''
+        self._MAV_CMD_DO_GO_AROUND(self.run_cmd)
+        self._MAV_CMD_DO_GO_AROUND(self.run_cmd_int)
+
+    def _MAV_CMD_DO_FLIGHTTERMINATION(self, command):
+        self.set_parameters({
+            "AFS_ENABLE": 1,
+            "SYSID_MYGCS": self.mav.source_system,
+            "AFS_TERM_ACTION": 42,
+        })
+        self.wait_ready_to_arm()
+        self.arm_vehicle()
+        self.context_collect('STATUSTEXT')
+        command(mavutil.mavlink.MAV_CMD_DO_FLIGHTTERMINATION, p1=1)
+        self.wait_disarmed()
+        self.wait_text('Terminating due to GCS request', check_context=True)
+        self.reboot_sitl()
+
+    def MAV_CMD_DO_FLIGHTTERMINATION(self):
+        '''test MAV_CMD_DO_FLIGHTTERMINATION works on Plane'''
+        self._MAV_CMD_DO_FLIGHTTERMINATION(self.run_cmd)
+        self._MAV_CMD_DO_FLIGHTTERMINATION(self.run_cmd_int)
 
     def tests(self):
         '''return list of all tests'''
@@ -4995,6 +5039,9 @@ class AutoTestPlane(AutoTest):
             self.MAV_CMD_GUIDED_CHANGE_ALTITUDE,
             self.MAV_CMD_PREFLIGHT_CALIBRATION,
             self.MAV_CMD_DO_INVERTED_FLIGHT,
+            self.MAV_CMD_DO_AUTOTUNE_ENABLE,
+            self.MAV_CMD_DO_GO_AROUND,
+            self.MAV_CMD_DO_FLIGHTTERMINATION,
         ])
         return ret
 

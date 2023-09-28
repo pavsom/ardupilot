@@ -644,8 +644,10 @@ static const ap_message STREAM_EXTRA3_msgs[] = {
     MSG_BATTERY_STATUS,
     MSG_GIMBAL_DEVICE_ATTITUDE_STATUS,
     MSG_OPTICAL_FLOW,
+#if COMPASS_CAL_ENABLED
     MSG_MAG_CAL_REPORT,
     MSG_MAG_CAL_PROGRESS,
+#endif
     MSG_EKF_STATUS_REPORT,
     MSG_VIBRATION,
 };
@@ -954,6 +956,9 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_packet(const mavlink_command_in
 {
     switch(packet.command) {
 
+    case MAV_CMD_DO_AUTOTUNE_ENABLE:
+        return handle_MAV_CMD_DO_AUTOTUNE_ENABLE(packet);
+
     case MAV_CMD_DO_REPOSITION:
         return handle_command_int_do_reposition(packet);
 
@@ -996,6 +1001,9 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_packet(const mavlink_command_in
     case MAV_CMD_DO_VTOL_TRANSITION:
         return handle_command_DO_VTOL_TRANSITION(packet);
 #endif
+
+    case MAV_CMD_DO_GO_AROUND:
+        return plane.trigger_land_abort(packet.param1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
 
     default:
         return GCS_MAVLINK::handle_command_int_packet(packet, msg);
@@ -1056,17 +1064,16 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_long_packet(const mavlink_command_l
         }
         return MAV_RESULT_FAILED;
 
-    case MAV_CMD_DO_GO_AROUND:
-        return plane.trigger_land_abort(packet.param1) ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
-
-    case MAV_CMD_DO_AUTOTUNE_ENABLE:
-        // param1 : enable/disable
-        plane.autotune_enable(!is_zero(packet.param1));
-        return MAV_RESULT_ACCEPTED;
-
     default:
         return GCS_MAVLINK::handle_command_long_packet(packet, msg);
     }
+}
+
+MAV_RESULT GCS_MAVLINK_Plane::handle_MAV_CMD_DO_AUTOTUNE_ENABLE(const mavlink_command_int_t &packet)
+{
+        // param1 : enable/disable
+        plane.autotune_enable(!is_zero(packet.param1));
+        return MAV_RESULT_ACCEPTED;
 }
 
 #if PARACHUTE == ENABLED
