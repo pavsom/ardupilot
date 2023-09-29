@@ -139,7 +139,7 @@ public:
         bool temp_cal_running;    // true if a temperature calibration is running
         bool gyro_calibrated;     // true if calibrated gyro/acc
         
-        bool combat_mode;
+        bool red_blink_mode;
         bool search_mode;
         bool service_mode;
         bool manual_mode;

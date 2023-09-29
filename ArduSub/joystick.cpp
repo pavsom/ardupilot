@@ -419,8 +419,8 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_1_toggle:
         if (!held) {
-            AP_Notify::flags.combat_mode = AP_Notify::flags.combat_mode? false : true;
-            gcs().send_text(MAV_SEVERITY_INFO,"#combat mode toggled");
+            AP_Notify::flags.red_blink_mode = AP_Notify::flags.red_blink_mode? false : true;
+            gcs().send_text(MAV_SEVERITY_INFO,"#red blink mode toggled");
             relay.toggle(0);
         }
         break;
