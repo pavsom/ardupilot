@@ -317,8 +317,8 @@ void RGBLed::custom_override(void)
 
         // Part of cycle that sets leds from flags
         if (AP_Notify::flags.service_mode){
-            leds = colorServiceMode;
-            ledsNoBlink = colorServiceMode;
+            leds = colorRedTestMode;
+            ledsNoBlink = colorRedTestMode;
         }
         if (AP_Notify::flags.armed){
             if(i < id_nums/2){
@@ -332,18 +332,18 @@ void RGBLed::custom_override(void)
         }
         if (AP_Notify::flags.manual_mode){
             if(i < id_nums/2){
-                leds = colorManualModeLeft;
+                leds = colorGreenTestMode;
             }
             else{
-                leds = colorManualModeRight;
+                leds = colorBlueTestMode;
             }
         }
         if (AP_Notify::flags.search_mode){
             leds = colorSearchMode;
             ledsNoBlink = colorSearchMode;
         }
-        if (AP_Notify::flags.combat_mode){
-            leds = colorCombatMode;
+        if (AP_Notify::flags.red_blink_mode){
+            leds = colorRedBlinkMode;
         }
 
         // Part of cycle that does the blinking
