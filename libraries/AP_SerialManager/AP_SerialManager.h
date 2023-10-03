@@ -131,6 +131,8 @@
 #define AP_SERIALMANAGER_ROBOTIS_BUFSIZE_RX  128
 #define AP_SERIALMANAGER_ROBOTIS_BUFSIZE_TX  128
 
+#define AP_SERIALMANAGER_HIWONDER_BUFSIZE_RX  128
+#define AP_SERIALMANAGER_HIWONDER_BUFSIZE_TX  128
 // MegaSquirt EFI protocol
 #define AP_SERIALMANAGER_EFI_MS_BAUD           115
 #define AP_SERIALMANAGER_EFI_MS_BUFSIZE_RX     512
@@ -205,6 +207,8 @@ public:
         SerialProtocol_MAVLinkHL = 43,
         SerialProtocol_Tramp = 44,
         SerialProtocol_DDS_XRCE = 45,
+
+        SerialProtocol_Hiwonder = 99,
         SerialProtocol_NumProtocols                    // must be the last value
     };
 
