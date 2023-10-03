@@ -1,0 +1,58 @@
+include ../f405-canUni/hwdef.inc
+
+define CAN_APP_NODE_NAME "org.ardupilot.f405_Air"
+
+# ---------------------- UARTs ---------------------------
+# order of UARTs
+#           | sr0  | sr1  | sr2  | GPS | MSP |
+SERIAL_ORDER USART1 USART3
+
+STDOUT_SERIAL SD1
+STDOUT_BAUDRATE 57600
+
+PC0 OUT_PWR_12V OUTPUT GPIO(1) LOW
+# ---------------------- VSD -------------------------
+PC2 OUT_PWR_COIL OUTPUT GPIO(2) LOW 
+PC3 IN_PWR_COIL INPUT GPIO(3)
+# ---------------------- Servo -------------------------
+define AP_HIWONDERSERVO_ENABLED 1
+define NUM_SERVO_CHANNELS 2
+# USART3
+PC10 USART3_TX USART3 SPEED_HIGH GPIO(6)
+PC11 USART3_RX USART3 SPEED_HIGH
+
+PC4 OUT_PWR_SERVO OUTPUT GPIO(4) HIGH
+PC5 IN_PWR_SERVO INPUT GPIO(5)
+# ---------------------- CAN bus -------------------------
+PB8 CAN1_RX CAN1
+PB9 CAN1_TX CAN1
+
+PB5 CAN2_RX CAN2
+PB13 CAN2_TX CAN2
+# ---------------------- I2C bus -------------------------
+# I2C1,
+PB7 I2C1_SDA I2C1
+PB6 I2C1_SCL I2C1
+
+# I2C2, 
+PB10 I2C2_SCL I2C2
+PB11 I2C2_SDA I2C2
+
+I2C_ORDER I2C1 I2C2
+
+# ---------------------- BARO -------------------------
+define AP_PERIPH_BARO_ENABLE_DEFAULT 1
+define AP_BARO_BACKEND_DEFAULT_ENABLED 0
+define AP_BARO_MS56XX_ENABLED 1
+define AP_BARO_MS5837_ENABLED 1
+define HAL_BARO_PROBE_EXT_DEFAULT 512
+define HAL_I2C_INTERNAL_MASK 4
+define HAL_PERIPH_ENABLE_BARO
+
+#env OPTIMIZE -O0
+define AP_DRONECAN_SNOWSTORM_SUPPORT 1
+define AP_DRONECAN_SNOWSTORM_VSD_SUPPORT 1
+define AP_INERTIALSENSOR_ENABLED 0
+
+define HAL_PERIPH_ENABLE_RC_OUT
+define AP_HIWONDERSERVO_ENABLED 1
