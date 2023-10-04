@@ -35,7 +35,7 @@
 */
 
 #include "AP_HiwonderServo_Device.h"
-
+#include <AP_Math/AP_Math.h>
 #if AP_HIWONDERSERVO_ENABLED
 
 
@@ -194,10 +194,18 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
     timeCurrent = _time;
     switch (servo)
     {
+    case Servo::UNKNOWN:
+        break;
     case Servo::IDLE:
     if (!repliesToReceive){
-        send_read(SERVO_TEMP_READ);
-        send_read(SERVO_LED_ERROR_READ);
+        if (positionSet != params.angleSet){
+            start();
+        }else{
+            send_read(SERVO_MOVE_TIME_READ);
+            send_read(SERVO_POS_READ);
+            send_read(SERVO_TEMP_READ);
+            send_read(SERVO_LED_ERROR_READ);
+        }
     }
         break;
     case Servo::MOVING:
@@ -212,12 +220,14 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
     switch (state)
     {
     case State::DETECT:
+        servo = Servo::UNKNOWN;
         detected = 0;
         detect();
         break;
     case State::CONFIG:
         sendConfig();
         detected = 2;
+        servo = Servo::IDLE;
         state = State::WAIT;
         timeLastMove = timeCurrent;
         break;
@@ -237,18 +247,18 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
             state = State::MOVE_MAX;
         break;
     case State::MOVE_MAX:
-        setPosition(1000, 0);
+        setDegree(240,0);
         state = State::MOVE_MIN;
         break;
     case State::MOVE_MIN:
         if (servo == Servo::IDLE){
-            setPosition(0, 1000);
+            setDegree(0,30.00);
             state = State::MOVE_MID;
         }
         break;
     case State::MOVE_MID:
         if (servo == Servo::IDLE){
-            setPosition(500, 100);
+            setDegree(120, 0.5);
             state = State::IDLE;
         }
         break;
@@ -270,21 +280,10 @@ bool AP_HiwonderServo_Device::inPosition(){
 }
 
 
-void AP_HiwonderServo_Device::setPosition(int16_t _position){
-    /* positionSet = _position;
-    positionTime = 0;
-    timeLastMove = timeCurrent;
-    servo = Servo::MOVING; */
-    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)_position,(uint16_t)0);
-    //send_read(SERVO_MOVE_TIME_READ);
-}
-
-void AP_HiwonderServo_Device::setPosition(int16_t _position, uint16_t _time){
-    positionSet = _position;
-    positionTime = _time;
+void AP_HiwonderServo_Device::start(){
     timeLastMove = timeCurrent;
     servo = Servo::MOVING;
-    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)_position,(uint16_t)_time);
+    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)positionSet,(uint16_t)positionTime);
     send_read(SERVO_MOVE_TIME_READ);
 }
 
@@ -384,5 +383,36 @@ void AP_HiwonderServo_Device::send_command(uint8_t cmd, uint16_t param1, uint16_
     txItem.item.data[3] = DXL_HIBYTE(param2);
     txItem.item.withReply = 0;
     serialDriver->addTxItem(txItem);
+}
+
+
+void AP_HiwonderServo_Device::setDegree(float angle, float degreePerSecond)
+{
+    angle = constrain_float(angle, 0, 240);
+    if (degreePerSecond < 0) degreePerSecond = 0;
+    if (abs(degreePerSecond) < 0.001){
+        positionTime = 0;
+    }else{
+        float speed = abs(positionToDegree(positionSet) - angle) * 1000;
+        speed /= degreePerSecond;
+        if (speed > 30000) speed = 30000;
+        positionTime = static_cast<uint16_t>(speed);
+    }
+    positionSet = degreeToPosition(angle);
+}
+
+float AP_HiwonderServo_Device::degreeToPosition(float angle)
+{
+    return angle * angleToStepsRatio;
+}
+
+float AP_HiwonderServo_Device::positionToDegree(int16_t _position)
+{
+    return _position / angleToStepsRatio;
+}
+
+void AP_HiwonderServo_Device::moveDegree(float angle, float degreePerSecond)
+{
+    setDegree(angle + positionToDegree(positionSet), degreePerSecond);
 }
 #endif  // AP_HIWONDERSERVO_ENABLED

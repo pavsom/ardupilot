@@ -38,6 +38,7 @@ class AP_HiwonderServo_Device {
     MOVE_MID
   };
   enum class Servo{
+    UNKNOWN,
     IDLE,
     MOVING
   };
@@ -72,23 +73,28 @@ private:
   int16_t positionSet;
   uint16_t positionTime;
   uint32_t timeLastMove;
-  Servo servo = Servo::IDLE;
+  Servo servo = Servo::UNKNOWN;
   // -------------  move  ---------- //
-  void setPosition(int16_t _position);
-  void setPosition(int16_t _position, uint16_t _time);
-  bool inPosition();
-  // -------------  move  ---------- //
+  inline void start();
+  inline bool inPosition();
+  
+  void setDegree(float angle, float degreePerSecond);
+  void moveDegree(float angle, float degreePerSecond);
   // ------------- comand ---------- //
   void sendConfig();
   inline void send_command(uint8_t cmd);
   inline void changeAddress(uint8_t idOld);
   inline void send_command(uint8_t cmd, uint8_t param1);
   inline void send_command(uint8_t cmd, uint16_t param1, uint16_t param2);
+
+ 
   // ------------- read ------------ //
   void readAll();
   inline void send_read(uint8_t cmd);
   inline void send_read(uint8_t cmd, uint8_t _id);
-
+  // ------------ utils ------------ //
+  inline float degreeToPosition(float angle);
+  inline float positionToDegree(int16_t _position);
   struct servoParameters{
     uint32_t posMax;
     uint32_t posMin;

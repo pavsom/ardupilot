@@ -235,6 +235,7 @@ void AP_HiwonderServo::update()
                 break;
             }
         }
+        rxQueue.pop();
         return;
     }
 
