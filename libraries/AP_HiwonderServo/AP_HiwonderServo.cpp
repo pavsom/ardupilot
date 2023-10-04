@@ -133,62 +133,28 @@ bool AP_HiwonderServo::sendMessage(servoMessageItem& txItem)
 
     port->write(txBuf, length+3);
     last_send_us = AP_HAL::micros();
-    timeout = (txItem.item.withReply? 
-        100000 : ((30) * us_per_byte + us_gap));
-    replyPending = txItem.item.id;
-    return txItem.item.withReply? false : true;
+    if (txItem.item.withReply){
+        timeout = 100000;
+        replyPending = txItem.item.id;
+        return false;
+    }else{
+        timeout = (30) * us_per_byte + us_gap;
+        replyPending = -1;
+        return true;
+    }
 }
 
 uint8_t AP_HiwonderServo::addressInvalid(uint8_t _instance){
-    idToDetect++;
+    addressToCheck++;
     for (uint8_t i = 0; i < AP_HIWONDER_SERVO_NUM; i++){
         if (i == _instance) continue;
-        if (servo[i]->getId() == idToDetect){
+        if (servo[i]->getId() == addressToCheck){
             return 0xff;
         }
     }
-    if (idToDetect >= 0xFE) return 0xff;
-    return idToDetect;
+    if (addressToCheck >= 0xFE) return 0xff;
+    return addressToCheck;
 }
-
-/*
-  use a broadcast ping to find attached servos
- */
-/* bool AP_HiwonderServo::detect_servos(void)
-{
-    for (uint8_t i = 0; i < AP_HIWONDER_SERVO_NUM; i++){
-        if (servo[i]->detected > 0) continue;
-        if (servo[i]->timeoutCounts < 10){
-            send_read(i, servo[i]->getId(), SERVO_ID_READ);
-            return true;
-        }
-        idToDetect++;
-        if (adressInvalid(i)) 
-            return true;
-        send_read(i, idToDetect, SERVO_ID_READ);
-        return true;
-    }
-    return false;
-} */
-
-/*
-  broadcast configure all servos
- */
-/* bool AP_HiwonderServo::configure_servos(void)
-{
-    // disable torque control
-    send_command(BROADCAST_ID, REG_TORQUE_ENABLE, 0, 1);
-
-        // disable replies unless we read
-    send_command(BROADCAST_ID, REG_STATUS_RETURN, STATUS_RETURN_READ, 1);
-
-    // use position control mode
-    send_command(BROADCAST_ID, REG_OPERATING_MODE, OPMODE_POS_CONTROL, 1);
-
-    // enable torque control
-    send_command(BROADCAST_ID, REG_TORQUE_ENABLE, 1, 1);
-} */
-
 
 uint8_t AP_HiwonderServo::decode(char c){
     rxBuf[rxReceived] = c;
@@ -289,10 +255,7 @@ void AP_HiwonderServo::update()
     }
     if (replyPending >= 0){ // timeout
         for (uint8_t i = 0; i < AP_HIWONDER_SERVO_NUM; i++){
-            if (servo[i]->getId() == replyPending || 
-                (!servo[i]->isDetected() && servo[i]->waitReply > 0)){
-                servo[i]->noReply();
-                replyPending = -1;
+            if (servo[i]->timeout(replyPEnding)){
                 break;
             }
         }
@@ -303,34 +266,7 @@ void AP_HiwonderServo::update()
     currentServo->update(AP_HAL::millis());
     activeServo++;
     currentServo = servo[activeServo % AP_HIWONDER_SERVO_NUM];
-    /* if (currentServo->isDetected())
-        activeServo++;
-    currentServo = servo[activeServo % AP_HIWONDER_SERVO_NUM];
-    
-    currentServo->detect();
 
-    currentServo->configure(); */
-
-
-    
-    
-    
-    // loop for all 16 channels
-    /* for (uint8_t i = 0; i < NUM_SERVO_CHANNELS; i++) {
-        if (((1U<<i) & servo_mask) == 0) {
-            continue;
-        }
-        SRV_Channel *c = SRV_Channels::srv_channel(i);
-        if (c == nullptr) {
-            continue;
-        }
-        const uint16_t pwm = c->get_output_pwm();
-        const uint16_t min = c->get_output_min();
-        const uint16_t max = c->get_output_max();
-        float v = float(pwm - min) / (max - min);
-        uint32_t value = pos_min + v * (pos_max - pos_min);
-        send_command(1,i+1, REG_GOAL_POSITION, (uint8_t)value);
-    } */
 }
 
 namespace AP {

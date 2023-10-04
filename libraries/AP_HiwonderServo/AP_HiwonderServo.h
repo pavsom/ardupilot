@@ -65,7 +65,7 @@ private:
     bool initialised;
     
     uint8_t rxReceived = 0;
-    uint8_t idToDetect = 0;
+    uint8_t addressToCheck = 0;
     int16_t replyPending = -1;
     
     ObjectBuffer<servoMessageItem> rxQueue;

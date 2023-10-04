@@ -98,9 +98,9 @@ AP_HiwonderServo_Device::AP_HiwonderServo_Device(uint8_t _instance, AP_HiwonderS
 }
 
 bool AP_HiwonderServo_Device::handleMessage(servoMessageItem& rxItem){
-    if (!waitReply) return false;
+    if (!repliesToReceive) return false;
     if (detected > 0 && rxItem.item.id != id) return false;
-    waitReply--;
+    repliesToReceive--;
     if (state == State::READ_CONFIG_WAIT){
         state = detected < 2? State::CONFIG : State::IDLE;
     } 
@@ -168,13 +168,12 @@ bool AP_HiwonderServo_Device::handleMessage(servoMessageItem& rxItem){
     return true;
 }
 
-bool AP_HiwonderServo_Device::noReply(){
-    if (!waitReply) return false;
-    waitReply--;
+bool AP_HiwonderServo_Device::timeout(int16_t _id){
+    if (!repliesToReceive) return false;
+    if (_id != id && detected > 0) return false;
+    repliesToReceive--;
     if (timeoutCounts < 200) timeoutCounts++;
-    else {
-        state = State::DETECT;
-    }
+    else state = State::DETECT;
     return true;
 }
 
@@ -190,61 +189,13 @@ bool AP_HiwonderServo_Device::detect(){
     return true;
 }
 
-bool AP_HiwonderServo_Device::configure(){
-    /* if (!detected || detected > 20) return false;
-    else{
-        switch (detected++)
-        {
-        case 1:
-            readAll();
-            return true;
-        case 2:
-            sendConfig();
-            return true;
-        case 3:
-            setPosition(500,2000);
-            break;
-        case 4:
-            if (!inPosition()){
-                detected--;
-                break;
-            }
-            setPosition(0,2000);
-            break;
-        case 5:
-            if (!inPosition()){
-                detected--;
-                break;
-            }
-            setPosition(1000,2000);
-            break;
-        case 6:
-            if (!inPosition()){
-                detected--;
-                break;
-            }
-            setPosition(500,2000);
-            break;
-        case 7:
-            if (!inPosition()){
-                detected--;
-                break;
-            }
-            break;
-        default:
-            break;
-        }
-    } */
-    return false;
-}
-
 void AP_HiwonderServo_Device::update(uint32_t _time)
 {
     timeCurrent = _time;
     switch (servo)
     {
     case Servo::IDLE:
-    if (!waitReply){
+    if (!repliesToReceive){
         send_read(SERVO_TEMP_READ);
         send_read(SERVO_LED_ERROR_READ);
     }
@@ -306,20 +257,82 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
     }
 }
 
+bool AP_HiwonderServo_Device::inPosition(){
+    if (abs(positionCurrent - positionSet) < 10) return true;
+    if (!repliesToReceive){
+        if (params.angleSet != positionSet){
+            send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)positionSet,(uint16_t)positionTime);
+        }
+        send_read(SERVO_POS_READ);
+        send_read(SERVO_MOVE_TIME_READ);
+    }
+    return false;
+}
+
+
+void AP_HiwonderServo_Device::setPosition(int16_t _position){
+    /* positionSet = _position;
+    positionTime = 0;
+    timeLastMove = timeCurrent;
+    servo = Servo::MOVING; */
+    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)_position,(uint16_t)0);
+    //send_read(SERVO_MOVE_TIME_READ);
+}
+
+void AP_HiwonderServo_Device::setPosition(int16_t _position, uint16_t _time){
+    positionSet = _position;
+    positionTime = _time;
+    timeLastMove = timeCurrent;
+    servo = Servo::MOVING;
+    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)_position,(uint16_t)_time);
+    send_read(SERVO_MOVE_TIME_READ);
+}
+
+void AP_HiwonderServo_Device::sendConfig()
+{
+    send_command(SERVO_ANGLE_OFFSET_ADJUST,(uint8_t)0);
+    send_command(SERVO_ANGLE_LIMIT_WRITE,(uint16_t)0,(uint16_t)1000);
+    send_command(SERVO_LOAD_OR_UNLOAD_WRITE,(uint8_t)1);
+
+    send_command(SERVO_OR_MOTOR_MODE_WRITE,(uint16_t)0,(uint16_t)0);
+    send_command(SERVO_TEMP_MAX_LIMIT_WRITE,(uint8_t)85);
+    send_command(SERVO_LED_CTRL_WRITE,(uint8_t)1);
+    send_command(SERVO_LED_ERROR_WRITE,(uint8_t)7);
+    
+}
+
+void AP_HiwonderServo_Device::readAll()
+{
+    send_read(SERVO_MOVE_TIME_READ);
+    //send_read(SERVO_MOVE_TIME_WAIT_READ); // bugged response with 55 55 id ff
+    send_read(SERVO_ANGLE_OFFSET_READ);
+    send_read(SERVO_ANGLE_LIMIT_READ);
+    send_read(SERVO_VIN_LIMIT_READ);
+    send_read(SERVO_TEMP_MAX_LIMIT_READ);
+    send_read(SERVO_TEMP_READ);
+    send_read(SERVO_VIN_READ);
+    send_read(SERVO_POS_READ);
+    send_read(SERVO_OR_MOTOR_MODE_READ);
+    send_read(SERVO_LOAD_OR_UNLOAD_READ);
+    send_read(SERVO_LED_CTRL_READ);
+    send_read(SERVO_LED_ERROR_READ);
+}
+
 void AP_HiwonderServo_Device::send_read(uint8_t cmd)
 {
-    waitReply++;
+    /* repliesToReceive++;
     servoMessageItem txItem;
     txItem.item.id = id;
     txItem.item.cmd = cmd;
     txItem.item.length = 3;
     txItem.item.withReply = 1;
-    serialDriver->addTxItem(txItem);
+    serialDriver->addTxItem(txItem); */
+    void AP_HiwonderServo_Device::send_read(uint8_t cmd, uint8_t id)
 }
 
 void AP_HiwonderServo_Device::send_read(uint8_t cmd, uint8_t _id)
 {
-    waitReply++;
+    repliesToReceive++;
     servoMessageItem txItem;
     txItem.item.id = _id;
     txItem.item.cmd = cmd;
@@ -371,64 +384,5 @@ void AP_HiwonderServo_Device::send_command(uint8_t cmd, uint16_t param1, uint16_
     txItem.item.data[3] = DXL_HIBYTE(param2);
     txItem.item.withReply = 0;
     serialDriver->addTxItem(txItem);
-}
-
-void AP_HiwonderServo_Device::readAll()
-{
-    send_read(SERVO_MOVE_TIME_READ);
-    //send_read(SERVO_MOVE_TIME_WAIT_READ);
-    send_read(SERVO_ANGLE_OFFSET_READ);
-    send_read(SERVO_ANGLE_LIMIT_READ);
-    send_read(SERVO_VIN_LIMIT_READ);
-    send_read(SERVO_TEMP_MAX_LIMIT_READ);
-    send_read(SERVO_TEMP_READ);
-    send_read(SERVO_VIN_READ);
-    send_read(SERVO_POS_READ);
-    send_read(SERVO_OR_MOTOR_MODE_READ);
-    send_read(SERVO_LOAD_OR_UNLOAD_READ);
-    send_read(SERVO_LED_CTRL_READ);
-    send_read(SERVO_LED_ERROR_READ);
-}
-void AP_HiwonderServo_Device::sendConfig()
-{
-    send_command(SERVO_ANGLE_OFFSET_ADJUST,(uint8_t)0);
-    send_command(SERVO_ANGLE_LIMIT_WRITE,(uint16_t)0,(uint16_t)1000);
-    send_command(SERVO_LOAD_OR_UNLOAD_WRITE,(uint8_t)1);
-
-    send_command(SERVO_OR_MOTOR_MODE_WRITE,(uint16_t)0,(uint16_t)0);
-    send_command(SERVO_TEMP_MAX_LIMIT_WRITE,(uint8_t)85);
-    send_command(SERVO_LED_CTRL_WRITE,(uint8_t)1);
-    send_command(SERVO_LED_ERROR_WRITE,(uint8_t)7);
-    
-}
-
-void AP_HiwonderServo_Device::setPosition(int16_t _position){
-    positionSet = _position;
-    positionTime = 1000;
-    timeLastMove = timeCurrent;
-    servo = Servo::MOVING;
-    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)_position,(uint16_t)1000);
-    send_read(SERVO_MOVE_TIME_READ);
-}
-
-void AP_HiwonderServo_Device::setPosition(int16_t _position, uint16_t _time){
-    positionSet = _position;
-    positionTime = _time;
-    timeLastMove = timeCurrent;
-    servo = Servo::MOVING;
-    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)_position,(uint16_t)_time);
-    send_read(SERVO_MOVE_TIME_READ);
-}
-
-bool AP_HiwonderServo_Device::inPosition(){
-    if (abs(positionCurrent - positionSet) < 10) return true;
-    if (!waitReply){
-        if (params.angleSet != positionSet){
-            send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)positionSet,(uint16_t)positionTime);
-        }
-        send_read(SERVO_POS_READ);
-        send_read(SERVO_MOVE_TIME_READ);
-    }
-    return false;
 }
 #endif  // AP_HIWONDERSERVO_ENABLED

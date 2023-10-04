@@ -41,43 +41,54 @@ class AP_HiwonderServo_Device {
     IDLE,
     MOVING
   };
+  const float = 4.1666666666666f;
 public:
   AP_HiwonderServo_Device(uint8_t _instance, AP_HiwonderServo* serialDriver);
   
+  // -------------     coms   ---------- //
   bool handleMessage(servoMessageItem& rxItem);
-  bool noReply();
-  uint8_t waitReply = 0;
-  uint8_t getId(){return id;};
-  uint8_t isDetected(){return detected > 0;};
+  bool timeout(int16_t _id);
+  bool waitReply(){return (repliesToReceive != 0);};
+  // -------------    local   ---------- //
   void setId(uint8_t _id){id = _id;};
-  bool inPosition();
-  uint8_t timeoutCounts = 0;
-  bool detect();
-  bool configure();
+  uint8_t getId(){return id;};
   void update(uint32_t _time);
-  State state = State::DETECT;
-  Servo servo = Servo::IDLE;
+
+  /* uint8_t isDetected(){return detected > 0;}; */
 private:
-  void setPosition(int16_t _position);
-  void setPosition(int16_t _position, uint16_t _time);
-  void readAll();
-  void sendConfig();
-  void send_read(uint8_t cmd);
-  void send_read(uint8_t cmd, uint8_t _id);
-  void send_command(uint8_t cmd);
-  void changeAddress(uint8_t idOld);
-  void send_command(uint8_t cmd, uint8_t param1);
-  void send_command(uint8_t cmd, uint16_t param1, uint16_t param2);
-  uint8_t id;
-  uint8_t instance;
+  // -------------     coms   ---------- //
   AP_HiwonderServo* serialDriver;
+  uint8_t repliesToReceive = 0;
+  uint8_t instance;
+  uint8_t timeoutCounts = 0;
+  // -------------    local   ---------- //
+  uint8_t id;
   uint8_t detected = 0;
-  // stats
+  uint32_t timeCurrent;
+  bool detect();
+  State state = State::DETECT;
+  // ------------- position  ---------- //
   int16_t positionCurrent;
   int16_t positionSet;
   uint16_t positionTime;
-  uint32_t timeCurrent;
   uint32_t timeLastMove;
+  Servo servo = Servo::IDLE;
+  // -------------  move  ---------- //
+  void setPosition(int16_t _position);
+  void setPosition(int16_t _position, uint16_t _time);
+  bool inPosition();
+  // -------------  move  ---------- //
+  // ------------- comand ---------- //
+  void sendConfig();
+  inline void send_command(uint8_t cmd);
+  inline void changeAddress(uint8_t idOld);
+  inline void send_command(uint8_t cmd, uint8_t param1);
+  inline void send_command(uint8_t cmd, uint16_t param1, uint16_t param2);
+  // ------------- read ------------ //
+  void readAll();
+  inline void send_read(uint8_t cmd);
+  inline void send_read(uint8_t cmd, uint8_t _id);
+
   struct servoParameters{
     uint32_t posMax;
     uint32_t posMin;
