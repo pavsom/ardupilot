@@ -202,7 +202,7 @@ bool AP_HiwonderServo::addTxItem(servoMessageItem& txItem)
 
 bool AP_HiwonderServo::waitingReply(){
     for (uint8_t i = 0; i < AP_HIWONDER_SERVO_NUM; i++){
-        if (servo[i]->waitReply){
+        if (servo[i]->waitReply()){
             return true;
         }
     }
@@ -255,7 +255,7 @@ void AP_HiwonderServo::update()
     }
     if (replyPending >= 0){ // timeout
         for (uint8_t i = 0; i < AP_HIWONDER_SERVO_NUM; i++){
-            if (servo[i]->timeout(replyPEnding)){
+            if (servo[i]->timeout(replyPending)){
                 break;
             }
         }

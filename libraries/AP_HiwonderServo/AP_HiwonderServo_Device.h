@@ -41,7 +41,7 @@ class AP_HiwonderServo_Device {
     IDLE,
     MOVING
   };
-  const float = 4.1666666666666f;
+  const float angleToStepsRatio= 4.1666666666666f;
 public:
   AP_HiwonderServo_Device(uint8_t _instance, AP_HiwonderServo* serialDriver);
   

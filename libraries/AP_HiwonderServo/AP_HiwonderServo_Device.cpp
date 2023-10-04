@@ -327,7 +327,7 @@ void AP_HiwonderServo_Device::send_read(uint8_t cmd)
     txItem.item.length = 3;
     txItem.item.withReply = 1;
     serialDriver->addTxItem(txItem); */
-    void AP_HiwonderServo_Device::send_read(uint8_t cmd, uint8_t id)
+    send_read(cmd, id);
 }
 
 void AP_HiwonderServo_Device::send_read(uint8_t cmd, uint8_t _id)
