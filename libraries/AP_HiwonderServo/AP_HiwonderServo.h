@@ -27,6 +27,9 @@
 
 #define AP_HIWONDER_SERVO_NUM 2
 
+#define TIMEOUT_READ 100000
+#define ADDRESS_MAX 20
+
 class AP_HiwonderServo_Device;
 
 class AP_HiwonderServo {

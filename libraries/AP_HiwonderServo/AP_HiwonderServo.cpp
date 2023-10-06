@@ -134,7 +134,7 @@ bool AP_HiwonderServo::sendMessage(servoMessageItem& txItem)
     port->write(txBuf, length+3);
     last_send_us = AP_HAL::micros();
     if (txItem.item.withReply){
-        timeout = 100000;
+        timeout = TIMEOUT_READ;
         replyPending = txItem.item.id;
         return false;
     }else{
@@ -149,10 +149,10 @@ uint8_t AP_HiwonderServo::addressInvalid(uint8_t _instance){
     for (uint8_t i = 0; i < AP_HIWONDER_SERVO_NUM; i++){
         if (i == _instance) continue;
         if (servo[i]->getId() == addressToCheck){
-            return 0xff;
+            return servo[_instance]->getId();
         }
     }
-    if (addressToCheck >= 0xFE) return 0xff;
+    if (addressToCheck > ADDRESS_MAX) addressToCheck = 1;
     return addressToCheck;
 }
 
@@ -263,7 +263,7 @@ void AP_HiwonderServo::update()
         replyPending = -1;
         rxReceived = 0;
     }
-
+    
     currentServo->update(AP_HAL::millis());
     activeServo++;
     currentServo = servo[activeServo % AP_HIWONDER_SERVO_NUM];

@@ -96,13 +96,25 @@ AP_HiwonderServo_Device::AP_HiwonderServo_Device(uint8_t _instance, AP_HiwonderS
     detected = 0;
     serialDriver = _serialDriver;
 }
+bool AP_HiwonderServo_Device::didWeSendIt(uint8_t _id){
+    if (!repliesToReceive) return false;
+    bool res;
+    if (!detected)
+        res = detectId == _id;
+    else
+        res = id == _id;
+    if (res) repliesToReceive--;
+    return res;
+}
 
 bool AP_HiwonderServo_Device::handleMessage(servoMessageItem& rxItem){
-    if (!repliesToReceive) return false;
-    if (detected > 0 && rxItem.item.id != id) return false;
-    repliesToReceive--;
-    if (state == State::READ_CONFIG_WAIT){
-        state = detected < 2? State::CONFIG : State::IDLE;
+    if (!didWeSendIt(rxItem.item.id)) return false;
+    if (state == State::READ_CONFIG_WAIT && !repliesToReceive){
+        if (detected < 2){
+            state = State::CONFIG;
+            positionSet = params.angleSet;
+            positionNeeded = params.angleSet;
+        }
     } 
     timeoutCounts = 0;
     switch (rxItem.item.cmd)
@@ -169,10 +181,8 @@ bool AP_HiwonderServo_Device::handleMessage(servoMessageItem& rxItem){
 }
 
 bool AP_HiwonderServo_Device::timeout(int16_t _id){
-    if (!repliesToReceive) return false;
-    if (_id != id && detected > 0) return false;
-    repliesToReceive--;
-    if (timeoutCounts < 200) timeoutCounts++;
+    if (!didWeSendIt(_id)) return false;
+    if (timeoutCounts < 20) timeoutCounts++;
     else state = State::DETECT;
     return true;
 }
@@ -180,11 +190,13 @@ bool AP_HiwonderServo_Device::timeout(int16_t _id){
 bool AP_HiwonderServo_Device::detect(){
     if (detected > 0) return true;
     if (timeoutCounts < 10){
+        detectId = id;
         send_read(SERVO_ID_READ);
         return true;
     }
     uint8_t address = serialDriver->addressInvalid(instance);
     if (address == 0xFF) return false;
+    detectId = address;
     send_read(SERVO_ID_READ, address);
     return true;
 }
@@ -192,24 +204,30 @@ bool AP_HiwonderServo_Device::detect(){
 void AP_HiwonderServo_Device::update(uint32_t _time)
 {
     timeCurrent = _time;
+    if (repliesToReceive && (timeCurrent - lastRead > 5000)){
+        if (state == State::READ_CONFIG) state = State::DETECT;
+        repliesToReceive = 0;
+    }
     switch (servo)
     {
     case Servo::UNKNOWN:
         break;
     case Servo::IDLE:
     if (!repliesToReceive){
-        if (positionSet != params.angleSet){
+        if (abs(positionNeeded - positionSet) > 10){
             start();
-        }else{
+        }else if (timeCurrent - lastRead > 200)
+        {
             send_read(SERVO_MOVE_TIME_READ);
             send_read(SERVO_POS_READ);
             send_read(SERVO_TEMP_READ);
             send_read(SERVO_LED_ERROR_READ);
+            //lastRead = timeCurrent;
         }
     }
         break;
     case Servo::MOVING:
-        if (timeCurrent - timeLastMove > positionTime && inPosition()){
+        if (timeCurrent - timeLastMove > timeSet && inPosition()){
                 servo = Servo::IDLE;
                 send_command(SERVO_LOAD_OR_UNLOAD_WRITE, 0);
         }
@@ -222,43 +240,87 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
     case State::DETECT:
         servo = Servo::UNKNOWN;
         detected = 0;
-        detect();
+        if (!repliesToReceive) detect();
         break;
     case State::CONFIG:
         sendConfig();
         detected = 2;
         servo = Servo::IDLE;
-        state = State::WAIT;
-        timeLastMove = timeCurrent;
+        state = State::MOVE_MAX;
+        timeLastMove = 0;
         break;
     case State::IDLE:
-        if (servo == Servo::IDLE){
+        /* if (servo == Servo::IDLE){
             state = State::WAIT;
-        }
+        } */
         break;
     case State::READ_CONFIG:
-        readAll();
+        if (!repliesToReceive) readAll();
         state = State::READ_CONFIG_WAIT;
         break;
     case State::READ_CONFIG_WAIT:
+        
         break;
     case State::WAIT:
         //if (timeCurrent - timeLastMove > 400)
             state = State::MOVE_MAX;
         break;
     case State::MOVE_MAX:
-        setDegree(240,0);
-        state = State::MOVE_MIN;
+        setDegree(120,240);
+        state = State::MOVE1;
         break;
+    case State::MOVE1:
+        if (servo == Servo::IDLE){
+            if (instance == 0)
+                setDegree(110,240);
+            else
+                setDegree(100,30);
+            state = State::MOVE2;
+        }
+        break;
+    case State::MOVE2:
+        if (servo == Servo::IDLE){
+            if (instance == 0)
+                setDegree(130,240);
+            else
+                setDegree(140,30);
+            state = State::MOVE3;
+        }
+        break;
+    case State::MOVE3:
+        if (servo == Servo::IDLE){
+            if (instance == 0)
+                setDegree(110,240);
+            else
+                setDegree(100,30);
+            state = State::MOVE4;
+        }
+        break;
+    case State::MOVE4:
+        if (servo == Servo::IDLE){
+            if (instance == 0)
+                setDegree(120,240);
+            else
+                setDegree(120,30);
+            state = State::IDLE;
+        }
+        break;
+
     case State::MOVE_MIN:
         if (servo == Servo::IDLE){
-            setDegree(0,30.00);
+            if (instance == 0)
+                setDegree(0,120);
+            else
+                setDegree(0,180);
             state = State::MOVE_MID;
         }
         break;
     case State::MOVE_MID:
         if (servo == Servo::IDLE){
-            setDegree(120, 0.5);
+            if (instance == 0)
+                setDegree(240,240);
+            else
+                setDegree(240,240);
             state = State::IDLE;
         }
         break;
@@ -269,12 +331,17 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
 
 bool AP_HiwonderServo_Device::inPosition(){
     if (abs(positionCurrent - positionSet) < 10) return true;
+    if (!moveResendDelay) moveResendDelay = timeLastMove + timeSet + 1000;
     if (!repliesToReceive){
-        if (params.angleSet != positionSet){
-            send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)positionSet,(uint16_t)positionTime);
+        if (params.angleSet != positionSet ||
+            timeCurrent > (moveResendDelay += 1000)){
+            send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)positionSet,(uint16_t)timeSet);
         }
-        send_read(SERVO_POS_READ);
-        send_read(SERVO_MOVE_TIME_READ);
+        if (timeCurrent - lastRead > 100){
+            send_read(SERVO_POS_READ);
+            send_read(SERVO_MOVE_TIME_READ);
+            //lastRead = timeCurrent;
+        }
     }
     return false;
 }
@@ -282,8 +349,9 @@ bool AP_HiwonderServo_Device::inPosition(){
 
 void AP_HiwonderServo_Device::start(){
     timeLastMove = timeCurrent;
+    moveResendDelay = 0;
     servo = Servo::MOVING;
-    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)positionSet,(uint16_t)positionTime);
+    send_command(SERVO_MOVE_TIME_WRITE,(uint16_t)positionNeeded,(uint16_t)timeNeeded);
     send_read(SERVO_MOVE_TIME_READ);
 }
 
@@ -332,6 +400,7 @@ void AP_HiwonderServo_Device::send_read(uint8_t cmd)
 void AP_HiwonderServo_Device::send_read(uint8_t cmd, uint8_t _id)
 {
     repliesToReceive++;
+    lastRead = timeCurrent;
     servoMessageItem txItem;
     txItem.item.id = _id;
     txItem.item.cmd = cmd;
@@ -373,6 +442,10 @@ void AP_HiwonderServo_Device::send_command(uint8_t cmd, uint8_t param1)
 
 void AP_HiwonderServo_Device::send_command(uint8_t cmd, uint16_t param1, uint16_t param2)
 {
+    if (cmd == SERVO_MOVE_TIME_WRITE){
+        positionSet = param1;
+        timeSet = param2;
+    }
     servoMessageItem txItem;
     txItem.item.id = id;
     txItem.item.cmd = cmd;
@@ -389,26 +462,22 @@ void AP_HiwonderServo_Device::send_command(uint8_t cmd, uint16_t param1, uint16_
 void AP_HiwonderServo_Device::setDegree(float angle, float degreePerSecond)
 {
     angle = constrain_float(angle, 0, 240);
-    if (degreePerSecond < 0) degreePerSecond = 0;
-    if (abs(degreePerSecond) < 0.001){
-        positionTime = 0;
-    }else{
-        float speed = abs(positionToDegree(positionSet) - angle) * 1000;
-        speed /= degreePerSecond;
-        if (speed > 30000) speed = 30000;
-        positionTime = static_cast<uint16_t>(speed);
-    }
-    positionSet = degreeToPosition(angle);
+    degreePerSecond = constrain_float(degreePerSecond, 0.1, 240);
+    float speed = abs(positionToDegree(positionSet) - angle) * 1000;
+    speed /= degreePerSecond;
+    if (speed > moveTimeMAx) speed = moveTimeMAx;
+    timeNeeded = static_cast<uint16_t>(speed + 0.5f);
+    positionNeeded = degreeToPosition(angle);
 }
 
 float AP_HiwonderServo_Device::degreeToPosition(float angle)
 {
-    return angle * angleToStepsRatio;
+    return (angle * angleToStepsRatio) + 0.5f;
 }
 
 float AP_HiwonderServo_Device::positionToDegree(int16_t _position)
 {
-    return _position / angleToStepsRatio;
+    return (_position / angleToStepsRatio) + 0.5f;
 }
 
 void AP_HiwonderServo_Device::moveDegree(float angle, float degreePerSecond)

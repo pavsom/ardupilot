@@ -35,7 +35,11 @@ class AP_HiwonderServo_Device {
     WAIT,
     MOVE_MAX,
     MOVE_MIN,
-    MOVE_MID
+    MOVE_MID,
+    MOVE1,
+    MOVE2,
+    MOVE3,
+    MOVE4
   };
   enum class Servo{
     UNKNOWN,
@@ -43,6 +47,7 @@ class AP_HiwonderServo_Device {
     MOVING
   };
   const float angleToStepsRatio= 4.1666666666666f;
+  const uint16_t moveTimeMAx = 30000;
 public:
   AP_HiwonderServo_Device(uint8_t _instance, AP_HiwonderServo* serialDriver);
   
@@ -55,6 +60,7 @@ public:
   uint8_t getId(){return id;};
   void update(uint32_t _time);
 
+  const float maxSpeed = 240;
   /* uint8_t isDetected(){return detected > 0;}; */
 private:
   // -------------     coms   ---------- //
@@ -62,16 +68,26 @@ private:
   uint8_t repliesToReceive = 0;
   uint8_t instance;
   uint8_t timeoutCounts = 0;
+  uint32_t lastRead = 0;
+  bool didWeSendIt(uint8_t _id);
+  uint32_t moveResendDelay = 0;
+  //uint32_t 
   // -------------    local   ---------- //
   uint8_t id;
   uint8_t detected = 0;
   uint32_t timeCurrent;
   bool detect();
   State state = State::DETECT;
+  uint8_t detectId = 0;
   // ------------- position  ---------- //
   int16_t positionCurrent;
+
   int16_t positionSet;
-  uint16_t positionTime;
+  uint16_t timeSet;
+
+  int16_t positionNeeded;
+  uint16_t timeNeeded;
+  
   uint32_t timeLastMove;
   Servo servo = Servo::UNKNOWN;
   // -------------  move  ---------- //
