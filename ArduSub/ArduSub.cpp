@@ -68,8 +68,8 @@ const AP_Scheduler::Task Sub::scheduler_tasks[] = {
     // camera mount's fast update
     FAST_TASK_CLASS(AP_Mount, &sub.camera_mount, update_fast),
 #endif
-
-    SCHED_TASK(fifty_hz_loop,         50,     75,   3),
+    
+    SCHED_TASK(fifty_hz_loop,         50,     75,   4),
     SCHED_TASK_CLASS(AP_GPS, &sub.gps, update, 50, 200,   6),
 #if AP_OPTICALFLOW_ENABLED
     SCHED_TASK_CLASS(AP_OpticalFlow,          &sub.optflow,             update,         200, 160,   9),
