@@ -899,6 +899,8 @@ void AP_Periph_FW::onTransferReceived(CanardInstance* canard_instance,
         break;
 
     case UAVCAN_PROTOCOL_RESTARTNODE_ID:
+        if (transfer->transfer_type == CanardTransferTypeBroadcast)
+            break;
         printf("RestartNode\n");
         hal.scheduler->delay(10);
         prepare_reboot();
