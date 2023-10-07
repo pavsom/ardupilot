@@ -33,6 +33,7 @@ class AP_HiwonderServo_Device {
     READ_CONFIG,
     READ_CONFIG_WAIT,
     WAIT,
+    MOVE_INIT,
     MOVE_MAX,
     MOVE_MIN,
     MOVE_MID,

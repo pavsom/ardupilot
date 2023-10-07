@@ -265,7 +265,7 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
         //if (timeCurrent - timeLastMove > 400)
             state = State::MOVE_MAX;
         break;
-    case State::MOVE_MAX:
+    case State::MOVE_INIT:
         setDegree(120,240);
         state = State::MOVE1;
         break;
@@ -306,22 +306,14 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
         }
         break;
 
+    case State::MOVE_MAX:
+        setDegree(240,240);
+        state = State::MOVE_MIN;
+        break;
     case State::MOVE_MIN:
         if (servo == Servo::IDLE){
-            if (instance == 0)
-                setDegree(0,120);
-            else
-                setDegree(0,180);
-            state = State::MOVE_MID;
-        }
-        break;
-    case State::MOVE_MID:
-        if (servo == Servo::IDLE){
-            if (instance == 0)
-                setDegree(240,240);
-            else
-                setDegree(240,240);
-            state = State::IDLE;
+            setDegree(0,240);
+            state = State::MOVE_MAX;
         }
         break;
     default:
