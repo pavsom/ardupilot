@@ -62,6 +62,7 @@ public:
   void update(uint32_t _time);
 
   const float maxSpeed = 240;
+  void set_output_pwm(uint16_t pwm);
   /* uint8_t isDetected(){return detected > 0;}; */
 private:
   // -------------     coms   ---------- //

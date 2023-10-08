@@ -53,7 +53,6 @@ extern const AP_HAL::HAL& hal;
 
 
 #define HIWONDER_SRV_ID_DEFAULT 11
-#define HIWONDER_SRV2_ID_DEFAULT 12
 const AP_Param::GroupInfo AP_HiwonderServo::var_info[] = {
 
     // @Param: POSMIN
@@ -112,6 +111,21 @@ void AP_HiwonderServo::init(void)
         us_gap = 4 * 1e6 / baudrate;
     }
     currentServo = servo[activeServo % AP_HIWONDER_SERVO_NUM];
+
+
+    const SRV_Channel::Aux_servo_function_t fn = (SRV_Channel::Aux_servo_function_t)((uint8_t)SRV_Channel::k_none);
+    servoMask |= SRV_Channels::get_output_channel_mask(fn);
+
+    uint8_t hiwonderServoCounter = 0;
+    // loop for all 16 channels
+    for (uint8_t i=0; i<NUM_SERVO_CHANNELS; i++) {
+        if (((1U<<i) & servoMask) == 0) {
+            continue;
+        }
+        apServos[hiwonderServoCounter] = SRV_Channels::srv_channel(i);
+        if (hiwonderServoCounter < NUM_SERVO_CHANNELS) hiwonderServoCounter++;
+        else continue;
+    }
 }
 
 /*
@@ -267,6 +281,15 @@ void AP_HiwonderServo::update()
     currentServo->update(AP_HAL::millis());
     activeServo++;
     currentServo = servo[activeServo % AP_HIWONDER_SERVO_NUM];
+
+    // loop for all 16 channels
+    for (uint8_t i=0; i<AP_HIWONDER_SERVO_NUM; i++) {
+        if (apServos[i] == nullptr) continue;
+        const uint16_t pwm = apServos[i]->get_output_pwm();
+        if (lastPWM[i] == pwm) continue;
+        lastPWM[i] = pwm;
+        servo[i].set_output_pwm(lastPWM[i]);
+    }
 
 }
 

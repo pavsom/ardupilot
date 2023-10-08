@@ -462,6 +462,13 @@ void AP_HiwonderServo_Device::setDegree(float angle, float degreePerSecond)
     positionNeeded = degreeToPosition(angle);
 }
 
+void AP_HiwonderServo_Device::set_output_pwm(uint16_t pwm);
+{
+    pwm = constrain_uint16(pwm,1000,2000);
+    float angle = positionToDegree(pwm - 1000);
+    setDegree(angle, 240);
+}
+
 float AP_HiwonderServo_Device::degreeToPosition(float angle)
 {
     return (angle * angleToStepsRatio) + 0.5f;
