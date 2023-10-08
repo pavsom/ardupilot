@@ -87,8 +87,7 @@ private:
     uint8_t readTries = 0;
     bool waitForReply = false;
     uint32_t servoMask = 0;
-    SRV_Channel* apServos[AP_HIWONDER_SERVO_NUM];
-    uin16_t lastPWM[AP_HIWONDER_SERVO_NUM];
+    uint16_t lastPWM[AP_HIWONDER_SERVO_NUM];
 };
 
 namespace AP {

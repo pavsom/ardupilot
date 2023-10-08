@@ -116,16 +116,6 @@ void AP_HiwonderServo::init(void)
     const SRV_Channel::Aux_servo_function_t fn = (SRV_Channel::Aux_servo_function_t)((uint8_t)SRV_Channel::k_none);
     servoMask |= SRV_Channels::get_output_channel_mask(fn);
 
-    uint8_t hiwonderServoCounter = 0;
-    // loop for all 16 channels
-    for (uint8_t i=0; i<NUM_SERVO_CHANNELS; i++) {
-        if (((1U<<i) & servoMask) == 0) {
-            continue;
-        }
-        apServos[hiwonderServoCounter] = SRV_Channels::srv_channel(i);
-        if (hiwonderServoCounter < NUM_SERVO_CHANNELS) hiwonderServoCounter++;
-        else continue;
-    }
 }
 
 /*
@@ -282,13 +272,20 @@ void AP_HiwonderServo::update()
     activeServo++;
     currentServo = servo[activeServo % AP_HIWONDER_SERVO_NUM];
 
+
+    uint8_t hiwonderServoCounter = 0;
     // loop for all 16 channels
     for (uint8_t i=0; i<AP_HIWONDER_SERVO_NUM; i++) {
-        if (apServos[i] == nullptr) continue;
-        const uint16_t pwm = apServos[i]->get_output_pwm();
-        if (lastPWM[i] == pwm) continue;
-        lastPWM[i] = pwm;
-        servo[i].set_output_pwm(lastPWM[i]);
+        SRV_Channel *c = SRV_Channels::srv_channel(i);
+        if (c == nullptr) {
+            continue;
+        }
+        const uint16_t pwm = c->get_output_pwm();
+        if (lastPWM[hiwonderServoCounter] == pwm) continue;
+        lastPWM[hiwonderServoCounter] = pwm;
+        servo[hiwonderServoCounter]->set_output_pwm(lastPWM[hiwonderServoCounter]);
+        if (hiwonderServoCounter < NUM_SERVO_CHANNELS) hiwonderServoCounter++;
+        else break;
     }
 
 }
