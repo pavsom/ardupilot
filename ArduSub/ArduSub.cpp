@@ -150,8 +150,6 @@ void Sub::run_rate_controller()
 // 50 Hz tasks
 void Sub::fifty_hz_loop()
 {
-    uint32_t now = AP_HAL::millis();
-    printf("entried 50 hz loop, time %d \r\n", now);
     // check pilot input failsafe
     failsafe_pilot_input_check();
 
@@ -256,8 +254,6 @@ void Sub::twentyfive_hz_logging()
 // three_hz_loop - 3.3hz loop
 void Sub::three_hz_loop()
 {
-    uint32_t now = AP_HAL::millis();
-    printf("entried 3 hz loop, time %d \r\n", now);
     leak_detector.update();
 
     failsafe_leak_check();
