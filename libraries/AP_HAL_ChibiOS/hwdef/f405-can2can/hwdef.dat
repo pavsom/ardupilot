@@ -1,0 +1,27 @@
+include ../f405-canUni/hwdef.inc
+
+define CAN_APP_NODE_NAME "org.ardupilot.f405_can2can"
+
+# ---------------------- Leds ---------------------------
+PA15 LED_BLUE1 OUTPUT LOW GPIO(7)  # BLUE
+PC11 LED_RED1 OUTPUT LOW GPIO(8)  # RED
+PB4 LED_GREEN1 OUTPUT LOW GPIO(9)  # GREEN
+
+PB2 LED_BLUE2 OUTPUT LOW GPIO(10)  # BLUE
+#PB0 LED_GREEN2 OUTPUT LOW GPIO(11)  # GREEN
+PC4 LED_RED2 OUTPUT LOW GPIO(12)  # RED
+
+# ---------------------- UARTs ---------------------------
+# order of UARTs
+#           | sr0  | sr1  | sr2  | GPS | MSP |
+SERIAL_ORDER USART1 USART2 USART6
+
+STDOUT_SERIAL SD1
+STDOUT_BAUDRATE 57600
+
+# ---------------------- CAN bus -------------------------
+PB8 CAN1_RX CAN1
+PB9 CAN1_TX CAN1
+
+PB5 CAN2_RX CAN2
+PB13 CAN2_TX CAN2
