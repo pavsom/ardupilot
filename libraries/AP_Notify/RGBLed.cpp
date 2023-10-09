@@ -306,7 +306,7 @@ void RGBLed::custom_override(void)
     static uint32_t lastTime = 0;
     
     // Brightness prepare
-    uint8_t brightness = 255; //get_brightness();
+    uint8_t brightness = get_brightness();
     // The length of sending message
     uint8_t send_len = 0;
 
@@ -317,8 +317,8 @@ void RGBLed::custom_override(void)
 
         // Part of cycle that sets leds from flags
         if (AP_Notify::flags.service_mode){
-            leds = colorRedTestMode;
-            ledsNoBlink = colorRedTestMode;
+            leds = colorServiceMode;
+            ledsNoBlink = colorServiceMode;
         }
         if (AP_Notify::flags.armed){
             if(i < id_nums/2){
@@ -332,10 +332,10 @@ void RGBLed::custom_override(void)
         }
         if (AP_Notify::flags.manual_mode){
             if(i < id_nums/2){
-                leds = colorGreenTestMode;
+                leds = colorManualModeLeft;
             }
             else{
-                leds = colorBlueTestMode;
+                leds = colorManualModeRight;
             }
         }
         if (AP_Notify::flags.search_mode){
