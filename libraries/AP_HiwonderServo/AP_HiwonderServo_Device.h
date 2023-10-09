@@ -45,7 +45,8 @@ class AP_HiwonderServo_Device {
   enum class Servo{
     UNKNOWN,
     IDLE,
-    MOVING
+    MOVING,
+    COOLING
   };
   const float angleToStepsRatio= 4.1666666666666f;
   const uint16_t moveTimeMAx = 30000;
@@ -98,6 +99,7 @@ private:
   
   void setDegree(float angle, float degreePerSecond);
   void moveDegree(float angle, float degreePerSecond);
+
   // ------------- comand ---------- //
   void sendConfig();
   inline void send_command(uint8_t cmd);

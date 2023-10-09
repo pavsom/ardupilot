@@ -114,6 +114,8 @@ bool AP_HiwonderServo_Device::handleMessage(servoMessageItem& rxItem){
             state = State::CONFIG;
             positionSet = params.angleSet;
             positionNeeded = params.angleSet;
+        }else{
+            state = State::IDLE;
         }
     } 
     timeoutCounts = 0;
@@ -227,9 +229,26 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
     }
         break;
     case Servo::MOVING:
+        if (params.temperatureCurrent >= params.temperatureLimit){
+            send_command(SERVO_LOAD_OR_UNLOAD_WRITE, 0);
+            servo = Servo::COOLING;
+            break;
+        }
         if (timeCurrent - timeLastMove > timeSet && inPosition()){
                 servo = Servo::IDLE;
                 send_command(SERVO_LOAD_OR_UNLOAD_WRITE, 0);
+        }
+        break;
+    case Servo::COOLING:
+        if (timeCurrent - lastRead > 200){
+            send_command(SERVO_LOAD_OR_UNLOAD_WRITE, 0);
+            send_read(SERVO_MOVE_TIME_READ);
+            send_read(SERVO_POS_READ);
+            send_read(SERVO_TEMP_READ);
+            send_read(SERVO_LED_ERROR_READ);
+        }
+        if (params.temperatureCurrent < params.temperatureLimit - 10){
+            servo = Servo::IDLE;
         }
         break;
     default:
@@ -272,27 +291,27 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
     case State::MOVE1:
         if (servo == Servo::IDLE){
             if (instance == 0)
-                setDegree(110,240);
+                setDegree(140,240);
             else
-                setDegree(100,30);
+                setDegree(100,120);
             state = State::MOVE2;
         }
         break;
     case State::MOVE2:
         if (servo == Servo::IDLE){
             if (instance == 0)
-                setDegree(130,240);
+                setDegree(100,240);
             else
-                setDegree(140,30);
+                setDegree(140,120);
             state = State::MOVE3;
         }
         break;
     case State::MOVE3:
         if (servo == Servo::IDLE){
             if (instance == 0)
-                setDegree(110,240);
+                setDegree(130,240);
             else
-                setDegree(100,30);
+                setDegree(110,120);
             state = State::MOVE4;
         }
         break;
@@ -301,7 +320,7 @@ void AP_HiwonderServo_Device::update(uint32_t _time)
             if (instance == 0)
                 setDegree(120,240);
             else
-                setDegree(120,30);
+                setDegree(120,120);
             state = State::IDLE;
         }
         break;
@@ -332,6 +351,7 @@ bool AP_HiwonderServo_Device::inPosition(){
         if (timeCurrent - lastRead > 100){
             send_read(SERVO_POS_READ);
             send_read(SERVO_MOVE_TIME_READ);
+            send_read(SERVO_TEMP_READ);
             //lastRead = timeCurrent;
         }
     }
