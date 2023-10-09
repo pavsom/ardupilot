@@ -37,7 +37,9 @@
 #include "rc_in.h"
 #include "batt_balance.h"
 #include <AP_InertialSensor/AP_InertialSensor.h>
-
+#if AP_FLOATER3V_ENABLED
+#include <AP_Floater3V/AP_Floater3V.h>
+#endif
 #include <AP_NMEA_Output/AP_NMEA_Output.h>
 #if HAL_NMEA_OUTPUT_ENABLED && !(HAL_GCS_ENABLED && defined(HAL_PERIPH_ENABLE_GPS))
     // Needs SerialManager + (AHRS or GPS)

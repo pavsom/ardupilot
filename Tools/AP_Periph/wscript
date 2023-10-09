@@ -79,6 +79,8 @@ def build(bld):
                      'AP_Volz_Protocol',
                      'AP_SBusOut',
                      'AP_RobotisServo',
+                     'AP_HiwonderServo',
+                     'AP_Floater3V',
                      'AP_FETtecOneWire',
                      ]
     bld.ap_stlib(

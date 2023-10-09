@@ -109,6 +109,9 @@ void AP_Periph_FW::init()
     stm32_watchdog_pat();
     gcs().init();
 #endif
+#if AP_HIWONDERSERVO_ENABLED 
+    serial_manager.set_protocol_and_baud(1, AP_SerialManager::SerialProtocol_Hiwonder, 115200);
+#endif
     serial_manager.init();
     hal.serial(0)->begin(57600, 32, 32);
 
@@ -469,9 +472,13 @@ void AP_Periph_FW::update()
 
     if (now - last_led_ms > 1000) {
         last_led_ms = now;
+        //hal.gpio->pinMode(6,HAL_GPIO_INPUT);
 #ifdef HAL_GPIO_PIN_LED_GREEN2        
         palToggleLine(HAL_GPIO_PIN_LED_GREEN2);
-#endif        
+#endif  
+#ifdef HAL_GPIO_PIN_OUT_PWR_SERVO
+        palSetLine(HAL_GPIO_PIN_OUT_PWR_SERVO);
+#endif      
 #ifdef HAL_GPIO_PIN_LED
         if (!no_iface_finished_dna) {
             //palToggleLine(HAL_GPIO_PIN_LED);

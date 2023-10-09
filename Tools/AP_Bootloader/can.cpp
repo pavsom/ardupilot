@@ -459,6 +459,8 @@ static void onTransferReceived(CanardInstance* ins,
         break;
 
     case UAVCAN_PROTOCOL_RESTARTNODE_ID:
+        if (transfer->transfer_type == CanardTransferTypeBroadcast)
+            break;
         NVIC_SystemReset();
         break;
     }

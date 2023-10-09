@@ -143,10 +143,11 @@ void AP_Periph_FW::rcout_update()
         // register that the output has been changed
         rcout_has_new_data_to_update = true;
     }
-
+#if !AP_HIWONDERSERVO_ENABLED 
     if (!rcout_has_new_data_to_update) {
         return;
     }
+#endif
     rcout_has_new_data_to_update = false;
 
     SRV_Channels::calc_pwm();

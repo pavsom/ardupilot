@@ -902,6 +902,8 @@ void AP_Periph_FW::onTransferReceived(CanardInstance* canard_instance,
         break;
 
     case UAVCAN_PROTOCOL_RESTARTNODE_ID:
+        if (transfer->transfer_type == CanardTransferTypeBroadcast)
+            break;
         printf("RestartNode\n");
         hal.scheduler->delay(10);
         prepare_reboot();
@@ -973,6 +975,11 @@ void AP_Periph_FW::onTransferReceived(CanardInstance* canard_instance,
 #ifdef HAL_PERIPH_ENABLE_NOTIFY
     case ARDUPILOT_INDICATION_NOTIFYSTATE_ID:
         handle_notify_state(canard_instance, transfer);
+        break;
+#endif
+#ifdef AP_FLOATER3V_ENABLED
+    case COM_SNOWSTORM_PRESSURE_ID:
+        AP_Floater3V::get_singleton()->handle_floater(canard_instance, transfer);
         break;
 #endif
     }

@@ -53,6 +53,10 @@ AP_SBusOut *SRV_Channels::sbus_ptr;
 AP_RobotisServo *SRV_Channels::robotis_ptr;
 #endif
 
+#if AP_HIWONDERSERVO_ENABLED
+AP_HiwonderServo *SRV_Channels::hiwonder_ptr;
+#endif
+
 #if AP_FETTEC_ONEWIRE_ENABLED
 AP_FETtecOneWire *SRV_Channels::fetteconwire_ptr;
 #endif
@@ -211,6 +215,12 @@ const AP_Param::GroupInfo SRV_Channels::var_info[] = {
     // @Group: _ROB_
     // @Path: ../AP_RobotisServo/AP_RobotisServo.cpp
     AP_SUBGROUPINFO(robotis, "_ROB_",  22, SRV_Channels, AP_RobotisServo),
+#endif
+
+#if AP_HIWONDERSERVO_ENABLED
+    // @Group: _ROB_
+    // @Path: ../AP_HiwonderServo/AP_HiwonderServo.cpp
+    AP_SUBGROUPINFO(hiwonder, "_HWN_",  45, SRV_Channels, AP_HiwonderServo),
 #endif
 
 #if AP_FETTEC_ONEWIRE_ENABLED
@@ -396,6 +406,10 @@ SRV_Channels::SRV_Channels(void)
     robotis_ptr = &robotis;
 #endif // AP_ROBOTISSERVO_ENABLED
 
+#if AP_HIWONDERSERVO_ENABLED
+    hiwonder_ptr = &hiwonder;
+#endif // AP_HIWONDERSERVO_ENABLED
+
 #if HAL_SUPPORT_RCOUT_SERIAL
     blheli_ptr = &blheli;
 #endif
@@ -528,6 +542,11 @@ void SRV_Channels::push()
 #if AP_ROBOTISSERVO_ENABLED
     // give robotis library a chance to update
     robotis_ptr->update();
+#endif
+
+#if AP_HIWONDERSERVO_ENABLED
+    // give robotis library a chance to update
+    hiwonder_ptr->update();
 #endif
 
 #if HAL_SUPPORT_RCOUT_SERIAL
