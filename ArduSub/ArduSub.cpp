@@ -69,7 +69,7 @@ const AP_Scheduler::Task Sub::scheduler_tasks[] = {
     FAST_TASK_CLASS(AP_Mount, &sub.camera_mount, update_fast),
 #endif
 
-    SCHED_TASK(fifty_hz_loop,         50,     75,   3),
+    SCHED_TASK(fifty_hz_loop,         50,     75,   4),
     SCHED_TASK_CLASS(AP_GPS, &sub.gps, update, 50, 200,   6),
 #if AP_OPTICALFLOW_ENABLED
     SCHED_TASK_CLASS(AP_OpticalFlow,          &sub.optflow,             update,         200, 160,   9),
@@ -150,6 +150,8 @@ void Sub::run_rate_controller()
 // 50 Hz tasks
 void Sub::fifty_hz_loop()
 {
+    uint32_t now = AP_HAL::millis();
+    printf("entried 50 hz loop, time %d \r\n", now);
     // check pilot input failsafe
     failsafe_pilot_input_check();
 
@@ -166,7 +168,7 @@ void Sub::fifty_hz_loop()
 
     SRV_Channels::output_ch_all();
 
-    SRV_Channels::push();
+    //SRV_Channels::push();
 
     if (should_log(MASK_LOG_ANY)) {
         Log_Sensor_Health();
@@ -254,6 +256,8 @@ void Sub::twentyfive_hz_logging()
 // three_hz_loop - 3.3hz loop
 void Sub::three_hz_loop()
 {
+    uint32_t now = AP_HAL::millis();
+    printf("entried 3 hz loop, time %d \r\n", now);
     leak_detector.update();
 
     failsafe_leak_check();
