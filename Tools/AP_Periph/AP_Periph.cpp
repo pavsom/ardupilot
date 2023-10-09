@@ -167,7 +167,7 @@ void AP_Periph_FW::init()
         enum ap_var_type ptype;
         vp = AP_Param::find((char *)"NTF_RX_ID", &ptype);
         ((AP_Int8 *)vp)->set_and_save_ifchanged(1);
-        DEV_PRINTF("\r\n IMU Disabled RX_ID = 1 \r\n");
+        //DEV_PRINTF("\r\n IMU Disabled RX_ID = 1 \r\n");
     }
     else 
     {
@@ -175,7 +175,7 @@ void AP_Periph_FW::init()
         enum ap_var_type ptype;
         vp = AP_Param::find((char *)"NTF_RX_ID", &ptype);
         ((AP_Int8 *)vp)->set_and_save_ifchanged(0);
-        DEV_PRINTF("\r\n IMU ENabled RX_ID = 0 \r\n");
+        //DEV_PRINTF("\r\n IMU ENabled RX_ID = 0 \r\n");
     }
 #endif
 
