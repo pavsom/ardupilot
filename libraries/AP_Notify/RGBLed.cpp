@@ -306,42 +306,60 @@ void RGBLed::custom_override(void)
     static uint32_t lastTime = 0;
     
     // Brightness prepare
-    uint8_t brightness = get_brightness();
+    uint8_t brightness = 255; //get_brightness();
     // The length of sending message
     uint8_t send_len = 0;
 
     for(uint8_t i = 0; i < id_nums; i++){
         // Buffer prepare
         rgbHz leds = {0,0,0,0,0,0};
+        rgbHz ledsNoBlink = {0,0,0,0,0,0};
 
         // Part of cycle that sets leds from flags
-        if (AP_Notify::flags.custom_pump_fault){
-            leds = colorPumpFault;
-        }
-        if (AP_Notify::flags.custom_slow_mode){
-            leds = colorSlowMode;
+        if (AP_Notify::flags.service_mode){
+            leds = colorRedTestMode;
+            ledsNoBlink = colorRedTestMode;
         }
         if (AP_Notify::flags.armed){
-            if(i == 0){
+            if(i < id_nums/2){
                 leds = colorArmedLeft;
+                ledsNoBlink = colorArmedLeft;
             }
-            if(i == 2){
+            else{
                 leds = colorArmedRight;
+                ledsNoBlink = colorArmedRight;
             }
         }
-        if (AP_Notify::flags.custom_blesk && (i % 2 == 1)){
-            leds = colorBlesk;
+        if (AP_Notify::flags.manual_mode){
+            if(i < id_nums/2){
+                leds = colorGreenTestMode;
+            }
+            else{
+                leds = colorBlueTestMode;
+            }
         }
-        setBrightness(leds,brightness);
+        if (AP_Notify::flags.search_mode){
+            leds = colorSearchMode;
+            ledsNoBlink = colorSearchMode;
+        }
+        if (AP_Notify::flags.red_blink_mode){
+            leds = colorRedBlinkMode;
+        }
 
         // Part of cycle that does the blinking
         if (leds.hz){
             uint32_t ms_per_cycle = 1000 / leds.hz;
             uint32_t cycle = (tNow - _led_override.start_ms) % ms_per_cycle;
             if (cycle <= ms_per_cycle /2){
-                leds = {0,0,0,0,0,0};
+                if (AP_Notify::flags.manual_mode){
+                    leds = colorServiceMode;
+                }
+                else{
+                    leds = ledsNoBlink;
+                }
             }
         }
+        setBrightness(leds,brightness);
 
         // Part of cycle that fills ledCurrent array for sending
         if (leds.r != ledsCurrent[i].r ||

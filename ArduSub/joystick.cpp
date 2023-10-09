@@ -419,8 +419,8 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_1_toggle:
         if (!held) {
-            AP_Notify::flags.custom_slow_mode = AP_Notify::flags.custom_slow_mode? false : true;
-            gcs().send_text(MAV_SEVERITY_INFO,"#slow mode toggled");
+            AP_Notify::flags.red_blink_mode = AP_Notify::flags.red_blink_mode? false : true;
+            gcs().send_text(MAV_SEVERITY_INFO,"#red blink mode toggled");
             relay.toggle(0);
         }
         break;
@@ -437,8 +437,8 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_2_toggle:
         if (!held) {
-            AP_Notify::flags.custom_pump_fault = AP_Notify::flags.custom_pump_fault? false : true;
-            gcs().send_text(MAV_SEVERITY_INFO,"#pump mode toggled");
+            AP_Notify::flags.search_mode = AP_Notify::flags.search_mode? false : true;
+            gcs().send_text(MAV_SEVERITY_INFO,"#search mode toggled");
             relay.toggle(1);
         }
         break;
@@ -455,8 +455,8 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_3_toggle:
         if (!held) {
-            AP_Notify::flags.custom_blesk = AP_Notify::flags.custom_blesk? false : true;
-            gcs().send_text(MAV_SEVERITY_INFO,"#blesk mode toggled");
+            AP_Notify::flags.manual_mode = AP_Notify::flags.manual_mode? false : true;
+            gcs().send_text(MAV_SEVERITY_INFO,"#manual mode toggled");
             relay.toggle(2);
         }
         break;
@@ -473,6 +473,8 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_4_toggle:
         if (!held) {
+            AP_Notify::flags.service_mode = AP_Notify::flags.service_mode? false : true;
+            gcs().send_text(MAV_SEVERITY_INFO,"#service mode toggled");
             relay.toggle(3);
         }
         break;

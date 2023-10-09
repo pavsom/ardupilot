@@ -721,8 +721,11 @@ void AP_Periph_FW::handle_lightscommand(CanardInstance* canard_instance, CanardR
         // to get the right color proportions we scale the green so that is uses the
         // same number of bits as red and blue
         uint8_t red = cmd.color.red<<3U;
+        if (red > 240) red = 255;
         uint8_t green = (cmd.color.green>>1U)<<3U;
+        if (green > 240) green = 255;
         uint8_t blue = cmd.color.blue<<3U;
+        if (blue > 240) blue = 255;
         uint8_t id = cmd.light_id;
 #ifdef HAL_PERIPH_ENABLE_NOTIFY
         const int8_t brightness = notify.get_rgb_led_brightness_percent();

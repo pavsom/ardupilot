@@ -120,11 +120,21 @@ private:
     const uint32_t sequence_disarmed_good_gps = DEFINE_COLOUR_SEQUENCE_SLOW(GREEN);
     const uint32_t sequence_disarmed_bad_gps = DEFINE_COLOUR_SEQUENCE_SLOW(BLUE);
 
-    const rgbHz colorSlowMode = {0,255,255,0,0,0};
+    const rgbHz colorRedBlinkMode = {255,0,0,2,0,0};
+    const rgbHz colorServiceMode = {255,165,0,0,0,0};
+    const rgbHz colorSearchMode = {255,255,255,0,0,0};
     const rgbHz colorArmedLeft = {255,0,0,0,0,0};
     const rgbHz colorArmedRight = {0,255,0,0,0,0};
-    const rgbHz colorBlesk = {255,191,0,5,0,0};
+    const rgbHz colorManualModeLeft = {255,0,0,1,0,0};
+    const rgbHz colorManualModeRight = {0,255,0,1,0,0};
+
+    const rgbHz colorRedTestMode {255,0,0,0,0,0};
+    const rgbHz colorGreenTestMode {0,255,0,0,0,0};
+    const rgbHz colorBlueTestMode {0,0,255,0,0,0};
+
     const rgbHz colorPumpFault = {255,0,0,0,0,0};
+    const rgbHz colorBlesk = {255,191,0,5,0,0};
+    const rgbHz colorSlowMode = {0,255,255,0,0,0};
     void setBrightness(rgbHz& color, uint8_t& brightness);
     
     uint8_t last_step;
