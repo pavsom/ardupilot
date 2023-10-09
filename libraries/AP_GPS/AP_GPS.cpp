@@ -1164,8 +1164,18 @@ void AP_GPS::update(void)
 void AP_GPS::update_primary(void)
 {
 #if defined(GPS_BLENDED_INSTANCE)
-    // if blending is requested, attempt to calculate weighting for each GPS
-    if ((GPSAutoSwitch)_auto_switch.get() == GPSAutoSwitch::BLEND) {
+    /*
+      if blending is requested, attempt to calculate weighting for
+      each GPS
+      we do not do blending if using moving baseline yaw as the rover is
+      significant lagged and gives no more information on position or
+      velocity
+    */
+    const bool using_moving_base = (_type[0] == GPS_TYPE_UAVCAN_RTK_BASE ||
+                                    _type[0] == GPS_TYPE_UBLOX_RTK_BASE ||
+                                    _type[1] == GPS_TYPE_UAVCAN_RTK_BASE ||
+                                    _type[1] == GPS_TYPE_UBLOX_RTK_BASE);
+    if ((GPSAutoSwitch)_auto_switch.get() == GPSAutoSwitch::BLEND && !using_moving_base) {
         _output_is_blended = calc_blend_weights();
         // adjust blend health counter
         if (!_output_is_blended) {
@@ -2145,12 +2155,14 @@ bool AP_GPS::is_healthy(uint8_t instance) const
      */
     /*
       allow two lost frames before declaring the GPS unhealthy, but
-      require the average frame rate to be close to 5Hz. We allow for
-      a bit higher average for a rover due to the packet loss that
-      happens with the RTCMv3 data
+      require the average frame rate to be close to 5Hz.
+
+      We allow for a rate of 3Hz average for a moving baseline rover
+      due to the packet loss that happens with the RTCMv3 data and the
+      fact that the rate of yaw data is not critical
      */
     const uint8_t delay_threshold = 2;
-    const float delay_avg_max = ((_type[instance] == GPS_TYPE_UBLOX_RTK_ROVER) || (_type[instance] == GPS_TYPE_UAVCAN_RTK_ROVER))?245:215;
+    const float delay_avg_max = ((_type[instance] == GPS_TYPE_UBLOX_RTK_ROVER) || (_type[instance] == GPS_TYPE_UAVCAN_RTK_ROVER))?333:215;
     const GPS_timing &t = timing[instance];
     bool delay_ok = (t.delayed_count < delay_threshold) &&
         t.average_delta_ms < delay_avg_max &&

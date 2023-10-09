@@ -12,18 +12,11 @@
 extern const AP_HAL::HAL& hal;
 
 #define LOG_TAG "Mount"
-#define XACTI_PARAM_SINGLESHOT "SingleShot"
-#define XACTI_PARAM_RECORDING "Recording"
-#define XACTI_PARAM_FOCUSMODE "FocusMode"
-#define XACTI_PARAM_SENSORMODE "SensorMode"
-#define XACTI_PARAM_DIGITALZOOM "DigitalZoomMagnification"
-#define XACTI_PARAM_FIRMWAREVERSION "FirmwareVersion"
-#define XACTI_PARAM_STATUS "Status"
-#define XACTI_PARAM_DATETIME "DateTime"
-
 #define XACTI_MSG_SEND_MIN_MS 20                    // messages should not be sent to camera more often than 20ms
-#define XACTI_ZOOM_RATE_UPDATE_INTERVAL_MS  500     // zoom rate control increments zoom by 10% up or down every 0.5sec
+#define XACTI_DIGITAL_ZOOM_RATE_UPDATE_INTERVAL_MS  500 // digital zoom rate control updates 11% up or down every 0.5sec
+#define XACTI_OPTICAL_ZOOM_RATE_UPDATE_INTERVAL_MS  250 // optical zoom rate control updates 6.6% up or down every 0.25sec
 #define XACTI_STATUS_REQ_INTERVAL_MS 3000           // request status every 3 seconds
+#define XACTI_SET_PARAM_QUEUE_SIZE 3                // three set-param requests may be queued
 
 #define AP_MOUNT_XACTI_DEBUG 0
 #define debug(fmt, args ...) do { if (AP_MOUNT_XACTI_DEBUG) { GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Xacti: " fmt, ## args); } } while (0)
@@ -33,6 +26,10 @@ AP_Mount_Xacti::DetectedModules AP_Mount_Xacti::_detected_modules[];
 HAL_Semaphore AP_Mount_Xacti::_sem_registry;
 const char* AP_Mount_Xacti::send_text_prefix = "Xacti:";
 const char* AP_Mount_Xacti::sensor_mode_str[] = { "RGB", "IR", "PIP", "NDVI" };
+const char* AP_Mount_Xacti::_param_names[] = {"SingleShot", "Recording", "FocusMode",
+                                              "SensorMode", "DigitalZoomMagnification",
+                                              "FirmwareVersion", "Status", "DateTime",
+                                              "OpticalZoomMagnification"};
 
 // Constructor
 AP_Mount_Xacti::AP_Mount_Xacti(class AP_Mount &frontend, class AP_Mount_Params &params, uint8_t instance) :
@@ -43,11 +40,20 @@ AP_Mount_Xacti::AP_Mount_Xacti(class AP_Mount &frontend, class AP_Mount_Params &
     param_int_cb = FUNCTOR_BIND_MEMBER(&AP_Mount_Xacti::handle_param_get_set_response_int, bool, AP_DroneCAN*, const uint8_t, const char*, int32_t &);
     param_string_cb = FUNCTOR_BIND_MEMBER(&AP_Mount_Xacti::handle_param_get_set_response_string, bool, AP_DroneCAN*, const uint8_t, const char*, AP_DroneCAN::string &);
     param_save_cb = FUNCTOR_BIND_MEMBER(&AP_Mount_Xacti::handle_param_save_response, void, AP_DroneCAN*, const uint8_t, bool);
+
+    // static assert that Param enum matches parameter names array
+    static_assert((uint8_t)AP_Mount_Xacti::Param::LAST+1 == ARRAY_SIZE(AP_Mount_Xacti::_param_names), "AP_Mount_Xacti::_param_names array must match Param enum");
 }
 
 // init - performs any required initialisation for this instance
 void AP_Mount_Xacti::init()
 {
+    // instantiate parameter queue, return on failure so init fails
+    _set_param_int32_queue = new ObjectArray<SetParamQueueItem>(XACTI_SET_PARAM_QUEUE_SIZE);
+    if (_set_param_int32_queue == nullptr) {
+        GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s init failed", send_text_prefix);
+        return;
+    }
     _initialised = true;
 }
 
@@ -70,13 +76,25 @@ void AP_Mount_Xacti::update()
         return;
     }
 
-    // set date and time
-    if (_firmware_version.received && set_datetime(now_ms)) {
-        return;
+    // additional initial setup
+    if (_firmware_version.received) {
+        // set date and time
+        if (set_datetime(now_ms)) {
+            return;
+        }
+         // request camera capabilities
+        if (request_capabilities(now_ms)) {
+            return;
+        }
     }
 
     // request status
     if (request_status(now_ms)) {
+        return;
+    }
+
+    // process queue of set parameter items
+    if (process_set_param_int32_queue()) {
         return;
     }
 
@@ -188,19 +206,20 @@ bool AP_Mount_Xacti::healthy() const
 // take a picture.  returns true on success
 bool AP_Mount_Xacti::take_picture()
 {
-    if (_detected_modules[_instance].ap_dronecan == nullptr) {
+    // fail if camera errored
+    if (_camera_error) {
+        GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s unable to take pic", send_text_prefix);
         return false;
     }
 
-    // set SingleShot parameter
-    return set_param_int32(XACTI_PARAM_SINGLESHOT, 0);
+    return set_param_int32(Param::SingleShot, 0);
 }
 
 // start or stop video recording.  returns true on success
 // set start_recording = true to start record, false to stop recording
 bool AP_Mount_Xacti::record_video(bool start_recording)
 {
-    return set_param_int32(XACTI_PARAM_RECORDING, start_recording ? 1 : 0);
+    return set_param_int32(Param::Recording, start_recording ? 1 : 0);
 }
 
 // set zoom specified as a rate or percentage
@@ -214,17 +233,35 @@ bool AP_Mount_Xacti::set_zoom(ZoomType zoom_type, float zoom_value)
         } else {
             // zoom in or out
             _zoom_rate_control.enabled = true;
-            _zoom_rate_control.increment = (zoom_value < 0) ? -100 : 100;
+            _zoom_rate_control.dir = (zoom_value < 0) ? -1 : 1;
         }
         return true;
     }
 
     // zoom percentage
     if (zoom_type == ZoomType::PCT) {
+        if (capabilities.optical_zoom == Capability::True) {
+            // optical zoom capable cameras use combination of optical and digital zoom
+            // convert zoom percentage (0 ~ 100) to zoom times using linear interpolation
+            // optical zoom covers 1x to 2.5x, param values are in 100 to 250
+            // digital zoom covers 2.5x to 25x, param values are 100 to 1000
+            const float zoom_times = linear_interpolate(1, 25, zoom_value, 0, 100);
+            const uint16_t optical_zoom_param = constrain_uint16(uint16_t(zoom_times * 10) * 10, 100, 250);
+            const uint16_t digital_zoom_param = constrain_uint16(uint16_t(zoom_times * 0.4) * 100, 100, 1000);
+            bool ret = true;
+            if (optical_zoom_param != _last_optical_zoom_param_value) {
+                ret = set_param_int32(Param::OpticalZoomMagnification, optical_zoom_param);
+            }
+            if (digital_zoom_param != _last_digital_zoom_param_value) {
+                ret &= set_param_int32(Param::DigitalZoomMagnification, digital_zoom_param);
+            }
+            return ret;
+        }
+        // digital only zoom
         // convert zoom percentage (0 ~ 100) to zoom parameter value (100, 200, 300, ... 1000)
-        // 0~9pct:100, 10~19pct:200, ... 90~100pct:1000
-        uint16_t zoom_param_value = constrain_uint16(uint16_t(zoom_value * 0.1) * 10, 100, 1000);
-        return set_param_int32(XACTI_PARAM_DIGITALZOOM, zoom_param_value);
+        // 0~11pct:100, 12~22pct:200, 23~33pct:300, 34~44pct:400, 45~55pct:500, 56~66pct:600, 67~77pct:700, 78~88pct:800, 89~99pct:900, 100:1000
+        const uint16_t zoom_param_value = uint16_t(linear_interpolate(1, 10, zoom_value, 0, 100)) * 100;
+        return set_param_int32(Param::DigitalZoomMagnification, zoom_param_value);
     }
 
     // unsupported zoom type
@@ -254,7 +291,7 @@ SetFocusResult AP_Mount_Xacti::set_focus(FocusType focus_type, float focus_value
     }
 
     // set FocusMode parameter
-    return set_param_int32(XACTI_PARAM_FOCUSMODE, focus_param_value) ? SetFocusResult::ACCEPTED : SetFocusResult::FAILED;
+    return set_param_int32(Param::FocusMode, focus_param_value) ? SetFocusResult::ACCEPTED : SetFocusResult::FAILED;
 }
 
 // set camera lens as a value from 0 to 5
@@ -265,7 +302,7 @@ bool AP_Mount_Xacti::set_lens(uint8_t lens)
         return false;
     }
 
-    return set_param_int32(XACTI_PARAM_SENSORMODE, lens);
+    return set_param_int32(Param::SensorMode, lens);
 }
 
 // send camera information message to GCS
@@ -350,7 +387,7 @@ void AP_Mount_Xacti::subscribe_msgs(AP_DroneCAN* ap_dronecan)
 {
     // return immediately if DroneCAN is unavailable
     if (ap_dronecan == nullptr) {
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "%s DroneCAN subscribe failed", send_text_prefix);
+        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "%s DroneCAN subscribe failed", send_text_prefix);
         return;
     }
 
@@ -489,63 +526,88 @@ void AP_Mount_Xacti::handle_gnss_status_req(AP_DroneCAN* ap_dronecan, const Cana
 // handle param get/set response
 bool AP_Mount_Xacti::handle_param_get_set_response_int(AP_DroneCAN* ap_dronecan, uint8_t node_id, const char* name, int32_t &value)
 {
-    // display errors
+    // error string prefix to save on flash
     const char* err_prefix_str = "Xacti: failed to";
-    if (strcmp(name, XACTI_PARAM_SINGLESHOT) == 0) {
+
+    // take picture
+    if (strcmp(name, get_param_name_str(Param::SingleShot)) == 0) {
         if (value < 0) {
-            gcs().send_text(MAV_SEVERITY_ERROR, "%s take pic", err_prefix_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s take pic", err_prefix_str);
         }
         return false;
     }
-    if (strcmp(name, XACTI_PARAM_RECORDING) == 0) {
+
+    // recording
+    if (strcmp(name, get_param_name_str(Param::Recording)) == 0) {
         if (value < 0) {
             _recording_video = false;
-            gcs().send_text(MAV_SEVERITY_ERROR, "%s record", err_prefix_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s record", err_prefix_str);
         } else {
             _recording_video = (value == 1);
-            gcs().send_text(MAV_SEVERITY_INFO, "%s recording %s", send_text_prefix, _recording_video ? "ON" : "OFF");
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s recording %s", send_text_prefix, _recording_video ? "ON" : "OFF");
         }
         return false;
     }
-    if (strcmp(name, XACTI_PARAM_FOCUSMODE) == 0) {
+
+    // focus
+    if (strcmp(name, get_param_name_str(Param::FocusMode)) == 0) {
         if (value < 0) {
-            gcs().send_text(MAV_SEVERITY_ERROR, "%s change focus", err_prefix_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s change focus", err_prefix_str);
         } else {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s %s focus", send_text_prefix, value == 0 ? "manual" : "auto");
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s %s focus", send_text_prefix, value == 0 ? "manual" : "auto");
         }
         return false;
     }
-    if (strcmp(name, XACTI_PARAM_SENSORMODE) == 0) {
+
+    // camera lens (aka sensor mode)
+    if (strcmp(name, get_param_name_str(Param::SensorMode)) == 0) {
         if (value < 0) {
-            gcs().send_text(MAV_SEVERITY_ERROR, "%s change lens", err_prefix_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s change lens", err_prefix_str);
         } else if ((uint32_t)value < ARRAY_SIZE(sensor_mode_str)) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s %s", send_text_prefix, sensor_mode_str[(uint8_t)value]);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s %s", send_text_prefix, sensor_mode_str[(uint8_t)value]);
         }
         return false;
     }
-    if (strcmp(name, XACTI_PARAM_DIGITALZOOM) == 0) {
+
+    // digital zoom
+    if (strcmp(name, get_param_name_str(Param::DigitalZoomMagnification)) == 0) {
         if (value < 0) {
-            gcs().send_text(MAV_SEVERITY_ERROR, "%s change zoom", err_prefix_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s change zoom", err_prefix_str);
             // disable zoom rate control (if active) to avoid repeated failures
             _zoom_rate_control.enabled = false;
         } else if (value >= 100 && value <= 1000) {
-            _last_zoom_param_value = value;
+            _last_digital_zoom_param_value = value;
         }
         return false;
     }
+
+    // optical zoom
+    if (strcmp(name, get_param_name_str(Param::OpticalZoomMagnification)) == 0) {
+        if (value < 0) {
+            GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s change optical zoom", err_prefix_str);
+            // disable zoom rate control (if active) to avoid repeated failures
+            _zoom_rate_control.enabled = false;
+        } else if (value >= 100 && value <= 250) {
+            capabilities.optical_zoom = Capability::True;
+            capabilities.received = true;
+            _last_optical_zoom_param_value = value;
+        }
+        return false;
+    }
+    
     // unhandled parameter get or set
-    gcs().send_text(MAV_SEVERITY_INFO, "%s get/set %s res:%ld", send_text_prefix, name, (long int)value);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s get/set %s res:%ld", send_text_prefix, name, (long int)value);
     return false;
 }
 
 // handle param get/set response
 bool AP_Mount_Xacti::handle_param_get_set_response_string(AP_DroneCAN* ap_dronecan, uint8_t node_id, const char* name, AP_DroneCAN::string &value)
 {
-    if (strcmp(name, XACTI_PARAM_FIRMWAREVERSION) == 0) {
+    if (strcmp(name, get_param_name_str(Param::FirmwareVersion)) == 0) {
         _firmware_version.received = true;
         const uint8_t len = MIN(value.len, ARRAY_SIZE(_firmware_version.str)-1);
         memcpy(_firmware_version.str, (const char*)value.data, len);
-        gcs().send_text(MAV_SEVERITY_INFO, "Mount: Xacti fw:%s", _firmware_version.str);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "Mount: Xacti fw:%s", _firmware_version.str);
 
         // firmware str from gimbal is of the format YYMMDD[b]xx.  Convert to uint32 for reporting to GCS
         if (len >= 9) {
@@ -560,11 +622,11 @@ bool AP_Mount_Xacti::handle_param_get_set_response_string(AP_DroneCAN* ap_dronec
             _firmware_version.mav_ver = UINT32_VALUE(dev_ver_num, patch_ver_num, minor_ver_num, major_ver_num);
         }
         return false;
-    } else if (strcmp(name, XACTI_PARAM_DATETIME) == 0) {
+    } else if (strcmp(name, get_param_name_str(Param::DateTime)) == 0) {
         // display when time and date have been set
-        gcs().send_text(MAV_SEVERITY_INFO, "%s datetime set %s", send_text_prefix, (const char*)value.data);
+        GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s datetime set %s", send_text_prefix, (const char*)value.data);
         return false;
-    } else if (strcmp(name, XACTI_PARAM_STATUS) == 0) {
+    } else if (strcmp(name, get_param_name_str(Param::Status)) == 0) {
         // check for expected length
         const char* error_str = "error";
         if (value.len != sizeof(_status)) {
@@ -579,38 +641,40 @@ bool AP_Mount_Xacti::handle_param_get_set_response_string(AP_DroneCAN* ap_dronec
         // report change in status
         uint32_t changed_bits = last_error_status ^ _status.error_status;
         const char* ok_str = "OK";
-        if (changed_bits & (uint32_t)ErrorStatus::CANNOT_TAKE_PIC) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s %s take pic", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::CANNOT_TAKE_PIC ? "cannot" : "can");
-        }
         if (changed_bits & (uint32_t)ErrorStatus::TIME_NOT_SET) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s time %sset", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::TIME_NOT_SET ? "not " : " ");
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s time %sset", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::TIME_NOT_SET ? "not " : "");
+            if (_status.error_status & (uint32_t)ErrorStatus::TIME_NOT_SET) {
+                // try to set time again
+                _datetime.set = false;
+            }
         }
         if (changed_bits & (uint32_t)ErrorStatus::MEDIA_ERROR) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s media %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::MEDIA_ERROR ? error_str : ok_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s media %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::MEDIA_ERROR ? error_str : ok_str);
         }
         if (changed_bits & (uint32_t)ErrorStatus::LENS_ERROR) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s lens %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::LENS_ERROR ? error_str : ok_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s lens %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::LENS_ERROR ? error_str : ok_str);
         }
         if (changed_bits & (uint32_t)ErrorStatus::MOTOR_INIT_ERROR) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s motor %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::MOTOR_INIT_ERROR ? "init error" : ok_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s motor %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::MOTOR_INIT_ERROR ? "init error" : ok_str);
         }
         if (changed_bits & (uint32_t)ErrorStatus::MOTOR_OPERATION_ERROR) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s motor op %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::MOTOR_OPERATION_ERROR ? error_str : ok_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s motor op %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::MOTOR_OPERATION_ERROR ? error_str : ok_str);
         }
         if (changed_bits & (uint32_t)ErrorStatus::GIMBAL_CONTROL_ERROR) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s control %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::GIMBAL_CONTROL_ERROR ? error_str : ok_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s control %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::GIMBAL_CONTROL_ERROR ? error_str : ok_str);
         }
         if (changed_bits & (uint32_t)ErrorStatus::TEMP_WARNING) {
-            gcs().send_text(MAV_SEVERITY_INFO, "%s temp %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::TEMP_WARNING ? "warning" : ok_str);
+            GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s temp %s", send_text_prefix, _status.error_status & (uint32_t)ErrorStatus::TEMP_WARNING ? "warning" : ok_str);
         }
 
         // set motor error for health reporting
         _motor_error = _status.error_status & ((uint32_t)ErrorStatus::MOTOR_INIT_ERROR | (uint32_t)ErrorStatus::MOTOR_OPERATION_ERROR | (uint32_t)ErrorStatus::GIMBAL_CONTROL_ERROR);
+        _camera_error = _status.error_status & ((uint32_t)ErrorStatus::LENS_ERROR | (uint32_t)ErrorStatus::MEDIA_ERROR);
         return false;
     }
 
     // unhandled parameter get or set
-    gcs().send_text(MAV_SEVERITY_INFO, "%s get/set string %s res:%s", send_text_prefix, name, (const char*)value.data);
+    GCS_SEND_TEXT(MAV_SEVERITY_INFO, "%s get/set string %s res:%s", send_text_prefix, name, (const char*)value.data);
     return false;
 }
 
@@ -618,31 +682,47 @@ void AP_Mount_Xacti::handle_param_save_response(AP_DroneCAN* ap_dronecan, const 
 {
     // display failure to save parameter
     if (!success) {
-        gcs().send_text(MAV_SEVERITY_ERROR, "%s CAM%u failed to set param", send_text_prefix, (int)_instance+1);
+        GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s CAM%u failed to set param", send_text_prefix, (int)_instance+1);
     }
+}
+
+// get parameter name for a particular param enum value
+// returns an empty string if not found (which should never happen)
+const char* AP_Mount_Xacti::get_param_name_str(Param param) const
+{
+    // check to avoid reading beyond end of array.  This should never happen
+    if ((uint8_t)param > ARRAY_SIZE(_param_names)) {
+        INTERNAL_ERROR(AP_InternalError::error_t::invalid_arg_or_result);
+        return "";
+    }
+    return _param_names[(uint8_t)param];
 }
 
 // helper function to set integer parameters
-bool AP_Mount_Xacti::set_param_int32(const char* param_name, int32_t param_value)
+bool AP_Mount_Xacti::set_param_int32(Param param, int32_t param_value)
 {
-    if (_detected_modules[_instance].ap_dronecan == nullptr) {
+    if (_set_param_int32_queue == nullptr) {
         return false;
     }
 
-    if (_detected_modules[_instance].ap_dronecan->set_parameter_on_node(_detected_modules[_instance].node_id, param_name, param_value, &param_int_cb)) {
-        last_send_getset_param_ms = AP_HAL::millis();
-        return true;
-    }
-    return false;
+    // set param request added to queue to be sent.  throttling requests improves reliability
+    return _set_param_int32_queue->push(SetParamQueueItem{param, param_value});
 }
 
-bool AP_Mount_Xacti::set_param_string(const char* param_name, const AP_DroneCAN::string& param_value)
+// helper function to set string parameters
+bool AP_Mount_Xacti::set_param_string(Param param, const AP_DroneCAN::string& param_value)
 {
     if (_detected_modules[_instance].ap_dronecan == nullptr) {
         return false;
     }
 
-    if (_detected_modules[_instance].ap_dronecan->set_parameter_on_node(_detected_modules[_instance].node_id, param_name, param_value, &param_string_cb)) {
+    // convert param to string
+    const char* param_name_str = get_param_name_str(param);
+    if (param_name_str == nullptr) {
+        return false;
+    }
+
+    if (_detected_modules[_instance].ap_dronecan->set_parameter_on_node(_detected_modules[_instance].node_id, param_name_str, param_value, &param_string_cb)) {
         last_send_getset_param_ms = AP_HAL::millis();
         return true;
     }
@@ -650,15 +730,37 @@ bool AP_Mount_Xacti::set_param_string(const char* param_name, const AP_DroneCAN:
 }
 
 // helper function to get string parameters
-bool AP_Mount_Xacti::get_param_string(const char* param_name)
+bool AP_Mount_Xacti::get_param_string(Param param)
 {
     if (_detected_modules[_instance].ap_dronecan == nullptr) {
         return false;
     }
 
-    if (_detected_modules[_instance].ap_dronecan->get_parameter_on_node(_detected_modules[_instance].node_id, param_name, &param_string_cb)) {
+    // convert param to string
+    const char* param_name_str = get_param_name_str(param);
+    if (_detected_modules[_instance].ap_dronecan->get_parameter_on_node(_detected_modules[_instance].node_id, param_name_str, &param_string_cb)) {
         last_send_getset_param_ms = AP_HAL::millis();
         return true;
+    }
+    return false;
+}
+
+// process queue of set parameter items
+bool AP_Mount_Xacti::process_set_param_int32_queue()
+{
+    if ((_set_param_int32_queue == nullptr) || (_detected_modules[_instance].ap_dronecan == nullptr)) {
+        return false;
+    }
+
+    SetParamQueueItem param_to_set;
+    if (_set_param_int32_queue->pop(param_to_set)) {
+        // convert param to string
+        const char* param_name_str = get_param_name_str(param_to_set.param);
+        if (_detected_modules[_instance].ap_dronecan->set_parameter_on_node(_detected_modules[_instance].node_id, param_name_str, param_to_set.value, &param_int_cb)) {
+            last_send_getset_param_ms = AP_HAL::millis();
+            return true;
+        }
+        return false;
     }
     return false;
 }
@@ -732,23 +834,42 @@ bool AP_Mount_Xacti::update_zoom_rate_control(uint32_t now_ms)
         return false;
     }
 
-    // update only every 0.5 sec
-    if (now_ms - _zoom_rate_control.last_update_ms < XACTI_ZOOM_RATE_UPDATE_INTERVAL_MS) {
+    // we are controlling optical zoom if the camera has it and we are below the optical zoom upper limit
+    // or at the optical zoom upper limit, the lower digital zoom limit and are zooming out
+    bool optical_zoom_control = (capabilities.optical_zoom == Capability::True) &&
+                                ((_last_optical_zoom_param_value < 250) ||
+                                 ((_last_optical_zoom_param_value == 250) && (_last_digital_zoom_param_value == 100) && (_zoom_rate_control.dir < 0)));
+
+    // update every 0.25 or 0.5 sec
+    const uint32_t update_interval_ms = optical_zoom_control ? XACTI_OPTICAL_ZOOM_RATE_UPDATE_INTERVAL_MS : XACTI_DIGITAL_ZOOM_RATE_UPDATE_INTERVAL_MS;
+    if (now_ms - _zoom_rate_control.last_update_ms < update_interval_ms) {
         return false;
     }
     _zoom_rate_control.last_update_ms = now_ms;
 
-    // increment zoom
-    const uint16_t zoom_value = _last_zoom_param_value + _zoom_rate_control.increment;
+    // optical zoom
+    if (optical_zoom_control) {
+        const uint16_t optical_zoom_value = _last_optical_zoom_param_value + _zoom_rate_control.dir * 10;
+        // if reached lower limit of optical zoom, disable zoom control
+        if (optical_zoom_value < 100) {
+            _zoom_rate_control.enabled = false;
+            return false;
+        }
 
+        // send desired optical zoom to camera
+        return set_param_int32(Param::OpticalZoomMagnification, MIN(optical_zoom_value, 250));
+    }
+
+    // digital zoom
+    const uint16_t digital_zoom_value = _last_digital_zoom_param_value + _zoom_rate_control.dir * 100;
     // if reached limit then disable zoom
-    if ((zoom_value < 100) || (zoom_value > 1000)) {
+    if (((capabilities.optical_zoom != Capability::True) && (digital_zoom_value < 100)) || (digital_zoom_value > 1000)) {
         _zoom_rate_control.enabled = false;
         return false;
     }
 
-    // send desired zoom to camera
-    return set_param_int32(XACTI_PARAM_DIGITALZOOM, zoom_value);
+    // send desired digital zoom to camera
+    return set_param_int32(Param::DigitalZoomMagnification, digital_zoom_value);
 }
 
 // request firmware version. now_ms should be current system time (reduces calls to AP_HAL::millis)
@@ -765,7 +886,39 @@ bool AP_Mount_Xacti::request_firmware_version(uint32_t now_ms)
         return false;
     }
     _firmware_version.last_request_ms = now_ms;
-    return get_param_string(XACTI_PARAM_FIRMWAREVERSION);
+    return get_param_string(Param::FirmwareVersion);
+}
+
+// request parameters used to determine camera capabilities.  now_ms is current system time
+// returns true if a param get/set was sent so that we avoid sending other messages
+bool AP_Mount_Xacti::request_capabilities(uint32_t now_ms)
+{
+    // return immediately if we have already determined this models capabilities
+    if (capabilities.received) {
+        return false;
+    }
+
+    // send requests once per second until received
+    if (now_ms - capabilities.last_request_ms < 1000) {
+        return false;
+    }
+    capabilities.last_request_ms = now_ms;
+
+    // record start time
+    if (capabilities.first_request_ms == 0) {
+        capabilities.first_request_ms = now_ms;
+    }
+
+    // timeout after 10 seconds
+    if (now_ms - capabilities.first_request_ms > 10000) {
+        capabilities.optical_zoom = Capability::False;
+        capabilities.received = true;
+        return false;
+    }
+
+    // optical zoom: try setting optical zoom to 1x
+    // return is handled in handle_param_get_set_response_int
+    return set_param_int32(Param::OpticalZoomMagnification, 100);
 }
 
 // set date and time.  now_ms is current system time
@@ -800,9 +953,9 @@ bool AP_Mount_Xacti::set_datetime(uint32_t now_ms)
         return false;
     }
     datetime_string.len = num_bytes;
-    _datetime.set = set_param_string(XACTI_PARAM_DATETIME, datetime_string);
+    _datetime.set = set_param_string(Param::DateTime, datetime_string);
     if (!_datetime.set) {
-        gcs().send_text(MAV_SEVERITY_ERROR, "%s failed to set date/time", send_text_prefix);
+        GCS_SEND_TEXT(MAV_SEVERITY_ERROR, "%s failed to set date/time", send_text_prefix);
     }
 
     return _datetime.set;
@@ -818,7 +971,7 @@ bool AP_Mount_Xacti::request_status(uint32_t now_ms)
     }
 
     _status_report.last_request_ms = now_ms;
-    return get_param_string(XACTI_PARAM_STATUS);
+    return get_param_string(Param::Status);
 }
 
 // check if safe to send message (if messages sent too often camera will not respond)

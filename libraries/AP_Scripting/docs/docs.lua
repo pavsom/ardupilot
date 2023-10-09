@@ -45,6 +45,11 @@ function micros() end
 ---@return number|nil -- command param 4
 function mission_receive() end
 
+-- Print text, if MAVLink is available the value will be sent with debug severity
+-- If no MAVLink the value will be sent over can
+-- equivalent to gcs:send_text(7, text) or periph:can_printf(text)
+---@param text string|number|integer
+function print(text) end
 
 -- data flash logging to SD card
 ---@class logger
@@ -1968,6 +1973,11 @@ function serialLED:set_num_profiled(chan, num_leds) end
 ---@return boolean
 function serialLED:set_num_neopixel(chan, num_leds) end
 
+-- desc
+---@param chan integer
+---@param num_leds integer
+---@return boolean
+function serialLED:set_num_neopixel_rgb(chan, num_leds) end
 
 -- desc
 ---@class vehicle

@@ -227,6 +227,8 @@ class TeeBoth(object):
         self.file = None
 
     def write(self, data):
+        if isinstance(data, bytes):
+            data = data.decode('ascii')
         self.file.write(data)
         if not self.suppress_stdout:
             self.stdout.write(data)
@@ -2151,19 +2153,10 @@ class AutoTest(ABC):
             "SIM_ADSB_COUNT",
             "SIM_ADSB_RADIUS",
             "SIM_ADSB_TX",
-            "SIM_ARSPD2_FAIL",
-            "SIM_ARSPD2_FAILP",
             "SIM_ARSPD2_OFS",
-            "SIM_ARSPD2_PITOT",
-            "SIM_ARSPD2_RATIO",
             "SIM_ARSPD2_RND",
-            "SIM_ARSPD2_SIGN",
-            "SIM_ARSPD_FAILP",
             "SIM_ARSPD_OFS",
-            "SIM_ARSPD_PITOT",
-            "SIM_ARSPD_RATIO",
             "SIM_ARSPD_RND",
-            "SIM_ARSPD_SIGN",
             "SIM_BAR2_DELAY",
             "SIM_BAR2_DISABLE",
             "SIM_BAR2_DRIFT",
@@ -2216,10 +2209,6 @@ class AutoTest(ABC):
             "SIM_IE24_ENABLE",
             "SIM_IE24_ERROR",
             "SIM_IE24_STATE",
-            "SIM_IMU_COUNT",
-            "SIM_IMU_POS_X",
-            "SIM_IMU_POS_Y",
-            "SIM_IMU_POS_Z",
             "SIM_IMUT1_ACC1_X",
             "SIM_IMUT1_ACC1_Y",
             "SIM_IMUT1_ACC1_Z",
@@ -3359,13 +3348,16 @@ class AutoTest(ABC):
             raise NotAchievedException("Air Temperature not received from HIGH_LATENCY2")
         self.HIGH_LATENCY2_links()
 
-    def context_set_message_rate_hz(self, id, rate_hz):
+    def context_set_message_rate_hz(self, id, rate_hz, run_cmd=None):
+        if run_cmd is None:
+            run_cmd = self.run_cmd
+
         overridden_message_rates = self.context_get().overridden_message_rates
 
         if id not in overridden_message_rates:
             overridden_message_rates[id] = self.measure_message_rate(id)
 
-        self.set_message_rate_hz(id, rate_hz)
+        self.set_message_rate_hz(id, rate_hz, run_cmd=run_cmd)
 
     def HIGH_LATENCY2_links(self):
 
@@ -3785,8 +3777,11 @@ class AutoTest(ABC):
     def run_auxfunc(self,
                     function,
                     level,
+                    run_cmd=None,
                     want_result=mavutil.mavlink.MAV_RESULT_ACCEPTED):
-        self.run_cmd(
+        if run_cmd is None:
+            run_cmd = self.run_cmd
+        run_cmd(
             mavutil.mavlink.MAV_CMD_DO_AUX_FUNCTION,
             p1=function,
             p2=level,
@@ -4713,6 +4708,8 @@ class AutoTest(ABC):
             self.check_fence_items_same(items, downloaded_items, strict=strict)
         elif mission_type == mavutil.mavlink.MAV_MISSION_TYPE_MISSION:
             self.check_mission_waypoint_items_same(items, downloaded_items, strict=strict)
+        elif mission_type == mavutil.mavlink.MAV_MISSION_TYPE_RALLY:
+            self.check_mission_waypoint_items_same(items, downloaded_items, strict=strict)
         else:
             raise NotAchievedException("Unhandled")
 
@@ -4728,6 +4725,13 @@ class AutoTest(ABC):
             "waypoints",
             mavutil.mavlink.MAV_MISSION_TYPE_MISSION,
             strict=strict)
+
+    def check_rally_upload_download(self, items):
+        self.check_mission_item_upload_download(
+            items,
+            "rally",
+            mavutil.mavlink.MAV_MISSION_TYPE_RALLY
+        )
 
     def check_dflog_message_rates(self, log_filepath, message_rates):
         reader = self.dfreader_for_path(log_filepath)
@@ -5693,7 +5697,11 @@ class AutoTest(ABC):
                     p6=None,
                     p7=None,
                     quiet=False,
+                    mav=None,
                     ):
+
+        if mav is None:
+            mav = self.mav
 
         if p5 is not None:
             x = p5
@@ -5728,20 +5736,20 @@ class AutoTest(ABC):
                               x,
                               y,
                               z))
-        self.mav.mav.command_int_send(target_sysid,
-                                      target_compid,
-                                      frame,
-                                      command,
-                                      0, # current
-                                      0, # autocontinue
-                                      p1,
-                                      p2,
-                                      p3,
-                                      p4,
-                                      x,
-                                      y,
-                                      z)
-        self.run_cmd_get_ack(command, want_result, timeout)
+        mav.mav.command_int_send(target_sysid,
+                                 target_compid,
+                                 frame,
+                                 command,
+                                 0, # current
+                                 0, # autocontinue
+                                 p1,
+                                 p2,
+                                 p3,
+                                 p4,
+                                 x,
+                                 y,
+                                 z)
+        self.run_cmd_get_ack(command, want_result, timeout, mav=mav)
 
     def send_cmd(self,
                  command,
@@ -9753,20 +9761,35 @@ Also, ignores heartbeats not from our target system'''
     def rate_to_interval_us(self, rate):
         return 1/float(rate)*1000000.0
 
-    def set_message_rate_hz(self, id, rate_hz, mav=None):
+    def interval_us_to_rate(self, interval):
+        if interval == 0:
+            raise ValueError("Zero interval is infinite rate")
+        return 1000000.0/float(interval)
+
+    def set_message_rate_hz(self, id, rate_hz, mav=None, run_cmd=None):
         '''set a message rate in Hz; 0 for original, -1 to disable'''
+        if run_cmd is None:
+            run_cmd = self.run_cmd
         if isinstance(id, str):
             id = eval("mavutil.mavlink.MAVLINK_MSG_ID_%s" % id)
         if rate_hz == 0 or rate_hz == -1:
             set_interval = rate_hz
         else:
             set_interval = self.rate_to_interval_us(rate_hz)
-        self.run_cmd(
+        run_cmd(
             mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
             p1=id,
             p2=set_interval,
             mav=mav,
         )
+
+    def get_message_rate_hz(self, id, mav=None, run_cmd=None):
+        '''return rate message is being sent, in Hz'''
+        if run_cmd is None:
+            run_cmd = self.run_cmd
+
+        interval = self.get_message_interval(id, mav=mav, run_cmd=run_cmd)
+        return self.interval_us_to_rate(interval)
 
     def send_get_message_interval(self, victim_message, mav=None):
         if mav is None:
@@ -9786,12 +9809,19 @@ Also, ignores heartbeats not from our target system'''
             0,
             0)
 
-    def get_message_interval(self, victim_message, mav=None):
+    def get_message_interval(self, victim_message, mav=None, run_cmd=None):
         '''returns message interval in microseconds'''
+        if run_cmd is None:
+            run_cmd = self.run_cmd
+
         self.send_get_message_interval(victim_message, mav=mav)
         m = self.assert_receive_message('MESSAGE_INTERVAL', timeout=1, mav=mav)
+
+        if isinstance(victim_message, str):
+            victim_message = eval("mavutil.mavlink.MAVLINK_MSG_ID_%s" % victim_message)
         if m.message_id != victim_message:
-            raise NotAchievedException("Unexpected ID in MESSAGE_INTERVAL")
+            raise NotAchievedException(f"Unexpected ID in MESSAGE_INTERVAL (want={victim_message}, got={m.message_id}")
+
         return m.interval_us
 
     def set_message_interval(self, victim_message, interval_us, mav=None):
@@ -9864,6 +9894,22 @@ Also, ignores heartbeats not from our target system'''
         self.test_set_message_interval_basic()
         self.start_subtest('Many-message tests')
         self.test_set_message_interval_many()
+
+    def MESSAGE_INTERVAL_COMMAND_INT(self):
+        '''Test MAV_CMD_SET_MESSAGE_INTERVAL works as COMMAND_INT'''
+        original_rate = round(self.measure_message_rate("VFR_HUD", 20))
+        self.context_set_message_rate_hz('VFR_HUD', original_rate*2, run_cmd=self.run_cmd_int)
+        if abs(original_rate*2 - round(self.get_message_rate_hz("VFR_HUD", run_cmd=self.run_cmd_int))) > 1:
+            raise NotAchievedException("Did not set rate")
+
+        self.start_subtest("Use REQUEST_MESSAGE via COMMAND_INT")
+        # 148 is AUTOPILOT_VERSION:
+        self.context_collect('AUTOPILOT_VERSION')
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_REQUEST_MESSAGE, 148)
+        self.delay_sim_time(2)
+        count = len(self.context_collection('AUTOPILOT_VERSION'))
+        if count != 1:
+            raise NotAchievedException(f"Did not get single AUTOPILOT_VERSION message (count={count}")
 
     def test_set_message_interval_many(self):
         messages = [
@@ -11075,6 +11121,22 @@ Also, ignores heartbeats not from our target system'''
                 items.append(item)
 
         self.check_fence_upload_download(items)
+
+    def rally_MISSION_ITEM_INT_from_loc(self, loc):
+        return self.create_MISSION_ITEM_INT(
+            mavutil.mavlink.MAV_CMD_NAV_RALLY_POINT,
+            x=int(loc.lat*1e7),
+            y=int(loc.lng*1e7),
+            z=loc.alt,
+            frame=mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+            mission_type=mavutil.mavlink.MAV_MISSION_TYPE_RALLY
+        )
+
+    def upload_rally_points_from_locations(self, rally_point_locs):
+        '''takes a sequence of locations, sets vehicle rally points to those locations'''
+        items = [self.rally_MISSION_ITEM_INT_from_loc(x) for x in rally_point_locs]
+        self.correct_wp_seq_numbers(items)
+        self.check_rally_upload_download(items)
 
     def wait_for_initial_mode(self):
         '''wait until we get a heartbeat with an expected initial mode (the

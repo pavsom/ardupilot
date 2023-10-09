@@ -3793,28 +3793,35 @@ class AutoTestPlane(AutoTest):
         attempt_fence_breached_disable(start_mode="FBWA", end_mode="FBWA", expected_mode="GUIDED", action=6)
         attempt_fence_breached_disable(start_mode="FBWA", end_mode="FBWA", expected_mode="GUIDED", action=7)
 
-    def MAV_DO_AUX_FUNCTION(self):
+    def _MAV_CMD_DO_AUX_FUNCTION(self, run_cmd):
         '''Test triggering Auxiliary Functions via mavlink'''
         self.context_collect('STATUSTEXT')
-        self.run_auxfunc(64, 2)  # 64 == reverse throttle
+        self.run_auxfunc(64, 2, run_cmd=run_cmd)  # 64 == reverse throttle
         self.wait_statustext("RevThrottle: ENABLE", check_context=True)
-        self.run_auxfunc(64, 0)
+        self.run_auxfunc(64, 0, run_cmd=run_cmd)
         self.wait_statustext("RevThrottle: DISABLE", check_context=True)
-        self.run_auxfunc(65, 2)  # 65 == GPS_DISABLE
+        self.run_auxfunc(65, 2, run_cmd=run_cmd)  # 65 == GPS_DISABLE
 
         self.start_subtest("Bad auxfunc")
         self.run_auxfunc(
             65231,
             2,
-            want_result=mavutil.mavlink.MAV_RESULT_FAILED
+            want_result=mavutil.mavlink.MAV_RESULT_FAILED,
+            run_cmd=run_cmd,
         )
 
         self.start_subtest("Bad switchpos")
         self.run_auxfunc(
             62,
             17,
-            want_result=mavutil.mavlink.MAV_RESULT_DENIED
+            want_result=mavutil.mavlink.MAV_RESULT_DENIED,
+            run_cmd=run_cmd,
         )
+
+    def MAV_CMD_DO_AUX_FUNCTION(self):
+        '''Test triggering Auxiliary Functions via mavlink'''
+        self._MAV_CMD_DO_AUX_FUNCTION(run_cmd=self.run_cmd)
+        self._MAV_CMD_DO_AUX_FUNCTION(run_cmd=self.run_cmd_int)
 
     def FlyEachFrame(self):
         '''Fly each supported internal frame'''
@@ -4945,6 +4952,69 @@ class AutoTestPlane(AutoTest):
         self._MAV_CMD_DO_FLIGHTTERMINATION(self.run_cmd)
         self._MAV_CMD_DO_FLIGHTTERMINATION(self.run_cmd_int)
 
+    def MAV_CMD_DO_LAND_START(self):
+        '''test MAV_CMD_DO_LAND_START as mavlink command'''
+        self.set_parameters({
+            "RTL_AUTOLAND": 3,
+        })
+        self.upload_simple_relhome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 30),
+            (mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM, 0, 0, 30),
+            self.create_MISSION_ITEM_INT(
+                mavutil.mavlink.MAV_CMD_DO_LAND_START,
+            ),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 800, 0, 0),
+        ])
+
+        self.change_mode('AUTO')
+        self.wait_ready_to_arm()
+
+        self.arm_vehicle()
+
+        self.start_subtest("DO_LAND_START as COMMAND_LONG")
+        self.wait_current_waypoint(2)
+        self.run_cmd(mavutil.mavlink.MAV_CMD_DO_LAND_START)
+        self.wait_current_waypoint(4)
+
+        self.start_subtest("DO_LAND_START as COMMAND_INT")
+        self.set_current_waypoint(2)
+        self.run_cmd_int(mavutil.mavlink.MAV_CMD_DO_LAND_START)
+        self.wait_current_waypoint(4)
+
+        self.fly_home_land_and_disarm()
+
+    def start_flying_simple_rehome_mission(self, items):
+        '''uploads items, changes mode to auto, waits ready to arm and arms
+        vehicle.  If the first item it a takeoff you can expect the
+        vehicle to fly after this method returns
+        '''
+
+        self.upload_simple_relhome_mission(items)
+
+        self.change_mode('AUTO')
+        self.wait_ready_to_arm()
+
+        self.arm_vehicle()
+
+    def InteractTest(self):
+        '''just takeoff'''
+
+        if self.mavproxy is None:
+            raise NotAchievedException("Must be started with --map")
+
+        self.start_flying_simple_rehome_mission([
+            (mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 30),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 800, 0, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 800, 800, 0),
+            (mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 400, 0),
+        ])
+
+        self.wait_current_waypoint(4)
+
+        self.set_parameter('SIM_SPEEDUP', 1)
+
+        self.mavproxy.interact()
+
     def tests(self):
         '''return list of all tests'''
         ret = super(AutoTestPlane, self).tests()
@@ -5005,7 +5075,7 @@ class AutoTestPlane(AutoTest):
             self.RTL_CLIMB_MIN,
             self.ClimbBeforeTurn,
             self.IMUTempCal,
-            self.MAV_DO_AUX_FUNCTION,
+            self.MAV_CMD_DO_AUX_FUNCTION,
             self.SmartBattery,
             self.FlyEachFrame,
             self.RCDisableAirspeedUse,
@@ -5042,10 +5112,13 @@ class AutoTestPlane(AutoTest):
             self.MAV_CMD_DO_AUTOTUNE_ENABLE,
             self.MAV_CMD_DO_GO_AROUND,
             self.MAV_CMD_DO_FLIGHTTERMINATION,
+            self.MAV_CMD_DO_LAND_START,
+            self.InteractTest,
         ])
         return ret
 
     def disabled_tests(self):
         return {
             "LandingDrift": "Flapping test. See https://github.com/ArduPilot/ardupilot/issues/20054",
+            "InteractTest": "requires user interaction",
         }

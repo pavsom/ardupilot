@@ -356,7 +356,9 @@ static const ap_message STREAM_EXTENDED_STATUS_msgs[] = {
     MSG_GPS2_RAW,
     MSG_GPS2_RTK,
     MSG_NAV_CONTROLLER_OUTPUT,
+#if AP_FENCE_ENABLED
     MSG_FENCE_STATUS,
+#endif
     MSG_NAMED_FLOAT
 };
 static const ap_message STREAM_POSITION_msgs[] = {
@@ -477,8 +479,14 @@ MAV_RESULT GCS_MAVLINK_Sub::handle_command_int_packet(const mavlink_command_int_
 {
     switch(packet.command) {
 
+    case MAV_CMD_DO_CHANGE_SPEED:
+        return handle_MAV_CMD_DO_CHANGE_SPEED(packet);
+
     case MAV_CMD_DO_MOTOR_TEST:
         return handle_MAV_CMD_DO_MOTOR_TEST(packet);
+
+    case MAV_CMD_MISSION_START:
+        return handle_MAV_CMD_MISSION_START(packet);
 
     case MAV_CMD_NAV_LOITER_UNLIM:
         return handle_MAV_CMD_NAV_LOITER_UNLIM(packet);
@@ -524,7 +532,13 @@ MAV_RESULT GCS_MAVLINK_Sub::handle_command_long_packet(const mavlink_command_lon
         }
         return MAV_RESULT_FAILED;
 
-    case MAV_CMD_DO_CHANGE_SPEED:
+    default:
+        return GCS_MAVLINK::handle_command_long_packet(packet, msg);
+    }
+}
+
+MAV_RESULT GCS_MAVLINK_Sub::handle_MAV_CMD_DO_CHANGE_SPEED(const mavlink_command_int_t &packet)
+{
         // param1 : unused
         // param2 : new speed in m/s
         // param3 : unused
@@ -534,16 +548,14 @@ MAV_RESULT GCS_MAVLINK_Sub::handle_command_long_packet(const mavlink_command_lon
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_FAILED;
+}
 
-    case MAV_CMD_MISSION_START:
+MAV_RESULT GCS_MAVLINK_Sub::handle_MAV_CMD_MISSION_START(const mavlink_command_int_t &packet)
+{
         if (sub.motors.armed() && sub.set_mode(Mode::Number::AUTO, ModeReason::GCS_COMMAND)) {
             return MAV_RESULT_ACCEPTED;
         }
         return MAV_RESULT_FAILED;
-
-    default:
-        return GCS_MAVLINK::handle_command_long_packet(packet, msg);
-    }
 }
 
 MAV_RESULT GCS_MAVLINK_Sub::handle_MAV_CMD_DO_MOTOR_TEST(const mavlink_command_int_t &packet)

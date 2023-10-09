@@ -16,6 +16,7 @@
 #include <AP_Math/AP_Math.h>
 #include <AP_Common/AP_Common.h>
 #include <AP_DroneCAN/AP_DroneCAN.h>
+#include <AP_HAL/utility/RingBuffer.h>
 #include "AP_Mount.h"
 
 class AP_Mount_Xacti : public AP_Mount_Backend
@@ -118,10 +119,32 @@ private:
     bool handle_param_get_set_response_string(AP_DroneCAN* ap_dronecan, const uint8_t node_id, const char* name, AP_DroneCAN::string &value);
     void handle_param_save_response(AP_DroneCAN* ap_dronecan, const uint8_t node_id, bool success);
 
+    // param enum.  If enum is updated also update _param_names definition in cpp
+    enum class Param : uint8_t {
+        SingleShot = 0,
+        Recording,
+        FocusMode,
+        SensorMode,
+        DigitalZoomMagnification,
+        FirmwareVersion,
+        Status,
+        DateTime,
+        OpticalZoomMagnification,
+        LAST = OpticalZoomMagnification,            // this should be equal to the final parameter enum
+    };
+    static const char* _param_names[];              // array of Xacti parameter strings
+
+    // get parameter name for a particular param enum value
+    // returns an empty string if not found (which should never happen)
+    const char* get_param_name_str(Param param) const;
+
     // helper function to get and set parameters
-    bool set_param_int32(const char* param_name, int32_t param_value);
-    bool set_param_string(const char* param_name, const AP_DroneCAN::string& param_value);
-    bool get_param_string(const char* param_name);
+    bool set_param_int32(Param param, int32_t param_value);
+    bool set_param_string(Param param, const AP_DroneCAN::string& param_value);
+    bool get_param_string(Param param);
+
+    // process queue of set parameter items. returns true if set-parameter message was sent
+    bool process_set_param_int32_queue();
 
     // send gimbal control message via DroneCAN
     // mode is 2:angle control or 3:rate control
@@ -141,6 +164,10 @@ private:
     // returns true if sent so that we avoid immediately trying to also send other messages
     bool request_firmware_version(uint32_t now_ms);
 
+    // request parameters used to determine camera capabilities.  now_ms is current system time
+    // returns true if a param get/set was sent so that we avoid sending other messages
+    bool request_capabilities(uint32_t now_ms);
+
     // set date and time.  now_ms is current system time
     bool set_datetime(uint32_t now_ms);
 
@@ -159,10 +186,11 @@ private:
     Quaternion _current_attitude_quat;              // current attitude as a quaternion
     uint32_t _last_current_attitude_quat_ms;        // system time _current_angle_rad was updated
     bool _recording_video;                          // true if recording video
-    uint16_t _last_zoom_param_value = 100;          // last digital zoom parameter value sent to camera.  100 ~ 1000 (interval 100)
+    uint16_t _last_digital_zoom_param_value = 100;  // last digital zoom parameter value sent to camera.  100 ~ 1000 (interval 100)
+    uint16_t _last_optical_zoom_param_value = 100;  // last optical zoom parameter value sent to camera.  100 ~ 250 (interval 10)
     struct {
         bool enabled;                               // true if zoom rate control is enabled
-        int8_t increment;                           // zoom increment on each update (+100 or -100)
+        int8_t dir;                                 // zoom direction (-1 to zoom out, +1 to zoom in)
         uint32_t last_update_ms;                    // system time that zoom rate control last updated zoom
     } _zoom_rate_control;
 
@@ -179,6 +207,19 @@ private:
         uint32_t last_request_ms;                   // system time that date/time was last requested
         bool set;                                   // true once date/time has been set
     } _datetime;
+
+    // capability handling
+    enum class Capability : uint8_t {
+        False = 0,
+        True = 1,
+        Unknown = 2,
+    };
+    struct {
+        bool received;                              // true if we have determined cameras capabilities
+        uint32_t first_request_ms;                  // system time of first request for capabilities (used to timeout)
+        uint32_t last_request_ms;                   // system time of last capability related parameter check
+        Capability optical_zoom;                    // Yes if camera has optical zoom
+    } capabilities = {false, 0, 0, Capability::Unknown};
 
     // gimbal status handling
     enum class ErrorStatus : uint32_t {
@@ -217,6 +258,7 @@ private:
         uint32_t last_error_status;                 // last error status reported to user
     } _status_report;
     bool _motor_error;                              // true if status reports motor or control error (used for health reporting)
+    bool _camera_error;                             // true if status reports camera error
 
     // DroneCAN related variables
     static bool _subscribed;                        // true once subscribed to receive DroneCAN messages
@@ -229,6 +271,13 @@ private:
     uint32_t last_send_gimbal_control_ms;           // system time that send_gimbal_control was last called (used to slow down sends to 5hz)
     uint32_t last_send_copter_att_status_ms;        // system time that send_copter_att_status was last called (used to slow down sends to 10hz)
     uint32_t last_send_getset_param_ms;             // system time that a get or set parameter message was sent
+
+    // queue of set parameter int32 items.  set-parameter requests to camera are throttled to improve reliability
+    struct SetParamQueueItem {
+        Param param;                                // parameter (name)
+        int32_t value;                              // parameter value
+    };
+    ObjectArray<SetParamQueueItem> *_set_param_int32_queue; // queue of set-parameter items
 };
 
 #endif // HAL_MOUNT_XACTI_ENABLED

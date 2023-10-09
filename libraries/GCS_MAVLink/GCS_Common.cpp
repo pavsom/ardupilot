@@ -1777,7 +1777,7 @@ GCS_MAVLINK::update_receive(uint32_t max_time_us)
         bool parsed_packet = false;
 
         // Try to get a new message
-        if (mavlink_parse_char(chan, c, &msg, &status)) {
+        if (mavlink_frame_char_buffer(channel_buffer(), channel_status(), c, &msg, &status) == MAVLINK_FRAMING_OK) {
             hal.util->persistent_data.last_mavlink_msgid = msg.msgid;
             packetReceived(status, msg);
             parsed_packet = true;
@@ -2756,6 +2756,7 @@ void GCS_MAVLINK::send_named_float(const char *name, float value) const
     mavlink_msg_named_value_float_send(chan, AP_HAL::millis(), float_name, value);
 }
 
+#if AP_AHRS_ENABLED
 void GCS_MAVLINK::send_home_position() const
 {
     if (!AP::ahrs().home_is_set()) {
@@ -2801,6 +2802,7 @@ void GCS_MAVLINK::send_gps_global_origin() const
         ekf_origin.alt * 10,
         AP_HAL::micros64());
 }
+#endif  // AP_AHRS_ENABLED
 
 MAV_STATE GCS_MAVLINK::system_status() const
 {
@@ -2832,7 +2834,7 @@ void GCS_MAVLINK::send_heartbeat() const
         system_status());
 }
 
-MAV_RESULT GCS_MAVLINK::handle_command_do_aux_function(const mavlink_command_long_t &packet)
+MAV_RESULT GCS_MAVLINK::handle_command_do_aux_function(const mavlink_command_int_t &packet)
 {
     if (packet.param2 > 2) {
         return MAV_RESULT_DENIED;
@@ -2847,7 +2849,7 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_aux_function(const mavlink_command_lon
     return MAV_RESULT_ACCEPTED;
 }
 
-MAV_RESULT GCS_MAVLINK::handle_command_set_message_interval(const mavlink_command_long_t &packet)
+MAV_RESULT GCS_MAVLINK::handle_command_set_message_interval(const mavlink_command_int_t &packet)
 {
     return set_message_interval((uint32_t)packet.param1, (int32_t)packet.param2);
 }
@@ -2917,7 +2919,7 @@ uint8_t GCS::get_channel_from_port_number(uint8_t port_num)
     return UINT8_MAX;
 }
 
-MAV_RESULT GCS_MAVLINK::handle_command_request_message(const mavlink_command_long_t &packet)
+MAV_RESULT GCS_MAVLINK::handle_command_request_message(const mavlink_command_int_t &packet)
 {
     const uint32_t mavlink_id = (uint32_t)packet.param1;
     const ap_message id = mavlink_id_to_ap_message_id(mavlink_id);
@@ -2949,7 +2951,7 @@ bool GCS_MAVLINK::get_ap_message_interval(ap_message id, uint16_t &interval_ms) 
     return false;
 }
 
-MAV_RESULT GCS_MAVLINK::handle_command_get_message_interval(const mavlink_command_long_t &packet)
+MAV_RESULT GCS_MAVLINK::handle_command_get_message_interval(const mavlink_command_int_t &packet)
 {
     if (txspace() < PAYLOAD_SIZE(chan, MESSAGE_INTERVAL) + PAYLOAD_SIZE(chan, COMMAND_ACK)) {
         return MAV_RESULT_TEMPORARILY_REJECTED;
@@ -4836,22 +4838,6 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_packet(const mavlink_command_long_t 
         }
         break;
 
-    case MAV_CMD_DO_AUX_FUNCTION:
-        result = handle_command_do_aux_function(packet);
-        break;
-
-    case MAV_CMD_SET_MESSAGE_INTERVAL:
-        result = handle_command_set_message_interval(packet);
-        break;
-
-    case MAV_CMD_GET_MESSAGE_INTERVAL:
-        result = handle_command_get_message_interval(packet);
-        break;
-
-    case MAV_CMD_REQUEST_MESSAGE:
-        result = handle_command_request_message(packet);
-        break;
-
     default:
         result = try_command_long_as_command_int(packet, msg);
         break;
@@ -4909,6 +4895,21 @@ bool GCS_MAVLINK::command_long_stores_location(const MAV_CMD command)
     return false;
 }
 
+// returns a value suitable for COMMAND_INT.x or y based on a value
+// coming in from COMMAND_LONG.p5 or p6:
+static int32_t convert_COMMAND_LONG_loc_param(float param, bool stores_location)
+{
+    if (isnan(param)) {
+        return 0;
+    }
+
+    if (stores_location) {
+        return param *1e7;
+    }
+
+    return param;
+}
+
 void GCS_MAVLINK::convert_COMMAND_LONG_to_COMMAND_INT(const mavlink_command_long_t &in, mavlink_command_int_t &out, MAV_FRAME frame)
 {
     out = {};
@@ -4922,13 +4923,9 @@ void GCS_MAVLINK::convert_COMMAND_LONG_to_COMMAND_INT(const mavlink_command_long
     out.param2 = in.param2;
     out.param3 = in.param3;
     out.param4 = in.param4;
-    if (command_long_stores_location((MAV_CMD)in.command)) {
-        out.x = in.param5 *1e7;
-        out.y = in.param6 *1e7;
-    } else {
-        out.x = in.param5;
-        out.y = in.param6;
-    }
+    const bool stores_location = command_long_stores_location((MAV_CMD)in.command);
+    out.x = convert_COMMAND_LONG_loc_param(in.param5, stores_location);
+    out.y = convert_COMMAND_LONG_loc_param(in.param6, stores_location);
     out.z = in.param7;
 }
 
@@ -5105,6 +5102,9 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
         return handle_can_forward(packet, msg);
 #endif
 
+    case MAV_CMD_DO_AUX_FUNCTION:
+        return handle_command_do_aux_function(packet);
+
     case MAV_CMD_DO_FLIGHTTERMINATION:
         return handle_flight_termination(packet);
 
@@ -5167,6 +5167,18 @@ MAV_RESULT GCS_MAVLINK::handle_command_int_packet(const mavlink_command_int_t &p
     case MAV_CMD_STORAGE_FORMAT:
         return handle_command_storage_format(packet, msg);
 #endif
+
+    // support for dealing with streamrate for a specific message and
+    // requesting a message instance:
+    case MAV_CMD_SET_MESSAGE_INTERVAL:
+        return handle_command_set_message_interval(packet);
+
+    case MAV_CMD_GET_MESSAGE_INTERVAL:
+        return handle_command_get_message_interval(packet);
+
+    case MAV_CMD_REQUEST_MESSAGE:
+        return handle_command_request_message(packet);
+
     }
 
     return MAV_RESULT_UNSUPPORTED;
@@ -5652,6 +5664,7 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         send_global_position_int();
         break;
 
+#if AP_AHRS_ENABLED
     case MSG_HOME:
         CHECK_PAYLOAD_SIZE(HOME_POSITION);
         send_home_position();
@@ -5661,6 +5674,7 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         CHECK_PAYLOAD_SIZE(GPS_GLOBAL_ORIGIN);
         send_gps_global_origin();
         break;
+#endif  // AP_AHRS_ENABLED
 
 #if AP_RPM_ENABLED
     case MSG_RPM:

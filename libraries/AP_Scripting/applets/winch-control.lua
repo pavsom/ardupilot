@@ -1,4 +1,4 @@
--- mount-test.lua: allows the winch to be deployed or retracted at a fixed speed using an auxiliary switch
+-- winch-control.lua: allows the winch to be deployed or retracted at a fixed speed using an auxiliary switch
 --
 -- How To Use
 --   1. set RCx_OPTION to 300 to enable controlling the winch rate from an auxiliary switch
@@ -47,7 +47,7 @@ local WINCH_RATE_UP = bind_add_param('RATE_UP', 1, 0.5)
   // @Range: 0.1 5.0
   // @User: Standard
 --]]
-local WINCH_RATE_DN = bind_add_param('RATE_UP', 2, 2.0)
+local WINCH_RATE_DN = bind_add_param('RATE_DN', 2, 2.0)
 
 --[[
   // @Param: WINCH_RC_FUNC
