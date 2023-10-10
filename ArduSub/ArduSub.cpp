@@ -166,7 +166,7 @@ void Sub::fifty_hz_loop()
 
     SRV_Channels::output_ch_all();
 
-    //SRV_Channels::push();
+    SRV_Channels::push();
 
     if (should_log(MASK_LOG_ANY)) {
         Log_Sensor_Health();
