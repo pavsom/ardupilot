@@ -171,6 +171,8 @@ SRV_Channel::SRV_Channel(void)
     have_pwm_mask = ~uint32_t(0);
 }
 
+struct SRV_Channel::servos_flags SRV_Channel::flags;
+
 // convert a 0..range_max to a pwm
 uint16_t SRV_Channel::pwm_from_range(float scaled_value) const
 {

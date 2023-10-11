@@ -208,6 +208,17 @@ public:
         ZERO_PWM
     };
 
+    struct servos_flags {
+        bool radio_mast;
+        bool gnss_mast;
+        bool floating_antenna;
+        bool hatch;
+        bool dump;
+    };
+
+    static struct servos_flags flags;
+
+
     // set the output value as a pwm value
     void set_output_pwm(uint16_t pwm, bool force = false);
 
