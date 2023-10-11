@@ -306,7 +306,7 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         }
         break;
     case JSButton::button_function_t::k_gain_toggle:
-        if (!held) {
+        /* if (!held) {
             static bool lowGain = false;
             lowGain = !lowGain;
             if (lowGain) {
@@ -314,7 +314,18 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
             } else {
                 gain = 1.0f;
             }
-            gcs().send_text(MAV_SEVERITY_INFO,"#Gain: %2.0f%%",(double)gain*100);
+            gcs().send_text(MAV_SEVERITY_INFO,"#Gain: %2.0f%%",(double)gain*100); 
+        }
+        break; */
+        if (!held) {
+            SRV_Channel::flags.dump = SRV_Channel::flags.dump? false : true;
+            if (SRV_Channel::flags.dump) {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting5, 1500);
+            }
+            else {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting5, 1150);
+            }
+            gcs().send_text(MAV_SEVERITY_INFO,"#dump toggled");
         }
         break;
     case JSButton::button_function_t::k_gain_inc:
@@ -426,6 +437,14 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_1_momentary:
         if (!held) {
+            SRV_Channel::flags.radio_mast = SRV_Channel::flags.radio_mast? false : true;
+            if (SRV_Channel::flags.radio_mast) {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting1, 1500);
+            }
+            else {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting1, 1150);
+            }
+            gcs().send_text(MAV_SEVERITY_INFO,"#radio mast toggled");
             relay.on(0);
         }
         break;
@@ -444,6 +463,14 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_2_momentary:
         if (!held) {
+            SRV_Channel::flags.gnss_mast = SRV_Channel::flags.gnss_mast? false : true;
+            if (SRV_Channel::flags.gnss_mast) {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting2, 1500);
+            }
+            else {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting2, 1150);
+            }
+            gcs().send_text(MAV_SEVERITY_INFO,"#GNSS mast toggled");
             relay.on(1);
         }
         break;
@@ -462,6 +489,14 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_3_momentary:
         if (!held) {
+            SRV_Channel::flags.floating_antenna = SRV_Channel::flags.floating_antenna? false : true;
+            if (SRV_Channel::flags.floating_antenna) {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting3, 1500);
+            }
+            else {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting3, 1150);
+            }
+            gcs().send_text(MAV_SEVERITY_INFO,"#floating antenna toggled");
             relay.on(2);
         }
         break;
@@ -480,6 +515,14 @@ void Sub::handle_jsbutton_press(uint8_t _button, bool shift, bool held)
         break;
     case JSButton::button_function_t::k_relay_4_momentary:
         if (!held) {
+            SRV_Channel::flags.hatch = SRV_Channel::flags.hatch? false : true;
+            if (SRV_Channel::flags.hatch) {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting4, 1500);
+            }
+            else {
+                SRV_Channels::set_output_pwm(SRV_Channel::k_scripting4, 1150);
+            }
+            gcs().send_text(MAV_SEVERITY_INFO,"#hatch toggled");
             relay.on(3);
         }
         break;
