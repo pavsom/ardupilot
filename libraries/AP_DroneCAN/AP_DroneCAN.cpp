@@ -149,7 +149,7 @@ const AP_Param::GroupInfo AP_DroneCAN::var_info[] = {
     // @Bitmask: 0: ESC 1, 1: ESC 2, 2: ESC 3, 3: ESC 4, 4: ESC 5, 5: ESC 6, 6: ESC 7, 7: ESC 8, 8: ESC 9, 9: ESC 10, 10: ESC 11, 11: ESC 12, 12: ESC 13, 13: ESC 14, 14: ESC 15, 15: ESC 16, 16: ESC 17, 17: ESC 18, 18: ESC 19, 19: ESC 20, 20: ESC 21, 21: ESC 22, 22: ESC 23, 23: ESC 24, 24: ESC 25, 25: ESC 26, 26: ESC 27, 27: ESC 28, 28: ESC 29, 29: ESC 30, 30: ESC 31, 31: ESC 32
     // @User: Advanced
     AP_GROUPINFO("ESC_RV", 9, AP_DroneCAN, _esc_rv, 0),
-    
+
     AP_GROUPEND
 };
 
@@ -422,9 +422,9 @@ void AP_DroneCAN::loop(void)
 #if AP_DRONECAN_HIMARK_SERVO_SUPPORT
                 if (option_is_set(Options::USE_HIMARK_SERVO)) {
                     SRV_send_himark();
-                } else
+                }
 #endif
-                {
+                else {
                     SRV_send_actuator();
                 }
                 for (uint8_t i = 0; i < DRONECAN_SRV_NUMBER; i++) {
@@ -777,11 +777,17 @@ void AP_DroneCAN::SRV_push_servos()
     WITH_SEMAPHORE(SRV_sem);
 
     for (uint8_t i = 0; i < DRONECAN_SRV_NUMBER; i++) {
+        SRV_Channel::Aux_servo_function_t ch_function = SRV_Channels::channel_function(i);
         // Check if this channels has any function assigned
-        if (SRV_Channels::channel_function(i) >= SRV_Channel::k_none) {
+        if (ch_function >= SRV_Channel::k_none) {
+            if ((ch_function >= SRV_Channel::k_scripting1) && (ch_function <= SRV_Channel::k_scripting4)) {
+                _SRV_conf[i].servo_pending = true;
+                if (_SRV_conf[i].pulse != SRV_Channels::srv_channel(i)->get_output_pwm()) {
+                    _SRV_last_send_us = 0;
+                    }
+            }
             _SRV_conf[i].pulse = SRV_Channels::srv_channel(i)->get_output_pwm();
             _SRV_conf[i].esc_pending = true;
-            _SRV_conf[i].servo_pending = true;
         }
     }
 
