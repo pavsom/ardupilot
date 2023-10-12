@@ -214,6 +214,7 @@ public:
         bool floating_antenna;
         bool hatch;
         bool dump;
+        bool need_send;
     };
 
     static struct servos_flags flags;
