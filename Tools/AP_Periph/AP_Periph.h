@@ -159,6 +159,18 @@ public:
     void prepare_reboot();
     bool canfdout() const { return (g.can_fdmode == 1); }
 
+#ifdef HAL_PERIPH_ENABLE_CAN2CAN
+    #define NUM_SERVOS 5
+    #define NUM_MOTORS 8
+    struct {
+        float position; // -1 to 1
+        uint64_t last_update_us;
+        bool pending;
+    } servos[NUM_SERVOS];
+    void can_send_ServoStatus(void);
+    void handle_ArrayCommand(CanardInstance* canard_instance, CanardRxTransfer* transfer);
+#endif
+
 #ifdef HAL_PERIPH_ENABLE_EFI
     void can_efi_update();
 #endif
