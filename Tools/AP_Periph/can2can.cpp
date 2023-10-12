@@ -16,7 +16,7 @@
             uint8_t buffer[UAVCAN_EQUIPMENT_ACTUATOR_STATUS_MAX_SIZE];
 
             // make up some synthetic status data
-            pkt.actuator_id = i + 9;
+            pkt.actuator_id = i + (NUM_MOTORS + 1);
             pkt.position = servos[i].position;
             pkt.force = 3.5 * servos[i].position;
             pkt.speed = 0; // m/s or rad/s
