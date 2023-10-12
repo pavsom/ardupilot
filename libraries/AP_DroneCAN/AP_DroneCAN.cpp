@@ -417,7 +417,7 @@ void AP_DroneCAN::loop(void)
             // we have active servos
             uint32_t now = AP_HAL::micros();
             const uint32_t servo_period_us = 1000000UL / unsigned(_servo_rate_hz.get());
-            if (now - _SRV_last_send_us >= servo_period_us) {
+            if ((now - _SRV_last_send_us >= servo_period_us) || SRV_Channel::flags.need_send) {
                 _SRV_last_send_us = now;
 #if AP_DRONECAN_HIMARK_SERVO_SUPPORT
                 if (option_is_set(Options::USE_HIMARK_SERVO)) {
@@ -425,7 +425,16 @@ void AP_DroneCAN::loop(void)
                 }
 #endif
                 else {
-                    SRV_send_actuator();
+                    if(!SRV_Channel::flags.need_send) {
+                        for (uint8_t i = 0; i < DRONECAN_SRV_NUMBER; i++) {
+                            _SRV_conf[i].servo_pending = true;
+                        }
+                        SRV_send_actuator();
+                    }
+                    else {
+                        SRV_send_actuator();
+                        SRV_Channel::flags.need_send = false;
+                    }
                 }
                 for (uint8_t i = 0; i < DRONECAN_SRV_NUMBER; i++) {
                     _SRV_conf[i].servo_pending = false;
@@ -780,10 +789,10 @@ void AP_DroneCAN::SRV_push_servos()
         SRV_Channel::Aux_servo_function_t ch_function = SRV_Channels::channel_function(i);
         // Check if this channels has any function assigned
         if (ch_function >= SRV_Channel::k_none) {
-            if ((ch_function >= SRV_Channel::k_scripting1) && (ch_function <= SRV_Channel::k_scripting4)) {
-                _SRV_conf[i].servo_pending = true;
+            if ((ch_function >= SRV_Channel::k_scripting1) && (ch_function <= SRV_Channel::k_scripting5)) {
                 if (_SRV_conf[i].pulse != SRV_Channels::srv_channel(i)->get_output_pwm()) {
-                    _SRV_last_send_us = 0;
+                    _SRV_conf[i].servo_pending = true;
+                    SRV_Channel::flags.need_send = true;
                     }
             }
             _SRV_conf[i].pulse = SRV_Channels::srv_channel(i)->get_output_pwm();
