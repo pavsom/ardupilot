@@ -126,7 +126,13 @@ const AP_Param::Info AP_Periph_FW::var_info[] = {
 
     // @Param: CAN2_PROTOCOL
     // @CopyFieldsFrom: CAN_PROTOCOL
-    GARRAY(can_protocol,     1, "CAN2_PROTOCOL", float(AP_CAN::Protocol::CANopen)),
+    GARRAY(can_protocol,     1, "CAN2_PROTOCOL", 
+#ifdef HAL_PERIPH_ENABLE_CAN2CAN
+        float(AP_CAN::Protocol::CANopen)
+#else
+        float(AP_CAN::Protocol::DroneCAN)
+#endif 
+    ),
 #endif
 
 #if HAL_NUM_CAN_IFACES >= 3
