@@ -2,6 +2,7 @@ include ../f405-canUni/hwdef.inc
 
 define CAN_APP_NODE_NAME "org.ardupilot.f405_can2can"
 define HAL_PERIPH_ENABLE_CAN2CAN 1
+define HAL_PERIPH_ENABLE_RC_OUT 1
 
 # ---------------------- Leds ---------------------------
 PA15 LED_BLUE1 OUTPUT LOW GPIO(7)  # BLUE
