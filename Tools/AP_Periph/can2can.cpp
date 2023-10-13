@@ -17,8 +17,8 @@
 
             // make up some synthetic status data
             pkt.actuator_id = i + (NUM_MOTORS + 1);
-            pkt.position = servos[i].position;
-            pkt.force = 3.5 * servos[i].position;
+            pkt.position = SRV_Channels::get_output_scaled(servos[i].function);
+            pkt.force = 3.5 * SRV_Channels::get_output_scaled(servos[i].function);
             pkt.speed = 0; // m/s or rad/s
             pkt.power_rating_pct = i;
 
@@ -60,12 +60,12 @@
             uint8_t id = cmd.commands.data[i].actuator_id - (NUM_MOTORS + 1);
             switch (cmd.commands.data[i].command_type) {
             case UAVCAN_EQUIPMENT_ACTUATOR_COMMAND_COMMAND_TYPE_UNITLESS:
-                servos[id].position = cmd.commands.data[i].command_value;
+                SRV_Channels::set_output_scaled(servos[id].function, cmd.commands.data[i].command_value);
                 break;
             case UAVCAN_EQUIPMENT_ACTUATOR_COMMAND_COMMAND_TYPE_PWM:
                 // map PWM to -1 to 1, assuming 1500 trim. If the servo has natural PWM
                 // support then we should use it directly instead
-                servos[id].position = (cmd.commands.data[i].command_value-1500)/500.0;
+                SRV_Channels::set_output_scaled(servos[id].function, cmd.commands.data[i].command_value);
                 break;
             }
             servos[id].last_update_us = tnow;
