@@ -163,9 +163,10 @@ public:
     #define NUM_SERVOS 5
     #define NUM_MOTORS 8
     struct {
-        float position; // -1 to 1
+        //float position; // -1 to 1
         uint64_t last_update_us;
         bool pending;
+        SRV_Channel::Aux_servo_function_t function;
     } servos[NUM_SERVOS];
     void can_send_ServoStatus(void);
     void handle_ArrayCommand(CanardInstance* canard_instance, CanardRxTransfer* transfer);

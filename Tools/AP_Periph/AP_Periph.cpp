@@ -318,6 +318,12 @@ void AP_Periph_FW::init()
 #if AP_SCRIPTING_ENABLED
     scripting.init();
 #endif
+
+#ifdef HAL_PERIPH_ENABLE_CAN2CAN
+    for (uint8_t i = 0; i < NUM_SERVOS; i++) {
+        servos[i].function = SRV_Channels::channel_function(i + 33);
+    }
+#endif
     start_ms = AP_HAL::millis();
 }
 
